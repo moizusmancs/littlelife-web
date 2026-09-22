@@ -1,0 +1,12 @@
+{
+  "app": {
+    "name": "LittleLife"
+  },
+  "nav": {
+    "home": "ہوم",
+    "map": "نقشہ",
+    "community": "کمیونٹی",
+    "resources": "وسائل",
+    "profile": "پروفائل"
+  }
+}

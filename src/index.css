@@ -1,111 +1,178 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+/* Class-based dark mode (`.dark` on <html>), not OS-media-based — the app has its own
+   light/dark toggle per the design system (mobile_plan §1.2.7 / web plan §2.4). */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/*
+ * LittleLife design tokens.
+ * Source of truth: supporting-material/UI mockups needed/uploads/mobile_plan-*.md §1
+ * (web reuses these in full per WEB_DESIGN_PLAN.md §1 — the only tonal difference is a
+ * *usage* rule for NGO/Admin, not a different token set — see the component-level "neutral
+ * dominant" guidance in FRONTEND_IMPLEMENTATION_PLAN.md §2.4, nothing to encode here).
+ *
+ * Tailwind v4's default spacing scale (N -> N * 4px) already matches the design's space.*
+ * scale exactly (space.4 = 16px = Tailwind's `4`), so it is intentionally NOT overridden below.
+ */
+@theme {
+  /* ---- Primary — Rose ---- */
+  --color-primary-50: #fff0f4;
+  --color-primary-100: #ffdce6;
+  --color-primary-200: #ffb8cd;
+  --color-primary-300: #ff8faf;
+  --color-primary-400: #fa6c97;
+  --color-primary-500: #f2477d; /* base — buttons, active tab, links, brand marks */
+  --color-primary-600: #db2e68; /* pressed */
+  --color-primary-700: #b81f55; /* text-on-primary-50 */
+  --color-primary-800: #8f1745;
+  --color-primary-900: #661038;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* ---- Secondary — Peach ---- */
+  --color-peach-50: #fff6ef;
+  --color-peach-100: #ffe8d6;
+  --color-peach-200: #ffcea8;
+  --color-peach-300: #ffb183;
+  --color-peach-400: #ff9563; /* base — gradient partner to primary.500 */
+  --color-peach-500: #f97c4d; /* hover */
+  --color-peach-600: #e0632f; /* pressed */
+
+  /* ---- Ink — contrast anchor ---- */
+  --color-ink-100: #ede3e7; /* hairline borders on white */
+  --color-ink-300: #b79aa6; /* disabled text, dividers on color */
+  --color-ink-500: #7a5a68; /* muted/placeholder/inactive tab */
+  --color-ink-700: #4a2e3c; /* secondary text */
+  --color-ink-900: #221019; /* primary text/headings/icons */
+
+  /* ---- Status / semantic — never interchangeable with brand colors ---- */
+  --color-status-safe: #2e9e5b;
+  --color-status-safe-tint: #e3f6ea;
+  --color-status-caution: #e0a100;
+  --color-status-caution-tint: #fff4d9;
+  --color-status-high: #f0740b;
+  --color-status-high-tint: #ffe9d6;
+  --color-status-critical: #d42e2e;
+  --color-status-critical-tint: #fde4e4;
+  --color-status-trust: #1f7a8c;
+  --color-status-trust-tint: #e1f1f4;
+  --color-status-info: #3a5fcd;
+  --color-status-info-tint: #e7ecfb;
+
+  /* ---- Category tags (incident / aid category chips) ---- */
+  --color-category-flooding: #2f6fed;
+  --color-category-blocked-road: #8a5a2b;
+  --color-category-fire: #c1440e;
+  --color-category-medical: #7c4dff;
+  --color-category-infrastructure: #5c6b7a;
+  --color-category-cloudburst: #4f8fe0;
+  --color-category-other: #7a5a68; /* = ink-500 */
+
+  /* ---- Neutral surfaces ---- */
+  --color-surface-base: #fffbf9;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #fdefea;
+  --color-surface-border: #f0dcd6;
+
+  /* ---- Typography ----
+     English: Manrope (headings) / Inter (body+UI). Urdu: Noto Sans Arabic replaces both —
+     Latin fonts don't cover Arabic script (mobile_plan §1.3). Nastaliq is deliberately never
+     used for interactive UI, only for a one-off splash/marketing use if ever needed. */
+  --font-heading: 'Manrope', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-arabic: 'Noto Sans Arabic', system-ui, sans-serif;
+
+  /* ---- Type scale (mobile_plan §1.3) ----
+     Additive alongside Tailwind's default text-xs/sm/base/... scale, not a replacement —
+     apply weight separately via font-bold/font-semibold/etc. at each usage site. */
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-h1: 24px;
+  --text-h1--line-height: 30px;
+  --text-h2: 20px;
+  --text-h2--line-height: 26px;
+  --text-h3: 17px;
+  --text-h3--line-height: 22px;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 16px;
+  --text-label: 13px;
+  --text-label--line-height: 16px;
+  --text-overline: 11px;
+  --text-overline--line-height: 14px;
+
+  /* ---- Radius ----
+     Overrides Tailwind's default sm/md/lg scale directly, so `rounded-sm/md/lg` just work.
+     Badges/chips use `rounded-full`, NOT `rounded-sm` — the written token doc says radius.sm,
+     every real screen uses a full pill; go with the built pill (see FRONTEND_IMPLEMENTATION_PLAN §2.4). */
+  --radius-sm: 8px; /* inputs */
+  --radius-md: 12px; /* cards, buttons */
+  --radius-lg: 20px; /* bottom sheets (top corners), modals */
+
+  /* ---- Elevation ----
+     Warm ink-tinted shadows (derived from ink.900), not pure black — overrides Tailwind's
+     default sm/md/lg shadow scale so `shadow-sm/md/lg` map straight to elevation.1/2/3.
+     Dark mode swaps these to plain black shadows — see the `.dark` block below. */
+  --shadow-sm: 0 1px 3px rgba(34, 16, 25, 0.08); /* elevation.1 — resting cards */
+  --shadow-md: 0 4px 12px rgba(34, 16, 25, 0.12); /* elevation.2 — raised cards, dropdowns */
+  --shadow-lg: 0 8px 24px rgba(34, 16, 25, 0.16); /* elevation.3 — modals, sheets, FAB */
+
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/*
+ * Web-specific breakpoint tokens (WEB_DESIGN_PLAN.md §1.3) — deliberately NOT added as
+ * `--breakpoint-*` theme keys: their pixel values (768 / 1024 / 1440) happen to line up with
+ * Tailwind's own *default* `md` / `lg` breakpoints (768 / 1024), and overriding `--breakpoint-sm`
+ * or `--breakpoint-md` here would silently shift every unrelated `sm:`/`md:` utility in the app
+ * to different pixel values than developers expect. Use Tailwind's existing `md:`/`lg:` variants
+ * directly for "sidebar collapses" / "split-view stacks", and an arbitrary `max-w-[1440px]` at
+ * the point of use for max dashboard content width — no custom breakpoint needed for that one,
+ * it's a width constraint, not a responsive variant.
+ */
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+/*
+ * Dark mode overrides — ONLY the three pairs actually confirmed against the built dark
+ * screens (mobile_plan §1.2.7 / the design audit). Status/category colors are unchanged for
+ * *solid fills* (buttons) — deliberately NOT redefined here. Dark-mode *tinted text* on
+ * status/category chips is a real gap the source docs never filled; define it explicitly in
+ * Phase 9, don't guess it here (see FRONTEND_IMPLEMENTATION_PLAN.md §2.4 and Phase 9).
+ */
+.dark {
+  --color-surface-base: #1a0e13;
+  --color-surface-raised: #2a1720;
+  --color-ink-900: #f7edf0;
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  /* Shadows read as plain black on dark surfaces, not warm-tinted (confirmed against the
+     built dark screens — this contradicts the light-mode "always warm-tinted" rule on purpose). */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 body {
   margin: 0;
+  background-color: var(--color-surface-base);
+  color: var(--color-ink-900);
+  font-family: var(--font-body);
+}
+
+:lang(ur) body,
+:lang(ur) h1,
+:lang(ur) h2,
+:lang(ur) h3 {
+  font-family: var(--font-arabic);
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  font-family: var(--font-heading);
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* Keyboard focus ring — never leave the browser default, per the design system's interaction
+   states (matches the "themed, never default" convention the mobile plan sets throughout). */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
 }

@@ -1,0 +1,12 @@
+{
+  "app": {
+    "name": "LittleLife"
+  },
+  "nav": {
+    "home": "Home",
+    "map": "Map",
+    "community": "Community",
+    "resources": "Resources",
+    "profile": "Profile"
+  }
+}
