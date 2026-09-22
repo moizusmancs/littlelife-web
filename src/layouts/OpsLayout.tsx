@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Bell, CaretUpDown, Lifebuoy, List } from '@phosphor-icons/react'
+import { BellIcon, CaretUpDownIcon, LifebuoyIcon, ListIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import { adminNavGroups, ngoNavGroups, type OpsNavGroup } from '@/components/nav/opsSidebarNav'
@@ -29,7 +29,7 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
       >
         <div className="flex h-16 flex-none items-center gap-2.5 border-b border-surface-border px-5">
           <div className="flex size-8 flex-none items-center justify-center rounded-md bg-primary-500">
-            <Lifebuoy weight="fill" className="text-white" size={20} />
+            <LifebuoyIcon weight="fill" className="text-white" size={20} />
           </div>
           {expanded && (
             <div className="flex flex-col leading-tight">
@@ -58,7 +58,7 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
                     to={item.to}
                     className={({ isActive }) =>
                       cn(
-                        'mx-2 flex h-[34px] items-center gap-2.5 rounded-sm border-s-4 border-transparent px-3 font-body text-label whitespace-nowrap text-ink-700 hover:bg-surface-sunken',
+                        'mx-2 flex h-8.5 items-center gap-2.5 rounded-sm border-s-4 border-transparent px-3 font-body text-label whitespace-nowrap text-ink-700 hover:bg-surface-sunken',
                         isActive && 'border-primary-500 bg-primary-50 text-primary-700',
                       )
                     }
@@ -93,7 +93,7 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
                         {user?.role}
                       </span>
                     </div>
-                    <CaretUpDown size={16} className="ms-auto flex-none text-ink-500" />
+                    <CaretUpDownIcon size={16} className="ms-auto flex-none text-ink-500" />
                   </>
                 )}
               </button>
@@ -110,7 +110,7 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
             className="flex size-9 items-center justify-center rounded-sm text-ink-700 hover:bg-surface-sunken"
             aria-label="Toggle sidebar"
           >
-            <List size={20} />
+            <ListIcon size={20} />
           </button>
           <div className="ms-auto flex items-center gap-3">
             <button
@@ -118,7 +118,7 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
               className="flex size-9 items-center justify-center rounded-full text-ink-700 hover:bg-surface-sunken"
               aria-label="Notifications"
             >
-              <Bell size={20} />
+              <BellIcon size={20} />
             </button>
           </div>
         </header>

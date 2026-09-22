@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 import { Link } from 'react-router-dom'
-import { EnvelopeSimple, GoogleLogo } from '@phosphor-icons/react'
+import { EnvelopeSimpleIcon, GoogleLogoIcon } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,7 +46,7 @@ export function LoginForm({ register, errors, onSubmit, isSubmitting, serverErro
           id="email"
           type="email"
           autoComplete="email"
-          leadingIcon={<EnvelopeSimple size={18} />}
+          leadingIcon={<EnvelopeSimpleIcon size={18} />}
           hasError={!!errors.email}
           aria-describedby={errors.email ? 'email-error' : undefined}
           {...register('email')}
@@ -97,7 +97,7 @@ export function LoginForm({ register, errors, onSubmit, isSubmitting, serverErro
         title="Coming soon"
       >
         <span className="inline-flex items-center gap-2.5 whitespace-nowrap">
-          <GoogleLogo size={18} />
+          <GoogleLogoIcon size={18} />
           Continue with Google
         </span>
         <Badge tone="caution">Coming soon</Badge>

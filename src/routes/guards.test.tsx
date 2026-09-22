@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/store/auth'
-import { RequireRole, RedirectIfAuthenticated } from './guards'
+import { RequireRole, RedirectIfAuthenticated, RequireUnverifiedSession } from './guards'
 
 function renderAt(initialPath: string) {
   return render(
@@ -10,6 +10,10 @@ function renderAt(initialPath: string) {
       <Routes>
         <Route element={<RedirectIfAuthenticated />}>
           <Route path="/login" element={<div>login screen</div>} />
+          <Route path="/register" element={<div>register screen</div>} />
+        </Route>
+        <Route element={<RequireUnverifiedSession />}>
+          <Route path="/verify-email" element={<div>verify email screen</div>} />
         </Route>
         <Route element={<RequireRole allowed={['user']} />}>
           <Route path="/app/home" element={<div>citizen home</div>} />
@@ -105,5 +109,51 @@ describe('route guards — role isolation', () => {
     renderAt('/login')
 
     expect(screen.getByText('admin dashboard')).toBeInTheDocument()
+  })
+
+  it('does NOT let an unverified citizen skip onboarding into the app', () => {
+    useAuthStore.getState().setAuth('token', {
+      id: '4',
+      email: 'unverified@example.com',
+      role: 'user',
+      emailVerified: false,
+    })
+
+    renderAt('/app/home')
+
+    expect(screen.queryByText('citizen home')).not.toBeInTheDocument()
+    expect(screen.getByText('verify email screen')).toBeInTheDocument()
+  })
+
+  it('renders /verify-email for an authenticated, unverified account', () => {
+    useAuthStore.getState().setAuth('token', {
+      id: '4',
+      email: 'unverified@example.com',
+      role: 'user',
+      emailVerified: false,
+    })
+
+    renderAt('/verify-email')
+
+    expect(screen.getByText('verify email screen')).toBeInTheDocument()
+  })
+
+  it('sends an already-verified account away from /verify-email — nothing to do there', () => {
+    useAuthStore.getState().setAuth('token', {
+      id: '1',
+      email: 'citizen@example.com',
+      role: 'user',
+      emailVerified: true,
+    })
+
+    renderAt('/verify-email')
+
+    expect(screen.getByText('citizen home')).toBeInTheDocument()
+  })
+
+  it('sends an unauthenticated visitor at /verify-email to /register, not the OTP screen', () => {
+    renderAt('/verify-email')
+
+    expect(screen.getByText('register screen')).toBeInTheDocument()
   })
 })

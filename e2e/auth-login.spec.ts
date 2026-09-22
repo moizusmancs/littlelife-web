@@ -16,12 +16,16 @@ test.describe('Login — real backend', () => {
     await expect(page).toHaveURL(/\/login$/)
   })
 
-  test('logs in a freshly-registered citizen and lands on Home', async ({ page, request }) => {
+  test('logs in a freshly-registered (unverified) citizen and lands on email verification, not Home', async ({
+    page,
+    request,
+  }) => {
     const email = `e2e-login-${Date.now()}@example.com`
     const password = 'SuperSecret123!'
 
-    // Registration itself isn't built in the UI yet (next screen in this phase) — seed the
-    // account directly against the real API, same backend the UI talks to via the dev proxy.
+    // Seeded directly against the real API rather than through the Register UI — this test is
+    // about Login's own behavior, not Register's. Every self-registered account starts
+    // unverified, so this is genuinely the only reachable post-login state without an OTP.
     const registerRes = await request.post('http://localhost:8080/api/v1/auth/register', {
       data: { email, password },
     })
@@ -32,10 +36,13 @@ test.describe('Login — real backend', () => {
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Log In' }).click()
 
-    await expect(page).toHaveURL(/\/app\/home$/)
+    // The onboarding gate (RequireRole, routes/guards.tsx) redirects an unverified account
+    // here instead of its role's landing route — this is intentional, not a bug: verification
+    // is mandatory and cannot be skipped.
+    await expect(page).toHaveURL(/\/verify-email$/)
   })
 
-  test('a citizen cannot reach an NGO or Admin route by navigating there directly', async ({
+  test('an unverified citizen cannot reach an NGO or Admin route by navigating there directly', async ({
     page,
     request,
   }) => {
@@ -48,12 +55,15 @@ test.describe('Login — real backend', () => {
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Log In' }).click()
-    await expect(page).toHaveURL(/\/app\/home$/)
+    await expect(page).toHaveURL(/\/verify-email$/)
 
+    // Neither route is reachable: role-mismatch bounces to /app/home, which itself then
+    // bounces to /verify-email since this account still isn't verified — same end state
+    // either way, never the admin/NGO screen itself.
     await page.goto('/admin/dashboard')
-    await expect(page).toHaveURL(/\/app\/home$/)
+    await expect(page).toHaveURL(/\/verify-email$/)
 
     await page.goto('/ngo/dashboard')
-    await expect(page).toHaveURL(/\/app\/home$/)
+    await expect(page).toHaveURL(/\/verify-email$/)
   })
 })

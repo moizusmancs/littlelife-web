@@ -56,3 +56,32 @@ export async function getMe(accessToken: string): Promise<MeResponse> {
 export async function logout(): Promise<void> {
   await apiClient.post('/auth/logout')
 }
+
+export interface RegisterResponse {
+  id: string
+  email: string
+  status: string
+  access_token: string
+  refresh_token: string
+}
+
+/**
+ * POST /auth/register — the request body is deliberately exactly `{email, password}`. The
+ * backend has no field for name, phone, or a language preference at all; those are captured
+ * later, post-verification, via profile PATCH routes during the mandatory onboarding flow —
+ * see RegisterPage's own comment for why this screen doesn't collect them.
+ *
+ * `password` needs 8+ characters, no other complexity rule. Always creates `role: "user"`
+ * (self-signup can never produce any other role) and `status: "pending_verification"`.
+ *
+ * Real asymmetry to know about: unlike login/refresh, this route does NOT apply the web/mobile
+ * cookie split — it always returns `refresh_token` as a plain body field and never sets a
+ * cookie, even for a web client. RegisterPage does not rely on this response's tokens for the
+ * ongoing session; it immediately calls `login` with the same credentials afterward to
+ * establish a real cookie-backed session the normal way (the doc's own recommended fix for
+ * this asymmetry).
+ */
+export async function register(email: string, password: string): Promise<RegisterResponse> {
+  const res = await apiClient.post<RegisterResponse>('/auth/register', { email, password })
+  return res.data
+}

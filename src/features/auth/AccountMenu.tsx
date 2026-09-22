@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { SignOut } from '@phosphor-icons/react'
+import { SignOutIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 export interface AccountMenuProps {
@@ -40,11 +40,11 @@ export function AccountMenu({ trigger, email, roleLabel, onLogout, isLoggingOut,
             disabled={isLoggingOut}
             className={cn(
               'flex cursor-pointer items-center gap-2.5 rounded-sm px-3 py-2.5 font-body text-body-md text-status-critical outline-none select-none',
-              'data-[highlighted]:bg-status-critical-tint',
+              'data-highlighted:bg-status-critical-tint',
               isLoggingOut && 'pointer-events-none opacity-60',
             )}
           >
-            <SignOut size={18} />
+            <SignOutIcon size={18} />
             {isLoggingOut ? 'Logging out…' : 'Log Out'}
           </DropdownMenu.Item>
         </DropdownMenu.Content>

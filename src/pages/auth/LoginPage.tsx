@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
+import { BuildingsIcon, MapPinIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { LoginForm } from '@/features/auth/LoginForm'
 import { loginSchema, type LoginFormValues } from '@/features/auth/schemas'
@@ -50,7 +51,32 @@ export function LoginPage() {
   })
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Log in to continue to LittleLife.">
+    <AuthLayout
+      heroHeadline="Flood safety, from your neighbours and the people who respond."
+      heroContent={
+        <>
+          <p className="mt-4.5 max-w-110 font-body text-body-lg text-white/92">
+            Community reports, verified alerts and safe routes for Pakistan — one account for
+            citizens, NGOs and NDMA staff.
+          </p>
+          <div className="mt-11 flex gap-7 font-body text-label font-medium text-white/90">
+            <span className="flex items-center gap-1.5">
+              <UsersThreeIcon size={16} /> 212k citizens
+            </span>
+            <span className="flex items-center gap-1.5">
+              <BuildingsIcon size={16} /> 48 NGOs
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MapPinIcon size={16} /> 134 districts
+            </span>
+          </div>
+        </>
+      }
+      secondCircle
+      cardWidth={440}
+      title="Welcome back"
+      subtitle="Log in to continue to LittleLife."
+    >
       <LoginForm
         register={register}
         errors={errors}

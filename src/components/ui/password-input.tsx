@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Eye, EyeSlash, LockKey } from '@phosphor-icons/react'
+import { EyeIcon, EyeSlashIcon, LockKeyIcon } from '@phosphor-icons/react'
 import { Input, type InputProps } from '@/components/ui/input'
 
 /**
@@ -8,15 +8,21 @@ import { Input, type InputProps } from '@/components/ui/input'
  * `...props`), so this local `useState` doesn't violate "state lives in the parent, not the
  * component": there is no business state here, only whether the glyphs are masked.
  */
-export const PasswordInput = React.forwardRef<HTMLInputElement, Omit<InputProps, 'type' | 'leadingIcon' | 'trailingSlot'>>(
-  (props, ref) => {
+export interface PasswordInputProps extends Omit<InputProps, 'type' | 'leadingIcon' | 'trailingSlot'> {
+  /** Login's mockup shows a leading lock icon on the password field; Register's doesn't
+   *  (Batch 3 Citizen §3a) — default on, so existing call sites don't need to change. */
+  showLockIcon?: boolean
+}
+
+export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
+  ({ showLockIcon = true, ...props }, ref) => {
     const [visible, setVisible] = React.useState(false)
 
     return (
       <Input
         ref={ref}
         type={visible ? 'text' : 'password'}
-        leadingIcon={<LockKey size={18} />}
+        leadingIcon={showLockIcon ? <LockKeyIcon size={18} /> : undefined}
         trailingSlot={
           <button
             type="button"
@@ -24,7 +30,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, Omit<InputProps,
             className="flex text-ink-500 hover:text-ink-700"
             aria-label={visible ? 'Hide password' : 'Show password'}
           >
-            {visible ? <EyeSlash size={18} /> : <Eye size={18} />}
+            {visible ? <EyeSlashIcon size={18} /> : <EyeIcon size={18} />}
           </button>
         }
         {...props}

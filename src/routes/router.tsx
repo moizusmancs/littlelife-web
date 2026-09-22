@@ -3,7 +3,8 @@ import { CitizenLayout } from '@/layouts/CitizenLayout'
 import { OpsLayout } from '@/layouts/OpsLayout'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import { RedirectIfAuthenticated, RequireRole } from '@/routes/guards'
+import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { RedirectIfAuthenticated, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
  *  phase (noted per-route below) replaces it — swap one `element` at a time, the tree itself
@@ -14,10 +15,15 @@ export function AppRouter() {
       <Routes>
         <Route element={<RedirectIfAuthenticated />}>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<PlaceholderPage title="Register" phase="Phase 1" />} />
-          <Route path="/verify-email" element={<PlaceholderPage title="Verify Email (OTP)" phase="Phase 1" />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<PlaceholderPage title="Forgot Password" phase="Phase 1" />} />
           <Route path="/reset-password" element={<PlaceholderPage title="Reset Password" phase="Phase 1" />} />
+        </Route>
+
+        {/* Mandatory onboarding step 1 of 2 — must be authenticated (registration logs the
+            account in immediately) but not yet verified; see RequireUnverifiedSession. */}
+        <Route element={<RequireUnverifiedSession />}>
+          <Route path="/verify-email" element={<PlaceholderPage title="Verify Email (OTP)" phase="Phase 1 (next)" />} />
         </Route>
 
         {/* Citizen Web */}
