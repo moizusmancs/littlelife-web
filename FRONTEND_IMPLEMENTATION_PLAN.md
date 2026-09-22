@@ -4,6 +4,98 @@
 backend ships more of `IMPLEMENTATION_ROADMAP.md`; nothing else about a phase should need to
 change when that happens — that's the entire point of the service-layer split in Phase 0.
 
+## Progress so far
+
+**Phase 0 — Foundation & Architecture: ✅ Done.**
+
+**Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
+real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), and the
+onboarding profile-completion step. Not yet built: Forgot/Reset Password, Account Settings, My
+NGO, Invitations, Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
+
+**Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
+section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
+short version.
+
+### Real deviations from the mockups, found and resolved while building (not silent departures)
+
+- **Login's "Email or phone" field → "Email" only.** `POST /auth/login` only ever accepts
+  `{email, password}` — there is no phone-login route anywhere in Identity.
+- **Register dropped name, phone+SMS-OTP, and the language picker entirely.**
+  `POST /auth/register` accepts exactly `{email, password}`. Confirmed with you: onboarding
+  collects the rest afterward, gated, via profile `PATCH` routes — see below.
+- **Verify Email dropped the mockup's SMS/voice-call framing for email delivery.** The backend's
+  OTP is emailed only (`api/00-identity.md`) — never texted. Confirmed with you as the fix.
+- **No region-picker onboarding step exists.** There is no backend field anywhere to persist a
+  citizen's home region (Profile only has `name`). Confirmed with you: onboarding is name-only;
+  `/app/onboarding/region` (Phase 2 below) stays a placeholder, unrelated to the mandatory chain.
+- **Mapbox → Leaflet** (§2.1) — decided before Phase 1 started, still holding.
+
+### New architecture Phase 1 revealed, beyond what Phase 0 originally scoped
+
+- **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
+  can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
+  mandatory second gate, chained after verification. `RequireRole` (`src/routes/guards.tsx`) now
+  checks both `emailVerified` and `profileComplete`; two new guards —
+  `RequireUnverifiedSession` (`/verify-email`) and `RequireIncompleteProfile`
+  (`/app/onboarding/profile`) — enforce each step can only be reached in the right window, in
+  both directions (can't skip ahead, can't revisit a completed step). `nextAuthRoute()`
+  (`src/store/auth.ts`) is the single "what's next" function every auth-flow screen navigates
+  through and what the guards enforce, so the two can never drift apart.
+- **No dev proxy.** The backend now allows CORS from the Vite origin directly (fixed
+  backend-side, verified live) — removed the Origin-rewrite proxy workaround from
+  `vite.config.ts` entirely; the app calls `http://localhost:8080/api/v1` directly via
+  `.env.local`'s `VITE_API_BASE_URL`.
+- **A dev-only debug hook** (`window.__authStore`, set in `App.tsx` behind
+  `import.meta.env.DEV` — compiled away from production builds) — lets manual/E2E checks set
+  auth state directly to reach onboarding-gated screens for visual verification without a real
+  OTP, which isn't obtainable through any response body (the backend only logs it server-side).
+- **MSW's role expanded slightly beyond Phase 7's original scope.** Still the mocking layer for
+  not-yet-built domains as planned, but also used with per-test `server.use()` overrides for
+  deterministic unit tests of *built* domains (Login/Register/Verify/Onboarding's own tests) —
+  cheaper and more reliable than hitting the real network in a unit test, while E2E still runs
+  against the real backend for the same flows.
+
+### Component library actually built so far (`src/components/ui/`)
+
+`Button` (variants: primary, secondary, ghost, dangerOutline, criticalSolid, safeSolid — the
+latter two reserved for real emergency actions, never generic destructive ones, per the design
+system's own rule), `Input` (leading icon + trailing slot; the `<input>` itself owns the full
+visible box rather than a wrapper div — see the Safari fix below), `PasswordInput` (show/hide
+toggle, optional leading lock icon), `OtpInput` (6 boxes, auto-advance/backspace/paste,
+fully responsive down to 320px), `Checkbox` (real native input, `group-has-checked:` for visual
+styling), `Badge`, `Label`. **Not built via shadcn's CLI** — every component is hand-built
+directly against the verified design tokens (§2.4); shadcn's generated components assume a
+different, Material-adjacent visual language that would need a full rewrite to match this design
+system anyway, so §2.2's original "shadcn/ui" line undersold what actually happened — Radix
+primitives (dropdown menu, etc.) plus `class-variance-authority` directly, shadcn's *pattern*
+without its generated code.
+
+### Real bugs found and fixed along the way
+
+- **Safari's native autofill highlight nested visibly inside `Input`'s own border** — the
+  leading icon was a flex *sibling* of the `<input>`, so the real input element's own DOM box
+  was narrower than the visible field, and Safari's autofill chrome anchors to the actual
+  element. Fixed by making the `<input>` own the full visible box, icon absolutely-positioned on
+  top instead of laid out beside it.
+- **Two separate flexbox `min-width: auto` overflow bugs** — one in `AuthLayout`'s mobile
+  column, one in `VerifyEmailForm`'s OTP row — both the classic case of a flex descendant's
+  content-driven minimum width silently forcing an ancestor wider than the viewport. Fixed with
+  `min-w-0` at each level; the OTP fix also switched the 6 boxes from fixed 52px to `flex-1`
+  with a capped max width, so they shrink gracefully on any narrow phone (verified: zero
+  overflow down to 320px) instead of clipping.
+- **Every `@phosphor-icons/react` import across the codebase used deprecated bare names**
+  (`Buildings` instead of `BuildingsIcon`, etc.) — renamed project-wide before it spread further.
+- **`sed -i` writes to tracked project files silently don't persist** in this harness (reverted
+  on the next tool call) — switched to the Edit tool for all renames.
+- A `Button`'s loading state stripped its accessible name entirely (spinner-only, nothing for a
+  screen reader) — fixed with a visually-hidden label that survives the loading state — which
+  then broke multi-child buttons' flex `gap` layout (the Google button's icon+label+badge);
+  fixed with `display: contents` on the label wrapper so it doesn't introduce a box that breaks
+  the parent's own flex layout.
+
+---
+
 ## 0. Purpose & how to use this document
 
 This is the build order for the React/Vite web frontend: which screen gets built when, which
@@ -76,9 +168,9 @@ interface, not a rewrite of any screen that uses it.
 
 | Concern | Choice |
 |---|---|
-| Styling | Tailwind CSS, tokens sourced from the verified design system (§2.4) |
-| Components | shadcn/ui (Radix + Tailwind), restyled to the real tokens |
-| Icons | **`@phosphor-icons/react`** — the actual design system's icon set (not lucide-react — that was only ever a default for the unused "Modernist" `_ds/` folder, which nothing in the real mockups references) |
+| Styling | Tailwind CSS **v4** (CSS-first `@theme` config, not a JS config file), tokens sourced from the verified design system (§2.4) |
+| Components | Hand-built directly against the design tokens, using Radix primitives (dropdown menu, etc.) + `class-variance-authority` for variants — shadcn's *pattern*, not its CLI-generated components (see Progress log — shadcn's own components assume a different visual language that would need a full rewrite anyway) |
+| Icons | **`@phosphor-icons/react`** — the actual design system's icon set (not lucide-react — that was only ever a default for the unused "Modernist" `_ds/` folder, which nothing in the real mockups references). **Import every icon by its `*Icon`-suffixed name** (`BuildingsIcon`, not `Buildings`) — the bare names are deprecated aliases in the installed version |
 | Routing | React Router v7, route tree per `WEB_DESIGN_PLAN.md` §2 |
 | Server state | TanStack Query |
 | Client state | Zustand (auth/session, theme, locale) |
@@ -171,26 +263,53 @@ hand-type from memory). Key points to get right:
   `navigation.ts`, `communication.ts`, `taskAssignments.ts`, `escalations.ts`, `reporting.ts` for
   the not-yet-built domains (Phase 7). Every screen calls through this layer, never Axios directly
   — this is what makes swapping a mock for a real backend call a one-file change.
-- **Auth store** (Zustand): in-memory access token + decoded role claim, `setAuth`/`clearAuth`.
-  Never persisted to `localStorage` (XSS surface) — a page refresh re-derives it via
-  `POST /auth/refresh` (cookie-based for web, per the API's `X-Client` convention — web sends no
-  `X-Client` header, so the refresh token stays an httpOnly cookie, never touched by JS).
-- **Axios instance**: `withCredentials: true`; request interceptor attaches
+  `identity.ts` and `profiling.ts` are partially filled in now (`login`, `getMe`, `logout`,
+  `register`, `verifyEmail`, `resendVerification`, `getProfile`, `updateProfile`) — the rest of
+  each file's real routes get added screen by screen as their phase is built, per the original plan.
+- **Auth store** (`src/store/auth.ts`, Zustand): in-memory access token + `AuthUser` (`id`,
+  `email`, `role`, `emailVerified`, `profileComplete`), `setAuth`/`clearAuth`/`markProfileComplete`.
+  Never persisted to `localStorage`/`sessionStorage` (XSS surface, verified with a real E2E check,
+  not just a code comment) — a page refresh re-derives it via `POST /auth/refresh` (cookie-based
+  for web, per the API's `X-Client` convention — web sends no `X-Client` header, so the refresh
+  token stays an httpOnly cookie, never touched by JS). `nextAuthRoute(user)` is the single
+  function every auth-flow screen and every guard uses to decide "where does this user go next"
+  through the mandatory chain (verify email → complete profile → the app) — see the Progress log.
+- **Axios instance** (`src/api/client.ts`): `withCredentials: true`; request interceptor attaches
   `Authorization: Bearer <token>`; response interceptor catches a `401`, calls `/auth/refresh`
-  once, retries the original request, and hard-redirects to `/login` on refresh failure.
-- **Route guards**: role read from the JWT claim in the auth store; `/app/*` requires `user`,
-  `/ngo/*` requires `ngo_admin`/`ngo_volunteer`, `/admin/*` requires `admin`/`super_admin`. Login
-  always resolves to exactly one landing route per `WEB_DESIGN_PLAN.md` §0 — no in-app role switch.
-- **Two nav shells**: Citizen top-nav (per `WEB_DESIGN_PLAN.md` §4.1) and the shared NGO/Admin
-  sidebar (§4.2) — build `Ops Sidebar.dc.html` almost directly, it's a real parameterized
-  (`role: 'admin'|'ngo'`) reference implementation of exactly this component, not just a mockup.
+  once (deduped across concurrent requests), retries the original request, and clears auth state
+  on refresh failure (route guards handle the redirect, not the interceptor itself).
+- **Route guards** (`src/routes/guards.tsx`): `RequireRole({allowed})` gates `/app/*` (`user`),
+  `/ngo/*` (`ngo_admin`/`ngo_volunteer`), `/admin/*` (`admin`/`super_admin`) — and, beyond role,
+  also requires `emailVerified` and `profileComplete`, redirecting into the onboarding chain
+  otherwise. `RedirectIfAuthenticated` sends an already-authenticated visitor away from
+  `/login`/`/register`/etc. to wherever `nextAuthRoute` says, not straight to their role's
+  landing route (an unverified account hitting `/login` again should land back in the chain, not
+  bounce past it). `RequireUnverifiedSession` (`/verify-email`) and `RequireIncompleteProfile`
+  (`/app/onboarding/profile`) gate the two onboarding steps themselves, each allowing entry only
+  in the correct window. No in-app role switcher (`WEB_DESIGN_PLAN.md` §0).
+- **Auth flow shell** (`src/layouts/AuthLayout.tsx`): shared chrome for every Pattern W-Auth
+  screen (Login, Register, Verify Email built; Forgot/Reset Password still to come) — fixed
+  620px brand panel matching the pixel mockups exactly, with per-screen `heroHeadline`/
+  `heroContent`/`heroPreHeadline` (the OTP step indicator) slots and a `cardWidth` prop, since
+  Login/Register/OTP each specify slightly different card widths and hero content in their own
+  mockups. Below `md` it collapses to a compact header (not part of the pixel spec — the mockups
+  only cover 1440 desktop, this is a deliberate, documented extrapolation).
+- **Two nav shells**: Citizen top-nav (per `WEB_DESIGN_PLAN.md` §4.1, `src/layouts/CitizenLayout.tsx`)
+  and the shared NGO/Admin sidebar (§4.2, `src/layouts/OpsLayout.tsx`) — built from
+  `Ops Sidebar.dc.html` almost directly, a real parameterized (`role: 'admin'|'ngo'`) reference
+  implementation, not just a mockup. Both wired to a shared `AccountMenu` (`src/features/auth/`)
+  for logout.
 - **MSW setup**: `src/mocks/handlers/*.ts` per not-yet-built domain, `src/mocks/browser.ts` (dev)
   and `src/mocks/server.ts` (tests). Handlers shaped to match the *documented* eventual contract in
-  `WEB_DESIGN_PLAN.md` §6's "On click →" column, so swapping to real is a contract-compatible change.
+  `WEB_DESIGN_PLAN.md` §6's "On click →" column, so swapping to real is a contract-compatible
+  change. Also used, beyond the original Phase 7 scope, via per-test `server.use()` overrides for
+  deterministic unit tests of already-built domains (see Progress log) — E2E still hits the real
+  backend for those.
 - **i18n scaffold**: `en`/`ur` namespaces, `dir` + font-family (`Inter`/`Manrope` ↔ `Noto Sans
   Arabic`) driven off locale.
-- **Testing scaffold**: Vitest + RTL config, Playwright config pointed at the local dev server (and
-  the local Go backend via docker-compose, where the phase under test has a real backend).
+- **Testing scaffold**: Vitest + RTL config, Playwright config pointed at the local Vite dev
+  server, calling the local Go backend **directly** (no dev proxy — the backend allows CORS from
+  the Vite origin natively; see Progress log) wherever a phase's backend is real.
 
 ---
 
@@ -211,7 +330,7 @@ finishing all of Citizen before starting NGO. This means:
 
 ---
 
-## Phase 0 — Foundation & Architecture
+## Phase 0 — Foundation & Architecture ✅ Done
 
 **Screens:** none.
 
@@ -231,11 +350,11 @@ finishing all of Citizen before starting NGO. This means:
 **Testing:** the smoke tests above. No feature tests yet — nothing to test.
 
 **Exit criteria:** `npm run dev` shows a themed, empty app shell for all three role route groups;
-`npm run test` and a Playwright smoke run both pass; lint/typecheck clean.
+`npm run test` and a Playwright smoke run both pass; lint/typecheck clean. **Met.**
 
 ---
 
-## Phase 1 — Identity & Account Shell
+## Phase 1 — Identity & Account Shell 🚧 In progress
 
 Covers every screen backed by `internal/identity` across all three roles. This is first because
 role-based routing (Phase 0) needs real login to actually exercise it, and every later phase's
@@ -243,60 +362,77 @@ screens sit behind auth.
 
 ### Screens
 
-| Screen | Route | Role | Pattern |
-|---|---|---|---|
-| Login | `/login` | All | W-Auth |
-| Register | `/register` | Citizen | W-Auth |
-| Verify Email (OTP) | `/verify-email` | Citizen | W-Auth |
-| Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth |
-| Edit Profile (name portion only — full profile is Phase 3) | `/app/profile/edit` | Citizen | W-Settings |
-| Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings |
-| My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings |
-| Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings |
-| Organization Settings | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings |
-| My Account | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings |
-| Volunteers | `/ngo/volunteers` | NGO | W-List |
-| Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail |
-| NGOs (+ detail) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail |
+| Screen | Route | Role | Pattern | Status |
+|---|---|---|---|---|
+| Login | `/login` | All | W-Auth | ✅ Built |
+| Register | `/register` | Citizen | W-Auth | ✅ Built |
+| Verify Email (OTP) | `/verify-email` | Citizen | W-Auth | ✅ Built |
+| Onboarding — Complete Profile **(NEW, see Progress log — mandatory step 2/2, no name changed but not originally its own line item)** | `/app/onboarding/profile` | Citizen | W-Auth | ✅ Built |
+| Logout (via `AccountMenu`, both nav shells) | n/a — menu action | All | — | ✅ Built |
+| Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ⬜ Not built |
+| Edit Profile (name portion only — full profile is Phase 3) | `/app/profile/edit` | Citizen | W-Settings | ⬜ Not built |
+| Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ⬜ Not built |
+| My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ⬜ Not built |
+| Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ⬜ Not built |
+| Organization Settings | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ⬜ Not built |
+| My Account | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ⬜ Not built |
+| Volunteers | `/ngo/volunteers` | NGO | W-List | ⬜ Not built |
+| Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ⬜ Not built |
+| NGOs (+ detail) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail | ⬜ Not built |
 
 ### Backend routes (all ✅ built — `api/00-identity.md`)
 
-| Route | Used by |
-|---|---|
-| `POST /auth/register` | Register |
-| `POST /auth/verify-email`, `POST /auth/resend-verification` | Verify Email |
-| `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Login, auth store bootstrap, global logout |
-| `PATCH /auth/password`, `POST /auth/password/forgot`, `POST /auth/password/reset` | Account Settings, Forgot/Reset |
-| `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings |
-| `POST /ngos/register` | My NGO → Register form |
-| `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list |
-| `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings |
-| `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) |
-| `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side) |
-| `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts |
+| Route | Used by | Status |
+|---|---|---|
+| `POST /auth/register` | Register | ✅ Wired |
+| `POST /auth/verify-email`, `POST /auth/resend-verification` | Verify Email | ✅ Wired |
+| `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Login, auth store bootstrap, global logout | ✅ Wired |
+| `GET /profile`, `PATCH /profile` | Onboarding profile step (pulled forward from Phase 4 — needed for the mandatory chain, not the full Edit Profile screen) | ✅ Wired (name field only; full profile screen still Phase 4) |
+| `PATCH /auth/password`, `POST /auth/password/forgot`, `POST /auth/password/reset` | Account Settings, Forgot/Reset | ⬜ Not wired |
+| `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ⬜ Not wired |
+| `POST /ngos/register` | My NGO → Register form | ⬜ Not wired |
+| `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
+| `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ⬜ Not wired |
+| `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) | ⬜ Not wired |
+| `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side) | ⬜ Not wired |
+| `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
 
 ### Build steps
-1. Login/Register/OTP/Forgot/Reset first, wired for real immediately (no mock needed, nothing to
-   mock against) — this is what makes every subsequent phase testable as a logged-in user.
-2. Wire the auth store + interceptor's refresh-and-retry against the real backend; write the token
-   lifecycle test now (login → expire → silent refresh → still-authed) since every later phase
-   depends on this working.
-3. Account Settings, My NGO, Invitations (citizen).
-4. Organization Settings, My Account, Volunteers (NGO).
-5. Users & Accounts, NGOs (Admin).
+1. ✅ Login/Register/OTP first, wired for real immediately (no mock needed, nothing to mock
+   against) — this is what makes every subsequent phase testable as a logged-in user. **Forgot/
+   Reset Password still outstanding from this step.**
+2. ✅ Auth store + interceptor's refresh-and-retry wired against the real backend; the token
+   lifecycle (login → expire → silent refresh → still-authed) is proven by the
+   "access token never touches browser storage" E2E test and the refresh-retry logic in
+   `src/api/client.ts` — every later phase depends on this working.
+   - ✅ **Added, not in the original plan:** the onboarding-completion step (name via
+     `PATCH /profile`) as a mandatory gate alongside email verification — see Progress log.
+3. ⬜ Account Settings, My NGO, Invitations (citizen).
+4. ⬜ Organization Settings, My Account, Volunteers (NGO).
+5. ⬜ Users & Accounts, NGOs (Admin).
 
 ### Testing
-- Component: form validation (Zod schemas matching each route's documented required fields),
-  password-rule live checklist, OTP auto-submit-on-6th-digit.
-- E2E (Playwright, real backend): register → verify OTP → land on `/app/onboarding/region` (stub
-  redirect target until Phase 2); login → correct role landing route for each of the 5 roles;
-  logout clears session; NGO registration → admin approval → promoted account can log in as
-  `ngo_admin`; volunteer invitation → citizen accepts → promoted to `ngo_volunteer`.
-- Manual: 401-refresh-retry against a real expired token; deactivate/delete flows (destructive,
-  verify confirmation dialogs actually gate the call).
+- ✅ Component: form validation (Zod schemas matching each route's documented required fields),
+  password-rule live checklist → **implemented as a strength meter, not a hard gate, since the
+  backend only enforces an 8-char minimum, no complexity rule**, OTP auto-submit-on-6th-digit.
+- ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
+  `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
+  unverified account → lands in the onboarding chain, not the role landing route; an unverified
+  citizen cannot reach `/app/home`, `/ngo/dashboard`, or `/admin/dashboard` by direct navigation;
+  logout clears the session server-side (verified by re-attempting a protected route after);
+  invalid-code OTP shows the real backend error; resend calls the real endpoint.
+  - ⬜ Not yet possible: a full "register → really verify → land in the app" E2E path — the real
+    OTP is only server-logged, not obtainable from any response this test suite can read. Revisit
+    once/if there's a way to complete this without a human reading a server log.
+  - ⬜ NGO registration → admin approval → promoted account login; volunteer invitation → accept
+    → promoted to `ngo_volunteer` — blocked on Users & Accounts / NGOs / Volunteers screens
+    (steps 3–5 above) not being built yet.
+- ⬜ Manual: 401-refresh-retry against a real expired token; deactivate/delete flows.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
-approval and volunteer promotion flows work end-to-end against the real backend.
+approval and volunteer promotion flows work end-to-end against the real backend. **Partially
+met** — register/login/logout/verify/onboard are real and tested; account management and the
+NGO/admin account-lifecycle screens remain.
 
 ---
 
@@ -426,7 +562,7 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 | `GET /trust-score` | `06-trust.md` | Credibility |
 | `GET /accounts/{id}/trust-score` | `06-trust.md` | NGO/Admin embedded credibility badge |
 | `POST /admin/accounts/{id}/moderation-actions`, `GET /admin/accounts/{id}/moderation-actions` | `06-trust.md` | Admin Account Detail (ships Phase 1, retrofit this panel in) |
-| `GET /profile`, `PATCH /profile` | `05-profiling.md` | Edit Profile |
+| `GET /profile`, `PATCH /profile` | `05-profiling.md` | Edit Profile — **the service-layer functions (`getProfile`/`updateProfile`) and the `name` field already exist**, pulled forward into Phase 1 for the onboarding gate; this phase is just the standalone Edit Profile screen reusing them, no new backend work |
 | `GET /profile/alert-preferences`, `PATCH /profile/alert-preferences` | `05-profiling.md` | Alert Preferences (auto-saves on change, no Save button, per spec) |
 | `GET /profile/activity-timeline` | roadmap "No Single Owner" — hosted in `internal/profiling`, reads across contexts | Activity Timeline |
 
@@ -712,3 +848,11 @@ When a backend domain in §1's table flips from ❌ to ✅: update that row, mov
 Axios, re-run that domain's E2E suite against the real backend, and check the box. Nothing else in
 this document should need to change — if it does, that's a sign the service-layer boundary leaked
 somewhere and is worth fixing.
+
+When a screen is actually built: flip its row in that phase's Screens table from ⬜ to ✅, update
+the Backend routes table's Status column, cross out completed Build steps, and update the
+Progress log at the top — that section is the fast-scan summary, it should never fall out of
+sync with what the phase sections themselves say. Add new "Real deviations"/"Real bugs
+found"/"New architecture" entries there as they happen, in the same style as Phase 1's — the
+value of this document is as an honest record of what actually happened, not a restatement of
+the original plan.
