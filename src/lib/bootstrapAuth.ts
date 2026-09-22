@@ -1,13 +1,6 @@
-import { apiClient, refreshAccessToken } from '@/api/client'
-import { useAuthStore, type Role } from '@/store/auth'
-
-interface MeResponse {
-  id: string
-  email: string
-  role: Role
-  status: string
-  email_verified: boolean
-}
+import { refreshAccessToken } from '@/api/client'
+import { getMe } from '@/api/identity'
+import { useAuthStore } from '@/store/auth'
 
 /**
  * Runs once on app load. Tries to turn the web session cookie (if any) into a live access
@@ -24,14 +17,12 @@ interface MeResponse {
 export async function bootstrapAuth() {
   try {
     const accessToken = await refreshAccessToken()
-    const me = await apiClient.get<MeResponse>('/auth/me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    const me = await getMe(accessToken)
     useAuthStore.getState().setAuth(accessToken, {
-      id: me.data.id,
-      email: me.data.email,
-      role: me.data.role,
-      emailVerified: me.data.email_verified,
+      id: me.id,
+      email: me.email,
+      role: me.role,
+      emailVerified: me.email_verified,
     })
   } catch {
     // No session cookie, or it's expired/invalid — stay logged out.

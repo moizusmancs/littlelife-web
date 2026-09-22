@@ -1,17 +1,21 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import { OpsLayout } from './OpsLayout'
 
 function renderAt(role: 'ngo' | 'admin', path: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<OpsLayout role={role} />}>
-          <Route path={path} element={<div>page content</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<OpsLayout role={role} />}>
+            <Route path={path} element={<div>page content</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

@@ -4,12 +4,15 @@ import { Bell, CaretUpDown, Lifebuoy, List } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import { adminNavGroups, ngoNavGroups, type OpsNavGroup } from '@/components/nav/opsSidebarNav'
+import { AccountMenu } from '@/features/auth/AccountMenu'
+import { useLogout } from '@/features/auth/useLogout'
 
 /** Shared structural shell for NGO Web and Admin Web (WEB_DESIGN_PLAN.md §4.2) — same layout,
  *  different sidebar contents, selected by `role`. */
 export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
   const [expanded, setExpanded] = useState(true)
   const user = useAuthStore((s) => s.user)
+  const { logout, isLoggingOut } = useLogout()
   const groups: OpsNavGroup[] = role === 'admin' ? adminNavGroups : ngoNavGroups
   const isNgoAdmin = user?.role === 'ngo_admin'
 
@@ -69,23 +72,33 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
           })}
         </nav>
 
-        <div className="flex flex-none items-center gap-2.5 border-t border-surface-border px-4 py-3">
-          <div className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700">
-            {initials}
-          </div>
-          {expanded && (
-            <>
-              <div className="flex min-w-0 flex-col">
-                <span className="overflow-hidden text-ellipsis font-body text-label text-ink-900">
-                  {user?.email ?? '—'}
-                </span>
-                <span className="mt-0.5 self-start rounded-full bg-status-trust-tint px-2 py-px font-body text-[11px] font-medium text-status-trust">
-                  {user?.role}
-                </span>
-              </div>
-              <CaretUpDown size={16} className="ms-auto flex-none text-ink-500" />
-            </>
-          )}
+        <div className="flex-none border-t border-surface-border px-4 py-3">
+          <AccountMenu
+            email={user?.email ?? ''}
+            roleLabel={user?.role ?? ''}
+            onLogout={logout}
+            isLoggingOut={isLoggingOut}
+            trigger={
+              <button type="button" className="flex w-full items-center gap-2.5 rounded-sm" aria-label="Account menu">
+                <div className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700">
+                  {initials}
+                </div>
+                {expanded && (
+                  <>
+                    <div className="flex min-w-0 flex-col text-left">
+                      <span className="overflow-hidden text-ellipsis font-body text-label text-ink-900">
+                        {user?.email ?? '—'}
+                      </span>
+                      <span className="mt-0.5 self-start rounded-full bg-status-trust-tint px-2 py-px font-body text-[11px] font-medium text-status-trust">
+                        {user?.role}
+                      </span>
+                    </div>
+                    <CaretUpDown size={16} className="ms-auto flex-none text-ink-500" />
+                  </>
+                )}
+              </button>
+            }
+          />
         </div>
       </aside>
 

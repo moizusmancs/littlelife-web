@@ -6,6 +6,6 @@ describe('App', () => {
   it('bootstraps and lands an unauthenticated visitor on the Login screen', async () => {
     render(<App />)
 
-    expect(await screen.findByText('Login')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
   })
 })

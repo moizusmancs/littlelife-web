@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { CitizenLayout } from '@/layouts/CitizenLayout'
 import { OpsLayout } from '@/layouts/OpsLayout'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { LoginPage } from '@/pages/auth/LoginPage'
 import { RedirectIfAuthenticated, RequireRole } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -12,7 +13,7 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<RedirectIfAuthenticated />}>
-          <Route path="/login" element={<PlaceholderPage title="Login" phase="Phase 1" />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<PlaceholderPage title="Register" phase="Phase 1" />} />
           <Route path="/verify-email" element={<PlaceholderPage title="Verify Email (OTP)" phase="Phase 1" />} />
           <Route path="/forgot-password" element={<PlaceholderPage title="Forgot Password" phase="Phase 1" />} />

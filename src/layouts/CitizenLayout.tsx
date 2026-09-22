@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Bell, ChatCircleDots, FirstAidKit, House, Lifebuoy, List, MapTrifold, UsersThree, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
+import { AccountMenu } from '@/features/auth/AccountMenu'
+import { useLogout } from '@/features/auth/useLogout'
 
 const NAV_LINKS = [
   { label: 'Home', to: '/app/home', icon: House },
@@ -15,6 +18,9 @@ const NAV_LINKS = [
  *  768px (Tailwind's default `md`) the center links collapse into a hamburger menu. */
 export function CitizenLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const user = useAuthStore((s) => s.user)
+  const { logout, isLoggingOut } = useLogout()
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '??'
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-base">
@@ -60,12 +66,21 @@ export function CitizenLayout() {
             >
               <ChatCircleDots size={20} />
             </button>
-            <NavLink
-              to="/app/profile"
-              className="flex size-9 items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700"
-            >
-              U
-            </NavLink>
+            <AccountMenu
+              email={user?.email ?? ''}
+              roleLabel="Citizen"
+              onLogout={logout}
+              isLoggingOut={isLoggingOut}
+              trigger={
+                <button
+                  type="button"
+                  className="flex size-9 items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700"
+                  aria-label="Account menu"
+                >
+                  {initials}
+                </button>
+              }
+            />
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
