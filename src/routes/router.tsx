@@ -4,7 +4,9 @@ import { OpsLayout } from '@/layouts/OpsLayout'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
-import { RedirectIfAuthenticated, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
+import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
+import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
+import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
  *  phase (noted per-route below) replaces it — swap one `element` at a time, the tree itself
@@ -20,10 +22,17 @@ export function AppRouter() {
           <Route path="/reset-password" element={<PlaceholderPage title="Reset Password" phase="Phase 1" />} />
         </Route>
 
-        {/* Mandatory onboarding step 1 of 2 — must be authenticated (registration logs the
+        {/* Mandatory onboarding, step 1 of 2 — must be authenticated (registration logs the
             account in immediately) but not yet verified; see RequireUnverifiedSession. */}
         <Route element={<RequireUnverifiedSession />}>
-          <Route path="/verify-email" element={<PlaceholderPage title="Verify Email (OTP)" phase="Phase 1 (next)" />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+        </Route>
+
+        {/* Mandatory onboarding, step 2 of 2 — verified but the profile's `name` is still the
+            empty-string "not yet set" state; see RequireIncompleteProfile. No nav chrome (same
+            AuthLayout shell as the rest of the pre-app flow), not CitizenLayout. */}
+        <Route element={<RequireIncompleteProfile />}>
+          <Route path="/app/onboarding/profile" element={<OnboardingProfilePage />} />
         </Route>
 
         {/* Citizen Web */}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { LifebuoyIcon } from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
 
 /**
  * Shared shell for every Pattern W-Auth screen (Login, Register, Verify Email, Forgot/Reset
@@ -13,6 +14,7 @@ import { LifebuoyIcon } from '@phosphor-icons/react'
  * extrapolation, not part of the pixel spec.
  */
 export function AuthLayout({
+  heroPreHeadline,
   heroHeadline,
   heroContent,
   secondCircle = false,
@@ -21,12 +23,19 @@ export function AuthLayout({
   cardWidth = 440,
   children,
 }: {
+  /** Renders between the logo and headline — only the OTP mockup (Batch 3 Citizen §3b) uses
+   *  this, for its step indicator. Adds the headline's own top margin when present, so callers
+   *  without it don't need to think about spacing. */
+  heroPreHeadline?: ReactNode
   heroHeadline: ReactNode
   heroContent: ReactNode
   /** Login's mockup has two decorative circles, Register's has one — see each screen's own
    *  markup rather than assuming they match. */
   secondCircle?: boolean
-  title: string
+  /** Omit for a screen whose card content isn't the left-aligned title+subtitle+form pattern
+   *  Login/Register use — the OTP screen's card is centered icon+heading+text as one block
+   *  (Batch 3 Citizen §3b) and owns its own heading entirely via `children` instead. */
+  title?: string
   subtitle?: string
   cardWidth?: number
   children: ReactNode
@@ -43,7 +52,8 @@ export function AuthLayout({
 
         <div className="flex-1" />
 
-        <p className="max-w-115 font-heading text-[44px] leading-13 font-bold text-balance">
+        {heroPreHeadline}
+        <p className={cn('max-w-115 font-heading text-[44px] leading-13 font-bold text-balance', heroPreHeadline && 'mt-6')}>
           {heroHeadline}
         </p>
         {heroContent}
@@ -66,9 +76,9 @@ export function AuthLayout({
           className="w-full rounded-md border border-surface-border bg-surface-raised p-9 shadow-md"
           style={{ maxWidth: cardWidth }}
         >
-          <h1 className="font-heading text-h1 font-bold text-ink-900">{title}</h1>
+          {title && <h1 className="font-heading text-h1 font-bold text-ink-900">{title}</h1>}
           {subtitle && <p className="mt-1.5 font-body text-body-md text-ink-500">{subtitle}</p>}
-          <div className="mt-7">{children}</div>
+          <div className={title ? 'mt-7' : undefined}>{children}</div>
         </div>
       </div>
     </div>

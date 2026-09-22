@@ -85,3 +85,38 @@ export async function register(email: string, password: string): Promise<Registe
   const res = await apiClient.post<RegisterResponse>('/auth/register', { email, password })
   return res.data
 }
+
+export interface VerifyEmailResponse {
+  status: string
+  access_token: string
+}
+
+/**
+ * POST /auth/verify-email — `code` must be exactly 6 characters or the request never reaches
+ * the "invalid or expired" branch at all, it's a plain 400 bind failure instead (the caller
+ * should never be able to submit a wrong-length code through the UI in the first place, since
+ * the OTP input itself only accepts 6 digits).
+ *
+ * The response's `access_token` is a FRESH token reflecting `email_verified: true` — the doc's
+ * explicit instruction is to immediately replace the stored token with this one, discarding
+ * the one issued at registration/login (which still claims unverified until it naturally
+ * expires or is refreshed). The caller is responsible for that swap; this function just
+ * returns what the backend sent.
+ */
+export async function verifyEmail(email: string, code: string): Promise<VerifyEmailResponse> {
+  const res = await apiClient.post<VerifyEmailResponse>('/auth/verify-email', { email, code })
+  return res.data
+}
+
+/**
+ * POST /auth/resend-verification — best-effort; a 200 here does not guarantee an email
+ * actually arrived (send failures are only logged server-side). NOT enumeration-safe (404 for
+ * an unknown email, 409 if already verified) — a real concern for an anonymous "resend" button,
+ * but not in this app's actual usage: verify-email is only ever reachable already
+ * authenticated as the exact account being verified (RequireUnverifiedSession), so the email
+ * is never actually unknown to the caller.
+ */
+export async function resendVerification(email: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/auth/resend-verification', { email })
+  return res.data
+}

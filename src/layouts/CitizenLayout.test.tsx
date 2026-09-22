@@ -43,6 +43,7 @@ describe('CitizenLayout', () => {
       email: 'citizen@example.com',
       role: 'user',
       emailVerified: true,
+      profileComplete: true,
     })
     let logoutCalled = false
     server.use(

@@ -23,7 +23,8 @@ test.describe('Register — real backend', () => {
     // And the session RegisterPage established really is cookie-backed (chained through a
     // real /auth/login), not just the register response's own token — refreshing should not
     // log the user out.
-    await expect(page.getByText('Not built yet')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Enter the 6-digit code' })).toBeVisible()
+    await expect(page.getByText(email)).toBeVisible()
   })
 
   test('shows the real conflict error when the email is already registered', async ({ page, request }) => {

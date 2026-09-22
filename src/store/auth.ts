@@ -8,6 +8,12 @@ export interface AuthUser {
   email: string
   role: Role
   emailVerified: boolean
+  /** Derived from Profiling's `GET /profile`.name !== "" (api/05-profiling.md — a freshly
+   *  registered account's name starts as an empty string, the documented "not yet set" state).
+   *  Only the boolean lives here, not the name itself — the auth store holds what route guards
+   *  need to gate on, not a general profile-data cache; the onboarding/profile-edit screens
+   *  fetch the real name independently. */
+  profileComplete: boolean
 }
 
 interface AuthState {
@@ -21,6 +27,9 @@ interface AuthState {
   setAuth: (accessToken: string, user: AuthUser) => void
   clearAuth: () => void
   setBootstrapped: () => void
+  /** Called once onboarding's name step succeeds — flips the gate without needing a full
+   *  re-fetch of everything setAuth normally requires. */
+  markProfileComplete: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -30,6 +39,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (accessToken, user) => set({ accessToken, user }),
   clearAuth: () => set({ accessToken: null, user: null }),
   setBootstrapped: () => set({ isBootstrapping: false }),
+  markProfileComplete: () =>
+    set((state) => (state.user ? { user: { ...state.user, profileComplete: true } } : state)),
 }))
 
 /** Login always resolves to exactly one landing route per role — no in-app role switcher
@@ -45,4 +56,17 @@ export function roleLandingRoute(role: Role): string {
     case 'super_admin':
       return '/admin/dashboard'
   }
+}
+
+/**
+ * Where to send an authenticated user next, given the mandatory onboarding chain
+ * (verify email -> complete profile -> the app) — the single source of truth every
+ * auth-flow page (Login/Register/VerifyEmail/Onboarding) navigates through, and what
+ * RequireRole itself gates on. Keeping this in one place means the "next step" logic can
+ * never drift between a page's own post-success navigation and what the guard enforces.
+ */
+export function nextAuthRoute(user: Pick<AuthUser, 'role' | 'emailVerified' | 'profileComplete'>): string {
+  if (!user.emailVerified) return '/verify-email'
+  if (!user.profileComplete) return '/app/onboarding/profile'
+  return roleLandingRoute(user.role)
 }

@@ -9,7 +9,8 @@ import { AuthLayout } from '@/layouts/AuthLayout'
 import { LoginForm } from '@/features/auth/LoginForm'
 import { loginSchema, type LoginFormValues } from '@/features/auth/schemas'
 import { getMe, login, type LoginResponse } from '@/api/identity'
-import { roleLandingRoute, useAuthStore } from '@/store/auth'
+import { getProfile } from '@/api/profiling'
+import { nextAuthRoute, useAuthStore } from '@/store/auth'
 import type { ApiErrorBody } from '@/api/types'
 
 function extractErrorMessage(error: unknown): string {
@@ -39,13 +40,16 @@ export function LoginPage() {
       // The login response has no `email_verified` field at all — fetch it rather than assume
       // a value (api/00-identity.md; see the comment on identity.login).
       const me = await getMe(data.access_token)
-      setAuth(data.access_token, {
+      const profile = await getProfile(data.access_token)
+      const user = {
         id: data.id,
         email: data.email,
         role: data.role,
         emailVerified: me.email_verified,
-      })
-      navigate(roleLandingRoute(data.role), { replace: true })
+        profileComplete: profile.name !== '',
+      }
+      setAuth(data.access_token, user)
+      navigate(nextAuthRoute(user), { replace: true })
     },
     onError: (error) => setServerError(extractErrorMessage(error)),
   })

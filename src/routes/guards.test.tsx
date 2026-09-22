@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/store/auth'
-import { RequireRole, RedirectIfAuthenticated, RequireUnverifiedSession } from './guards'
+import { RequireRole, RedirectIfAuthenticated, RequireUnverifiedSession, RequireIncompleteProfile } from './guards'
 
 function renderAt(initialPath: string) {
   return render(
@@ -14,6 +14,9 @@ function renderAt(initialPath: string) {
         </Route>
         <Route element={<RequireUnverifiedSession />}>
           <Route path="/verify-email" element={<div>verify email screen</div>} />
+        </Route>
+        <Route element={<RequireIncompleteProfile />}>
+          <Route path="/app/onboarding/profile" element={<div>onboarding profile screen</div>} />
         </Route>
         <Route element={<RequireRole allowed={['user']} />}>
           <Route path="/app/home" element={<div>citizen home</div>} />
@@ -27,6 +30,20 @@ function renderAt(initialPath: string) {
       </Routes>
     </MemoryRouter>,
   )
+}
+
+/** Every helper below defaults to a FULLY onboarded account (verified + profile complete) so
+ *  role-isolation tests aren't accidentally exercising the onboarding gates too — the
+ *  onboarding-specific tests further down override these explicitly. */
+function setAuthedUser(overrides: Partial<Parameters<ReturnType<typeof useAuthStore.getState>['setAuth']>[1]> = {}) {
+  useAuthStore.getState().setAuth('token', {
+    id: '1',
+    email: 'citizen@example.com',
+    role: 'user',
+    emailVerified: true,
+    profileComplete: true,
+    ...overrides,
+  })
 }
 
 describe('route guards — role isolation', () => {
@@ -44,12 +61,7 @@ describe('route guards — role isolation', () => {
   })
 
   it('does NOT let a citizen (role "user") reach the admin dashboard', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '1',
-      email: 'citizen@example.com',
-      role: 'user',
-      emailVerified: true,
-    })
+    setAuthedUser()
 
     renderAt('/admin/dashboard')
 
@@ -58,12 +70,7 @@ describe('route guards — role isolation', () => {
   })
 
   it('does NOT let a citizen reach the NGO dashboard either', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '1',
-      email: 'citizen@example.com',
-      role: 'user',
-      emailVerified: true,
-    })
+    setAuthedUser()
 
     renderAt('/ngo/dashboard')
 
@@ -72,12 +79,7 @@ describe('route guards — role isolation', () => {
   })
 
   it('does NOT let an NGO volunteer reach the admin dashboard', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '2',
-      email: 'volunteer@example.com',
-      role: 'ngo_volunteer',
-      emailVerified: true,
-    })
+    setAuthedUser({ id: '2', email: 'volunteer@example.com', role: 'ngo_volunteer' })
 
     renderAt('/admin/dashboard')
 
@@ -86,38 +88,33 @@ describe('route guards — role isolation', () => {
   })
 
   it('lets an admin reach the admin dashboard', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '3',
-      email: 'admin@example.com',
-      role: 'admin',
-      emailVerified: true,
-    })
+    setAuthedUser({ id: '3', email: 'admin@example.com', role: 'admin' })
 
     renderAt('/admin/dashboard')
 
     expect(screen.getByText('admin dashboard')).toBeInTheDocument()
   })
 
-  it('sends an already-authenticated visitor away from /login to their own landing route', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '3',
-      email: 'admin@example.com',
-      role: 'admin',
-      emailVerified: true,
-    })
+  it('sends an already-authenticated, fully-onboarded visitor away from /login to their own landing route', () => {
+    setAuthedUser({ id: '3', email: 'admin@example.com', role: 'admin' })
 
     renderAt('/login')
 
     expect(screen.getByText('admin dashboard')).toBeInTheDocument()
   })
+})
 
-  it('does NOT let an unverified citizen skip onboarding into the app', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '4',
-      email: 'unverified@example.com',
-      role: 'user',
-      emailVerified: false,
-    })
+describe('route guards — onboarding chain (verify email -> complete profile -> app)', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ isBootstrapping: false })
+  })
+
+  afterEach(() => {
+    useAuthStore.getState().clearAuth()
+  })
+
+  it('does NOT let an unverified citizen skip straight into the app', () => {
+    setAuthedUser({ emailVerified: false, profileComplete: false })
 
     renderAt('/app/home')
 
@@ -126,34 +123,71 @@ describe('route guards — role isolation', () => {
   })
 
   it('renders /verify-email for an authenticated, unverified account', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '4',
-      email: 'unverified@example.com',
-      role: 'user',
-      emailVerified: false,
-    })
+    setAuthedUser({ emailVerified: false, profileComplete: false })
 
     renderAt('/verify-email')
 
     expect(screen.getByText('verify email screen')).toBeInTheDocument()
   })
 
-  it('sends an already-verified account away from /verify-email — nothing to do there', () => {
-    useAuthStore.getState().setAuth('token', {
-      id: '1',
-      email: 'citizen@example.com',
-      role: 'user',
-      emailVerified: true,
-    })
+  it('sends an already-verified, profile-complete account away from /verify-email', () => {
+    setAuthedUser()
 
     renderAt('/verify-email')
 
     expect(screen.getByText('citizen home')).toBeInTheDocument()
   })
 
+  it('sends a verified-but-profile-incomplete account from /verify-email onward to onboarding, not the app', () => {
+    setAuthedUser({ profileComplete: false })
+
+    renderAt('/verify-email')
+
+    expect(screen.getByText('onboarding profile screen')).toBeInTheDocument()
+  })
+
   it('sends an unauthenticated visitor at /verify-email to /register, not the OTP screen', () => {
     renderAt('/verify-email')
 
     expect(screen.getByText('register screen')).toBeInTheDocument()
+  })
+
+  it('does NOT let a verified-but-profile-incomplete citizen skip onboarding into the app', () => {
+    setAuthedUser({ profileComplete: false })
+
+    renderAt('/app/home')
+
+    expect(screen.queryByText('citizen home')).not.toBeInTheDocument()
+    expect(screen.getByText('onboarding profile screen')).toBeInTheDocument()
+  })
+
+  it('renders /app/onboarding/profile for a verified, profile-incomplete account', () => {
+    setAuthedUser({ profileComplete: false })
+
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('onboarding profile screen')).toBeInTheDocument()
+  })
+
+  it('sends an unverified account at /app/onboarding/profile back to /verify-email — step one first', () => {
+    setAuthedUser({ emailVerified: false, profileComplete: false })
+
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('verify email screen')).toBeInTheDocument()
+  })
+
+  it('sends an already-fully-onboarded account away from /app/onboarding/profile', () => {
+    setAuthedUser()
+
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('citizen home')).toBeInTheDocument()
+  })
+
+  it('sends an unauthenticated visitor at /app/onboarding/profile to /login', () => {
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('login screen')).toBeInTheDocument()
   })
 })

@@ -1,5 +1,6 @@
 import { refreshAccessToken } from '@/api/client'
 import { getMe } from '@/api/identity'
+import { getProfile } from '@/api/profiling'
 import { useAuthStore } from '@/store/auth'
 
 /**
@@ -18,11 +19,13 @@ export async function bootstrapAuth() {
   try {
     const accessToken = await refreshAccessToken()
     const me = await getMe(accessToken)
+    const profile = await getProfile(accessToken)
     useAuthStore.getState().setAuth(accessToken, {
       id: me.id,
       email: me.email,
       role: me.role,
       emailVerified: me.email_verified,
+      profileComplete: profile.name !== '',
     })
   } catch {
     // No session cookie, or it's expired/invalid — stay logged out.

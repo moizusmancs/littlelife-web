@@ -68,6 +68,9 @@ describe('LoginPage', () => {
           email_verified: true,
         }),
       ),
+      http.get('*/profile', () =>
+        HttpResponse.json({ id: 'profile-1', name: 'Citizen Name', created_at: '', updated_at: '' }),
+      ),
     )
     renderLoginPage()
 
@@ -76,6 +79,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText('citizen home')).toBeInTheDocument()
     expect(useAuthStore.getState().accessToken).toBe('fake-access-token')
     expect(useAuthStore.getState().user?.emailVerified).toBe(true)
+    expect(useAuthStore.getState().user?.profileComplete).toBe(true)
   })
 
   it('redirects NGO/Admin roles to their own landing route, not the citizen one', async () => {
@@ -97,6 +101,9 @@ describe('LoginPage', () => {
           status: 'active',
           email_verified: true,
         }),
+      ),
+      http.get('*/profile', () =>
+        HttpResponse.json({ id: 'profile-2', name: 'Admin Name', created_at: '', updated_at: '' }),
       ),
     )
     renderLoginPage()

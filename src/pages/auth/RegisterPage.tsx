@@ -9,7 +9,7 @@ import { AuthLayout } from '@/layouts/AuthLayout'
 import { RegisterForm } from '@/features/auth/RegisterForm'
 import { registerSchema, type RegisterFormValues } from '@/features/auth/schemas'
 import { getMe, login, register as registerAccount } from '@/api/identity'
-import { useAuthStore } from '@/store/auth'
+import { nextAuthRoute, useAuthStore } from '@/store/auth'
 import type { ApiErrorBody } from '@/api/types'
 
 function extractErrorMessage(error: unknown): string {
@@ -68,13 +68,18 @@ export function RegisterPage() {
     },
     onSuccess: ({ loginResult, me }) => {
       setServerError(null)
-      setAuth(loginResult.access_token, {
+      // No need to fetch GET /profile here: a freshly-registered account's profile is
+      // documented to always start with name: "" (api/05-profiling.md), created atomically
+      // with the account itself — profileComplete is knowably false without an extra round trip.
+      const user = {
         id: loginResult.id,
         email: loginResult.email,
         role: loginResult.role,
         emailVerified: me.email_verified,
-      })
-      navigate('/verify-email', { replace: true })
+        profileComplete: false,
+      }
+      setAuth(loginResult.access_token, user)
+      navigate(nextAuthRoute(user), { replace: true })
     },
     onError: (error) => setServerError(extractErrorMessage(error)),
   })
