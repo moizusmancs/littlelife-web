@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
 import { EditProfilePage } from '@/pages/profile/EditProfilePage'
+import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -65,7 +66,7 @@ export function AppRouter() {
               <Route path="/app/profile" element={<PlaceholderPage title="Profile Overview" phase="Phase 4" />} />
               <Route path="/app/profile/edit" element={<EditProfilePage />} />
               <Route path="/app/profile/alert-preferences" element={<PlaceholderPage title="Alert Preferences" phase="Phase 4" />} />
-              <Route path="/app/profile/account-settings" element={<PlaceholderPage title="Account Settings" phase="Phase 1" />} />
+              <Route path="/app/profile/account-settings" element={<AccountSettingsPage />} />
               <Route path="/app/profile/credibility" element={<PlaceholderPage title="Credibility" phase="Phase 4" />} />
               <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
               <Route path="/app/profile/ngo" element={<PlaceholderPage title="My NGO" phase="Phase 1" />} />

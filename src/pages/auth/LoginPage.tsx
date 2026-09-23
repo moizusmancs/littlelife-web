@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { BuildingsIcon, MapPinIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { AuthLayout } from '@/layouts/AuthLayout'
@@ -24,14 +24,18 @@ function extractErrorMessage(error: unknown): string {
 /** Container for /login — owns all form/mutation state, LoginForm is pure presentation. */
 export function LoginPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [serverError, setServerError] = useState<string | null>(null)
-  // Set once by ResetPasswordPage's redirect (that route returns no session to carry forward,
-  // so a redirect + message is the only way to close the loop). Persists in history.state for
-  // this entry until the user navigates away — LoginForm hides it once a real serverError
-  // shows, so it never sits alongside a login failure looking like it's still relevant.
-  const infoMessage = (location.state as { infoMessage?: string } | null)?.infoMessage ?? null
+  // Set by ResetPasswordPage or AccountSettingsPage's deactivate/delete before they redirect
+  // here (neither returns a session to carry forward, so a redirect + message is the only way
+  // to close the loop) — read from the auth store's `pendingMessage`, not router `state`; see
+  // that field's own comment for why (a guard-redirect race can silently drop router state).
+  // Read once via a pure lazy initializer, cleared separately via an effect — see the same
+  // comment for why a combined read+clear breaks under StrictMode's dev double-invoke.
+  const [infoMessage] = useState(() => useAuthStore.getState().pendingMessage)
+  useEffect(() => {
+    useAuthStore.getState().clearPendingMessage()
+  }, [])
 
   const {
     register,

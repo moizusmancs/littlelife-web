@@ -10,10 +10,10 @@ change when that happens — that's the entire point of the service-layer split 
 
 **Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
-onboarding profile-completion step, Forgot/Reset Password, and Edit Profile (name portion) — this
-closes out the full auth-screen set plus the first W-Settings screen (steps 1–2 of Phase 1's build
-order). Not yet built: Account Settings, My NGO, Invitations, Organization Settings, NGO/Admin My
-Account, Volunteers, Users & Accounts, NGOs.
+onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), and
+Account Settings (deactivate/delete) — this closes out the full auth-screen set plus the first two
+W-Settings screens (steps 1–2 of Phase 1's build order). Not yet built: My NGO, Invitations,
+Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -61,6 +61,13 @@ short version.
   principle as every other deviation here: build what's real, don't fabricate the rest. Same
   reasoning for the mockup's "Invitations" nav item pending-count badge — omitted, no real count
   exists (Invitations itself isn't built).
+- **Account Settings has exactly two rows, not the mockup's full security panel.** Batch 4 NGO
+  §4m ("My Account") is the closest pixel reference to a settings screen with destructive account
+  rows, but it's staff-facing and mostly fictional relative to the real backend — 2FA, recovery
+  codes, and an active-sessions list have no backing route anywhere in `api/00-identity.md`. Only
+  its row *layout* (icon + title/description + trailing action, divided rows in one card) is
+  reused; the content is exactly the two real routes `WEB_DESIGN_PLAN.md` §6.2 documents —
+  Deactivate (caution icon, reversible) and Delete (critical icon, irreversible) — nothing else.
 
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
@@ -97,13 +104,23 @@ short version.
   second round trip. Every `/app/profile/*` route (built or still a placeholder) is nested under
   it, so the sub-nav stays present and consistent while navigating between them instead of
   flickering in and out per-screen.
-- **Cross-screen handoff via router state, not a global toast system.** `ResetPasswordPage`
-  returns no session (the backend issues no tokens for this route), so after a successful reset
-  it `navigate('/login', {state: {infoMessage}})`s — `LoginForm` reads that one optional prop
-  and shows it as a status banner, hidden the moment a real `serverError` also appears so it
-  never looks like stale advice sitting next to a fresh failure. No toast/notification
-  infrastructure was built for this — a targeted, one-off pattern for the one place today that
-  needs "screen A tells screen B something after a redirect."
+- **Cross-screen handoff to /login via a one-shot auth-store field, not router `state`.**
+  `ResetPasswordPage` and Account Settings' deactivate/delete all return no session to carry
+  forward, so a redirect + message is the only way to close the loop — `LoginForm` shows it as a
+  status banner, hidden the moment a real `serverError` also appears so it never looks like stale
+  advice sitting next to a fresh failure. First built as `navigate('/login', {state:
+  {infoMessage}})`, which worked fine for Reset Password (a pre-auth screen, nothing else
+  competing for `/login`'s next render) but silently lost the message for Account Settings — see
+  the real-bug entry below for why, and `pendingMessage`'s own comment in `store/auth.ts` for the
+  fix. No toast/notification infrastructure was built for this — still a targeted, one-off
+  pattern for "screen A tells screen B something after a redirect," just backed by the store
+  instead of router state now that a second, guarded-route caller exists.
+- **A generic `Dialog` primitive** (`src/components/ui/dialog.tsx`, wrapping
+  `@radix-ui/react-dialog`) — first real consumer is Account Settings' Deactivate/Delete confirm
+  dialogs, built generically (not Account-Settings-specific) since "opens confirm dialog" /
+  "opens password-confirmation dialog" recurs across nearly every later NGO/Admin screen's own
+  button spec (`WEB_DESIGN_PLAN.md`'s "On click →" column). Same shadcn-pattern-not-CLI approach
+  as every other component here.
 - **MSW's role expanded slightly beyond Phase 7's original scope.** Still the mocking layer for
   not-yet-built domains as planned, but also used with per-test `server.use()` overrides for
   deterministic unit tests of *built* domains (Login/Register/Verify/Onboarding's own tests) —
@@ -118,7 +135,8 @@ system's own rule), `Input` (leading icon + trailing slot; the `<input>` itself 
 visible box rather than a wrapper div — see the Safari fix below), `PasswordInput` (show/hide
 toggle, optional leading lock icon), `OtpInput` (6 boxes, auto-advance/backspace/paste,
 fully responsive down to 320px), `Checkbox` (real native input, `group-has-checked:` for visual
-styling), `Badge`, `Label`. **Not built via shadcn's CLI** — every component is hand-built
+styling), `Dialog` (wraps `@radix-ui/react-dialog` — overlay, centered content, title/description,
+close button), `Badge`, `Label`. **Not built via shadcn's CLI** — every component is hand-built
 directly against the verified design tokens (§2.4); shadcn's generated components assume a
 different, Material-adjacent visual language that would need a full rewrite to match this design
 system anyway, so §2.2's original "shadcn/ui" line undersold what actually happened — Radix
@@ -155,6 +173,26 @@ without its generated code.
   account), fixed by checking `name !== null` instead — `null` means "not fetched yet," `""`
   means "fetched, genuinely empty," and the two now render distinctly (skeleton vs. a real
   "Add your name" fallback).
+- **Router `state` silently lost the post-deactivate/delete redirect message** — caught during
+  visual verification against the real backend (the "Your account has been deleted." banner just
+  didn't show up). Root cause: `AccountSettingsPage` clears auth state and navigates away from a
+  route `RequireRole` guards; `RequireRole` reacts to that same state change and fires its own
+  *stateless* `<Navigate to="/login">`, racing the page's own state-carrying `navigate()` call —
+  whichever redirect's history entry wins, the other one's `state` payload is gone. This exact
+  race never showed up on Reset Password (a pre-auth screen with no guard fighting it) or on
+  plain logout (no `state` payload to lose in the first place), so it was latent until this
+  screen's redirect actually needed one. Fixed by moving the message into the auth store itself
+  (`pendingMessage`, see the "New architecture" entry above) — a store field survives any number
+  of redirects in between, unlike a single `navigate()` call's payload.
+- **The `pendingMessage` fix's first attempt broke under React StrictMode** — read via a single
+  combined "consume" action (`get X, clear X` in one call) inside a `useState(() => ...)` lazy
+  initializer. StrictMode double-invokes lazy initializers in dev specifically to catch impure
+  side effects, and this one wasn't pure: the first, thrown-away invocation cleared the message
+  before the second (kept) one ever ran, so it never reached the screen — in dev only, not in a
+  production build, which is exactly why this class of bug is easy to ship unnoticed. Fixed by
+  splitting the read (pure, in the initializer) from the clear (a real side effect, moved to a
+  `useEffect`) — `useEffect`'s own StrictMode double-fire is harmless here since clearing an
+  already-null field is a no-op.
 
 ---
 
@@ -433,7 +471,7 @@ screens sit behind auth.
 | Logout (via `AccountMenu`, both nav shells) | n/a — menu action | All | — | ✅ Built |
 | Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ✅ Built |
 | Edit Profile (name portion only — full profile is Phase 4) | `/app/profile/edit` | Citizen | W-Settings | ✅ Built |
-| Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ⬜ Not built |
+| Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ✅ Built |
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ⬜ Not built |
 | Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ⬜ Not built |
 | Organization Settings | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ⬜ Not built |
@@ -452,7 +490,7 @@ screens sit behind auth.
 | `GET /profile`, `PATCH /profile` | Onboarding profile step; Edit Profile (name field only, full profile screen still Phase 4) | ✅ Wired |
 | `PATCH /auth/password` | Account Settings (change password while logged in) | ⬜ Not wired |
 | `POST /auth/password/forgot`, `POST /auth/password/reset` | Forgot/Reset Password | ✅ Wired |
-| `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ⬜ Not wired |
+| `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ✅ Wired |
 | `POST /ngos/register` | My NGO → Register form | ⬜ Not wired |
 | `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
 | `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ⬜ Not wired |
@@ -473,7 +511,8 @@ screens sit behind auth.
 3. ✅ Edit Profile (name portion), plus the shared `ProfileLayout` W-Settings sub-nav shell every
    later `/app/profile/*` screen (built or still placeholder) now renders inside — see Progress
    log's "New architecture" entry.
-4. ⬜ Account Settings, My NGO, Invitations (citizen) — the remaining `/app/profile/*` screens.
+4. ✅ Account Settings (deactivate/delete), plus the generic `Dialog` primitive it needed — see
+   Progress log. ⬜ My NGO, Invitations remain — the last two `/app/profile/*` screens.
 5. ⬜ Organization Settings, My Account, Volunteers (NGO).
 6. ⬜ Users & Accounts, NGOs (Admin).
 
@@ -486,7 +525,8 @@ screens sit behind auth.
   (no link-validity gate — see Progress log), Edit Profile's loading skeleton vs. loaded-but-
   empty-name states (the `null` vs `""` distinction — see the real-bug entry in Progress log),
   Saved-indicator dirty-tracking, `ProfileLayout`'s shared query cache feeding both the sidebar
-  and the form.
+  and the form, Account Settings' two dialogs (open/close, form reset between opens, error
+  banners), and the `pendingMessage` store field itself (set → shown once on `/login` → cleared).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -501,7 +541,11 @@ screens sit behind auth.
   via a genuine `PATCH /profile`, and the sidebar reflects it live — reached via the
   `window.__authStore` debug-hook technique (see Progress log's "New architecture" entry), which
   is a real backend round trip for every API call even though the route-guard pass itself is
-  faked client-side, not a genuine completed OTP flow.
+  faked client-side, not a genuine completed OTP flow. Account Settings deactivates a real
+  account for real, then proves reactivation by actually logging back in and landing on real
+  (still-unverified) `/verify-email` — not just checking a 200 came back; a wrong password on
+  delete gets the real `401 "invalid email or password"`; a real delete redirects to `/login`
+  with the message and a follow-up real login attempt confirms the account is genuinely gone.
   - ⬜ Still not possible: a full "register → really verify (real OTP, no client-side override) →
     land in the app" E2E path, or "request reset → really reset → log in with the new password"
     — both real OTP/reset tokens are only server-logged, not obtainable from any response this
@@ -510,12 +554,13 @@ screens sit behind auth.
   - ⬜ NGO registration → admin approval → promoted account login; volunteer invitation → accept
     → promoted to `ngo_volunteer` — blocked on Users & Accounts / NGOs / Volunteers screens
     (steps 4–5 above) not being built yet.
-- ⬜ Manual: 401-refresh-retry against a real expired token; deactivate/delete flows.
+- ⬜ Manual: 401-refresh-retry against a real expired token.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
-met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) is real and
-tested; account management and the NGO/admin account-lifecycle screens remain.
+met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
+Profile and Account Settings are real and tested; My NGO/Invitations and the NGO/admin
+account-lifecycle screens remain.
 
 ---
 

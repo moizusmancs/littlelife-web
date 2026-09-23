@@ -32,6 +32,20 @@ async function fillAndSubmit(email: string, password: string) {
 describe('LoginPage', () => {
   afterEach(() => {
     useAuthStore.getState().clearAuth()
+    useAuthStore.getState().clearPendingMessage()
+  })
+
+  it('shows a pending info message from the auth store once, then clears it', async () => {
+    useAuthStore.getState().setPendingMessage('Your account has been deleted.')
+    renderLoginPage()
+
+    expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
+    expect(useAuthStore.getState().pendingMessage).toBeNull()
+  })
+
+  it('shows no info message when none is pending', () => {
+    renderLoginPage()
+    expect(screen.queryByText(/account has been/)).not.toBeInTheDocument()
   })
 
   it('shows the backend error message on invalid credentials and does not authenticate', async () => {

@@ -1,16 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
+import { useAuthStore } from '@/store/auth'
 import { ResetPasswordPage } from './ResetPasswordPage'
 
+/** The real handoff to /login reads `useAuthStore.getState().pendingMessage`, not router
+ *  `state` — see that field's own comment in store/auth.ts for why. This stub mirrors that. */
 function LoginStub() {
-  const location = useLocation()
-  const infoMessage = (location.state as { infoMessage?: string } | null)?.infoMessage
-  return <div>login screen{infoMessage ? ` — ${infoMessage}` : ''}</div>
+  const pendingMessage = useAuthStore((s) => s.pendingMessage)
+  return <div>login screen{pendingMessage ? ` — ${pendingMessage}` : ''}</div>
 }
 
 function renderResetPasswordPage(search: string) {
@@ -28,6 +30,10 @@ function renderResetPasswordPage(search: string) {
 }
 
 describe('ResetPasswordPage', () => {
+  afterEach(() => {
+    useAuthStore.getState().clearPendingMessage()
+  })
+
   it('always renders the full form — there is no link-validity gate, email/token are typed fields', () => {
     renderResetPasswordPage('')
 

@@ -8,6 +8,7 @@ import { AuthLayout } from '@/layouts/AuthLayout'
 import { ResetPasswordForm } from '@/features/auth/ResetPasswordForm'
 import { resetPasswordSchema, type ResetPasswordFormValues } from '@/features/auth/schemas'
 import { resetPassword } from '@/api/identity'
+import { useAuthStore } from '@/store/auth'
 import type { ApiErrorBody } from '@/api/types'
 
 function extractErrorMessage(error: unknown): string {
@@ -50,11 +51,10 @@ export function ResetPasswordPage() {
     onSuccess: () => {
       setServerError(null)
       // No tokens come back from this route — there's no session to carry forward
-      // (api/00-identity.md) — route to login with a real new password.
-      navigate('/login', {
-        replace: true,
-        state: { infoMessage: 'Your password has been reset. Log in with your new password.' },
-      })
+      // (api/00-identity.md) — route to login with a real new password. The message rides the
+      // auth store's `pendingMessage`, not router `state` — see that field's own comment.
+      useAuthStore.getState().setPendingMessage('Your password has been reset. Log in with your new password.')
+      navigate('/login', { replace: true })
     },
     onError: (error) => setServerError(extractErrorMessage(error)),
   })

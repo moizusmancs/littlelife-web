@@ -24,23 +24,45 @@ interface AuthState {
   /** True until the initial /auth/refresh-on-load attempt resolves, so route guards don't
    *  redirect to /login during the brief window before we know if a session cookie exists. */
   isBootstrapping: boolean
+  /** One-shot info banner text for the *next* /login render. Deliberately store state, not a
+   *  `navigate(..., {state})` payload: a route that clears auth and navigates away from a
+   *  guarded `/app/*` screen (Account Settings' deactivate/delete) races `RequireRole`'s own
+   *  effect, which reacts to the same state change and fires its own *stateless*
+   *  `<Navigate to="/login">` — whichever redirect's history entry wins, router `state` attached
+   *  to the other one is simply gone. A store field can't be lost that way; it's still there no
+   *  matter how many redirects happen in between. Not cleared by `clearAuth()` — it needs to
+   *  survive exactly that call.
+   *
+   *  Read it with a plain (pure) `useState(() => get().pendingMessage)` lazy initializer and
+   *  clear it separately from a `useEffect` — NOT a single combined "consume" action called
+   *  from the initializer. StrictMode double-invokes lazy initializers in dev specifically to
+   *  catch side effects; a combined read+clear fails exactly that check — the first, thrown-away
+   *  invocation clears it before the second (kept) one ever runs, so the message never actually
+   *  makes it to screen in dev. `useEffect`'s double-fire is safe here since `clearPendingMessage`
+   *  is idempotent. */
+  pendingMessage: string | null
   setAuth: (accessToken: string, user: AuthUser) => void
   clearAuth: () => void
   setBootstrapped: () => void
   /** Called once onboarding's name step succeeds — flips the gate without needing a full
    *  re-fetch of everything setAuth normally requires. */
   markProfileComplete: () => void
+  setPendingMessage: (message: string) => void
+  clearPendingMessage: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   isBootstrapping: true,
+  pendingMessage: null,
   setAuth: (accessToken, user) => set({ accessToken, user }),
   clearAuth: () => set({ accessToken: null, user: null }),
   setBootstrapped: () => set({ isBootstrapping: false }),
   markProfileComplete: () =>
     set((state) => (state.user ? { user: { ...state.user, profileComplete: true } } : state)),
+  setPendingMessage: (message) => set({ pendingMessage: message }),
+  clearPendingMessage: () => set({ pendingMessage: null }),
 }))
 
 /** Login always resolves to exactly one landing route per role — no in-app role switcher

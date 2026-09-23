@@ -147,3 +147,30 @@ export async function resetPassword(email: string, token: string, newPassword: s
   })
   return res.data
 }
+
+/**
+ * POST /auth/me/deactivate — no body. Reversible: a subsequent successful login with the
+ * correct password automatically reactivates the account (the backend's own note, not
+ * something this frontend has to implement). Revokes every session and clears the web cookie,
+ * same as logout — the caller should clear local auth state and route to `/login` afterward,
+ * not call `logout()` too (there is no session left for that call to act on).
+ */
+export async function deactivateAccount(): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/auth/me/deactivate')
+  return res.data
+}
+
+/**
+ * POST /auth/me/delete — a soft delete, irreversible through any route in this API (the email
+ * becomes available for a brand-new, unrelated registration; there is no "undelete"). Requires
+ * re-entering the current password, same reasoning as `PATCH /auth/password` — a stolen access
+ * token alone shouldn't be able to permanently delete the account. Revokes every session and
+ * clears the web cookie; the caller should clear local auth state and route to `/login`
+ * afterward, same as `deactivateAccount`.
+ */
+export async function deleteAccount(currentPassword: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/auth/me/delete', {
+    current_password: currentPassword,
+  })
+  return res.data
+}
