@@ -17,6 +17,10 @@ export interface LoginFormProps {
   /** Server-side failure message (invalid credentials, suspended account, network error) —
    *  distinct from field-level validation errors, which come from `errors` instead. */
   serverError: string | null
+  /** A non-error status to show once, e.g. "password reset, log in with your new one" after
+   *  ResetPasswordPage redirects here (that route returns no session to carry forward, so a
+   *  redirect + message is the only way to close the loop). */
+  infoMessage?: string | null
 }
 
 /**
@@ -28,9 +32,14 @@ export interface LoginFormProps {
  * `{email, password}` — there is no phone-login route. Labeling the field for a capability the
  * backend doesn't have would be misleading, so this stays "Email."
  */
-export function LoginForm({ register, errors, onSubmit, isSubmitting, serverError }: LoginFormProps) {
+export function LoginForm({ register, errors, onSubmit, isSubmitting, serverError, infoMessage }: LoginFormProps) {
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+      {infoMessage && !serverError && (
+        <div className="rounded-sm border border-status-safe bg-status-safe-tint px-3.5 py-2.5 font-body text-body-sm text-ink-900">
+          {infoMessage}
+        </div>
+      )}
       {serverError && (
         <div
           role="alert"

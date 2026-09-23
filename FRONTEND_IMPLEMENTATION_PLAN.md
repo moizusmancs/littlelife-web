@@ -9,9 +9,10 @@ change when that happens — that's the entire point of the service-layer split 
 **Phase 0 — Foundation & Architecture: ✅ Done.**
 
 **Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
-real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), and the
-onboarding profile-completion step. Not yet built: Forgot/Reset Password, Account Settings, My
-NGO, Invitations, Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
+real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
+onboarding profile-completion step, and Forgot/Reset Password — this closes out the full
+auth-screen set (step 1 of Phase 1's build order). Not yet built: Account Settings, My NGO,
+Invitations, Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -30,6 +31,26 @@ short version.
   citizen's home region (Profile only has `name`). Confirmed with you: onboarding is name-only;
   `/app/onboarding/region` (Phase 2 below) stays a placeholder, unrelated to the mandatory chain.
 - **Mapbox → Leaflet** (§2.1) — decided before Phase 1 started, still holding.
+- **Forgot Password never branches UI on whether the email is registered.** `POST
+  /auth/password/forgot` always returns the same `200` regardless (deliberately
+  enumeration-safe) — the screen shows one confirmation state, period; there is no "email not
+  found" error to build, and building one would misrepresent what the backend actually does.
+  `POST /auth/password/reset`, by contrast, genuinely is not enumeration-safe (a real `404` for
+  an unknown email) — the backend's own deliberate asymmetry between the two routes, both
+  surfaced as-is rather than smoothed over into fake-consistent frontend behavior.
+- **Reset Password is a manual code-entry form, not a magic link.** First built as a
+  click-a-link screen (read `email`/`token` from the URL only, gate the form behind their
+  presence) — corrected per your steer that the real flow is "reset code to email/or logs,
+  then provide this code along email... no magic links." Confirmed empirically against the real
+  backend too: unlike the OTP's 6-digit code (rejected at the wrong length before it even
+  reaches business logic), `POST /auth/password/reset`'s `token` has no length constraint at
+  all — a 1-char, 6-char, and 40-char fake token all hit the identical `invalid or expired code`
+  — and there's no real mailer in dev (the token is only server-logged), so a click-only screen
+  would have nothing to click. `email`, `token`, and both password fields are now all real,
+  editable form inputs (`schemas.ts`'s `resetPasswordSchema`); a `?email=&token=` URL still
+  pre-fills them as a convenience (real email link, or one pasted from a dev server log) but is
+  never required. Forgot Password's confirmation panel now also links forward into
+  `/reset-password?email=...` so the flow has a next step to take, not just "back to login."
 
 ### New architecture Phase 1 revealed, beyond what Phase 0 originally scoped
 
@@ -50,6 +71,13 @@ short version.
   `import.meta.env.DEV` — compiled away from production builds) — lets manual/E2E checks set
   auth state directly to reach onboarding-gated screens for visual verification without a real
   OTP, which isn't obtainable through any response body (the backend only logs it server-side).
+- **Cross-screen handoff via router state, not a global toast system.** `ResetPasswordPage`
+  returns no session (the backend issues no tokens for this route), so after a successful reset
+  it `navigate('/login', {state: {infoMessage}})`s — `LoginForm` reads that one optional prop
+  and shows it as a status banner, hidden the moment a real `serverError` also appears so it
+  never looks like stale advice sitting next to a fresh failure. No toast/notification
+  infrastructure was built for this — a targeted, one-off pattern for the one place today that
+  needs "screen A tells screen B something after a redirect."
 - **MSW's role expanded slightly beyond Phase 7's original scope.** Still the mocking layer for
   not-yet-built domains as planned, but also used with per-test `server.use()` overrides for
   deterministic unit tests of *built* domains (Login/Register/Verify/Onboarding's own tests) —
@@ -288,8 +316,8 @@ hand-type from memory). Key points to get right:
   (`/app/onboarding/profile`) gate the two onboarding steps themselves, each allowing entry only
   in the correct window. No in-app role switcher (`WEB_DESIGN_PLAN.md` §0).
 - **Auth flow shell** (`src/layouts/AuthLayout.tsx`): shared chrome for every Pattern W-Auth
-  screen (Login, Register, Verify Email built; Forgot/Reset Password still to come) — fixed
-  620px brand panel matching the pixel mockups exactly, with per-screen `heroHeadline`/
+  screen — Login, Register, Verify Email, Forgot Password, and Reset Password all built on it
+  now — fixed 620px brand panel matching the pixel mockups exactly, with per-screen `heroHeadline`/
   `heroContent`/`heroPreHeadline` (the OTP step indicator) slots and a `cardWidth` prop, since
   Login/Register/OTP each specify slightly different card widths and hero content in their own
   mockups. Below `md` it collapses to a compact header (not part of the pixel spec — the mockups
@@ -369,7 +397,7 @@ screens sit behind auth.
 | Verify Email (OTP) | `/verify-email` | Citizen | W-Auth | ✅ Built |
 | Onboarding — Complete Profile **(NEW, see Progress log — mandatory step 2/2, no name changed but not originally its own line item)** | `/app/onboarding/profile` | Citizen | W-Auth | ✅ Built |
 | Logout (via `AccountMenu`, both nav shells) | n/a — menu action | All | — | ✅ Built |
-| Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ⬜ Not built |
+| Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ✅ Built |
 | Edit Profile (name portion only — full profile is Phase 3) | `/app/profile/edit` | Citizen | W-Settings | ⬜ Not built |
 | Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ⬜ Not built |
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ⬜ Not built |
@@ -388,7 +416,8 @@ screens sit behind auth.
 | `POST /auth/verify-email`, `POST /auth/resend-verification` | Verify Email | ✅ Wired |
 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Login, auth store bootstrap, global logout | ✅ Wired |
 | `GET /profile`, `PATCH /profile` | Onboarding profile step (pulled forward from Phase 4 — needed for the mandatory chain, not the full Edit Profile screen) | ✅ Wired (name field only; full profile screen still Phase 4) |
-| `PATCH /auth/password`, `POST /auth/password/forgot`, `POST /auth/password/reset` | Account Settings, Forgot/Reset | ⬜ Not wired |
+| `PATCH /auth/password` | Account Settings (change password while logged in) | ⬜ Not wired |
+| `POST /auth/password/forgot`, `POST /auth/password/reset` | Forgot/Reset Password | ✅ Wired |
 | `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ⬜ Not wired |
 | `POST /ngos/register` | My NGO → Register form | ⬜ Not wired |
 | `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
@@ -398,9 +427,9 @@ screens sit behind auth.
 | `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
 
 ### Build steps
-1. ✅ Login/Register/OTP first, wired for real immediately (no mock needed, nothing to mock
-   against) — this is what makes every subsequent phase testable as a logged-in user. **Forgot/
-   Reset Password still outstanding from this step.**
+1. ✅ **Complete.** Login/Register/OTP/Forgot/Reset Password all wired for real immediately (no
+   mock needed, nothing to mock against) — this is what makes every subsequent phase testable as
+   a logged-in user.
 2. ✅ Auth store + interceptor's refresh-and-retry wired against the real backend; the token
    lifecycle (login → expire → silent refresh → still-authed) is proven by the
    "access token never touches browser storage" E2E test and the refresh-retry logic in
@@ -414,16 +443,24 @@ screens sit behind auth.
 ### Testing
 - ✅ Component: form validation (Zod schemas matching each route's documented required fields),
   password-rule live checklist → **implemented as a strength meter, not a hard gate, since the
-  backend only enforces an 8-char minimum, no complexity rule**, OTP auto-submit-on-6th-digit.
+  backend only enforces an 8-char minimum, no complexity rule**, OTP auto-submit-on-6th-digit,
+  Forgot Password's confirmation state (never an "email not found" branch — see Progress log),
+  Reset Password's manual `email`/`token` form fields with URL-param `defaultValues` prefill
+  (no link-validity gate — see Progress log).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
   citizen cannot reach `/app/home`, `/ngo/dashboard`, or `/admin/dashboard` by direct navigation;
   logout clears the session server-side (verified by re-attempting a protected route after);
-  invalid-code OTP shows the real backend error; resend calls the real endpoint.
-  - ⬜ Not yet possible: a full "register → really verify → land in the app" E2E path — the real
-    OTP is only server-logged, not obtainable from any response this test suite can read. Revisit
-    once/if there's a way to complete this without a human reading a server log.
+  invalid-code OTP shows the real backend error; resend calls the real endpoint; Forgot Password
+  shows an identical confirmation for both a real and a fabricated email (proves the
+  enumeration-safety actually holds, not just assumed); Reset Password with a fabricated
+  token/unknown email gets the real `404 "account not found"`, a real account with a wrong token
+  gets the real `400 "invalid or expired code"` — both genuine backend round trips, not stubs.
+  - ⬜ Not yet possible: a full "register → really verify → land in the app" E2E path, or a full
+    "request reset → really reset → log in with the new password" one — both real OTP/reset
+    tokens are only server-logged, not obtainable from any response this test suite can read.
+    Revisit once/if there's a way to complete these without a human reading a server log.
   - ⬜ NGO registration → admin approval → promoted account login; volunteer invitation → accept
     → promoted to `ngo_volunteer` — blocked on Users & Accounts / NGOs / Volunteers screens
     (steps 3–5 above) not being built yet.
@@ -431,8 +468,8 @@ screens sit behind auth.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
-met** — register/login/logout/verify/onboard are real and tested; account management and the
-NGO/admin account-lifecycle screens remain.
+met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) is real and
+tested; account management and the NGO/admin account-lifecycle screens remain.
 
 ---
 

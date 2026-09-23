@@ -2,15 +2,12 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { BuildingsIcon, MapPinIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { AuthLayout } from '@/layouts/AuthLayout'
-import { LoginForm } from '@/features/auth/LoginForm'
-import { loginSchema, type LoginFormValues } from '@/features/auth/schemas'
-import { getMe, login, type LoginResponse } from '@/api/identity'
-import { getProfile } from '@/api/profiling'
-import { nextAuthRoute, useAuthStore } from '@/store/auth'
+import { ForgotPasswordForm } from '@/features/auth/ForgotPasswordForm'
+import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/features/auth/schemas'
+import { forgotPassword } from '@/api/identity'
 import type { ApiErrorBody } from '@/api/types'
 
 function extractErrorMessage(error: unknown): string {
@@ -21,41 +18,27 @@ function extractErrorMessage(error: unknown): string {
   return 'Something went wrong. Please try again.'
 }
 
-/** Container for /login — owns all form/mutation state, LoginForm is pure presentation. */
-export function LoginPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const setAuth = useAuthStore((s) => s.setAuth)
+/**
+ * Container for /forgot-password — owns all form/mutation state, ForgotPasswordForm is pure
+ * presentation. No reference mockup exists for this screen (see ForgotPasswordForm's own
+ * comment); reuses Login's exact hero panel content since it's the same brand context, not
+ * invented copy.
+ */
+export function ForgotPasswordPage() {
   const [serverError, setServerError] = useState<string | null>(null)
-  // Set once by ResetPasswordPage's redirect (that route returns no session to carry forward,
-  // so a redirect + message is the only way to close the loop). Persists in history.state for
-  // this entry until the user navigates away — LoginForm hides it once a real serverError
-  // shows, so it never sits alongside a login failure looking like it's still relevant.
-  const infoMessage = (location.state as { infoMessage?: string } | null)?.infoMessage ?? null
+  const [submittedEmail, setSubmittedEmail] = useState('')
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
+  } = useForm<ForgotPasswordFormValues>({ resolver: zodResolver(forgotPasswordSchema) })
 
-  const mutation = useMutation<LoginResponse, unknown, LoginFormValues>({
-    mutationFn: ({ email, password }) => login(email, password),
-    onSuccess: async (data) => {
+  const mutation = useMutation({
+    mutationFn: (values: ForgotPasswordFormValues) => forgotPassword(values.email),
+    onSuccess: (_data, values) => {
       setServerError(null)
-      // The login response has no `email_verified` field at all — fetch it rather than assume
-      // a value (api/00-identity.md; see the comment on identity.login).
-      const me = await getMe(data.access_token)
-      const profile = await getProfile(data.access_token)
-      const user = {
-        id: data.id,
-        email: data.email,
-        role: data.role,
-        emailVerified: me.email_verified,
-        profileComplete: profile.name !== '',
-      }
-      setAuth(data.access_token, user)
-      navigate(nextAuthRoute(user), { replace: true })
+      setSubmittedEmail(values.email)
     },
     onError: (error) => setServerError(extractErrorMessage(error)),
   })
@@ -84,16 +67,17 @@ export function LoginPage() {
       }
       secondCircle
       cardWidth={440}
-      title="Welcome back"
-      subtitle="Log in to continue to LittleLife."
+      title={mutation.isSuccess ? undefined : 'Forgot your password?'}
+      subtitle={mutation.isSuccess ? undefined : "Enter your email and we'll send you a code to reset it."}
     >
-      <LoginForm
+      <ForgotPasswordForm
         register={register}
         errors={errors}
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
         isSubmitting={isSubmitting || mutation.isPending}
         serverError={serverError}
-        infoMessage={infoMessage}
+        isSubmitted={mutation.isSuccess}
+        submittedEmail={submittedEmail}
       />
     </AuthLayout>
   )

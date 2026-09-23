@@ -5,6 +5,8 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
@@ -18,8 +20,8 @@ export function AppRouter() {
         <Route element={<RedirectIfAuthenticated />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<PlaceholderPage title="Forgot Password" phase="Phase 1" />} />
-          <Route path="/reset-password" element={<PlaceholderPage title="Reset Password" phase="Phase 1" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         {/* Mandatory onboarding, step 1 of 2 — must be authenticated (registration logs the

@@ -13,10 +13,12 @@ function Harness({
   onSubmit,
   isSubmitting = false,
   serverError = null,
+  infoMessage = null,
 }: {
   onSubmit: (values: LoginFormValues) => void
   isSubmitting?: boolean
   serverError?: string | null
+  infoMessage?: string | null
 }) {
   const {
     register,
@@ -31,6 +33,7 @@ function Harness({
       onSubmit={handleSubmit(onSubmit)}
       isSubmitting={isSubmitting}
       serverError={serverError}
+      infoMessage={infoMessage}
     />
   )
 }
@@ -77,5 +80,20 @@ describe('LoginForm', () => {
   it('disables the submit button and shows a spinner while submitting', () => {
     renderForm({ onSubmit: vi.fn(), isSubmitting: true })
     expect(screen.getByRole('button', { name: 'Log In' })).toBeDisabled()
+  })
+
+  it('shows an info message (e.g. after a password reset) when given one', () => {
+    renderForm({ onSubmit: vi.fn(), infoMessage: 'Your password has been reset.' })
+    expect(screen.getByText('Your password has been reset.')).toBeInTheDocument()
+  })
+
+  it('hides the info message once a real server error is also present, rather than showing both', () => {
+    renderForm({
+      onSubmit: vi.fn(),
+      infoMessage: 'Your password has been reset.',
+      serverError: 'invalid email or password',
+    })
+    expect(screen.queryByText('Your password has been reset.')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('invalid email or password')
   })
 })

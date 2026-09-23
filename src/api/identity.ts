@@ -120,3 +120,30 @@ export async function resendVerification(email: string): Promise<{ message: stri
   const res = await apiClient.post<{ message: string }>('/auth/resend-verification', { email })
   return res.data
 }
+
+/**
+ * POST /auth/password/forgot — **always returns 200 with the same message, whether or not the
+ * email is registered** (deliberately enumeration-safe, unlike resend-verification). The caller
+ * must never branch UI on this response or build an "email not found" error state — there is
+ * exactly one outcome to show, regardless of what happened server-side.
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/auth/password/forgot', { email })
+  return res.data
+}
+
+/**
+ * POST /auth/password/reset — needs `email` alongside the `token` because the reset-token store
+ * is keyed by account ID, resolved from the email first. Unlike `forgotPassword`, this route is
+ * NOT enumeration-safe (a real 404 for an unknown email) — the backend's own deliberate choice,
+ * not something to paper over here. Returns no tokens on success; there is no session to carry
+ * forward, the caller should route to `/login` afterward.
+ */
+export async function resetPassword(email: string, token: string, newPassword: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/auth/password/reset', {
+    email,
+    token,
+    new_password: newPassword,
+  })
+  return res.data
+}

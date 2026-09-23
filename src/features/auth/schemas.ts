@@ -32,3 +32,36 @@ export const registerSchema = z
   })
 
 export type RegisterFormValues = z.infer<typeof registerSchema>
+
+/** POST /auth/password/forgot (api/00-identity.md) — `{email}` only. */
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+})
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
+
+/**
+ * POST /auth/password/reset (api/00-identity.md) sends `{email, token, new_password}` — all
+ * three are real user-entered fields here, not URL-only params. Confirmed empirically against
+ * the real backend: unlike verify-email's 6-digit OTP (which the binder rejects at the wrong
+ * length before it ever reaches business logic), `token` has NO length constraint at all — a
+ * 1-char, 6-char, and 40-char fake all reach the identical "invalid or expired code" check.
+ * That, plus there being no real mailer in dev (the token is only server-logged, same as the
+ * OTP — api/00-identity.md's own "best-effort mailer" note), means this can't be a
+ * click-a-link-only flow: there's nothing to click. The user reads the code from their email
+ * (or, in dev, a server log) and types it in alongside their email, same shape as OTP
+ * verification. `confirmPassword` is a client-only safety check, same pattern as Register.
+ */
+export const resetPasswordSchema = z
+  .object({
+    email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+    token: z.string().min(1, 'Enter the reset code from your email'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
