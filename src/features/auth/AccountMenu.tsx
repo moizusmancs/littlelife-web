@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { SignOutIcon } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
+import { SignOutIcon, UserCircleIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
 export interface AccountMenuProps {
@@ -12,6 +13,9 @@ export interface AccountMenuProps {
   onLogout: () => void
   isLoggingOut: boolean
   align?: 'start' | 'end'
+  /** Route to this role's real profile screen — omitted where there isn't one yet (NGO/Admin's
+   *  "My Account" is still a placeholder, so OpsLayout doesn't pass this). */
+  profileHref?: string
 }
 
 /**
@@ -20,7 +24,15 @@ export interface AccountMenuProps {
  * password-visibility toggle. The actual logout side effect (API call, store clear,
  * navigation) is owned by the caller via `onLogout` (see useLogout.ts).
  */
-export function AccountMenu({ trigger, email, roleLabel, onLogout, isLoggingOut, align = 'end' }: AccountMenuProps) {
+export function AccountMenu({
+  trigger,
+  email,
+  roleLabel,
+  onLogout,
+  isLoggingOut,
+  align = 'end',
+  profileHref,
+}: AccountMenuProps) {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
@@ -35,6 +47,17 @@ export function AccountMenu({ trigger, email, roleLabel, onLogout, isLoggingOut,
             <p className="mt-0.5 font-body text-body-sm text-ink-500">{roleLabel}</p>
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-surface-border" />
+          {profileHref && (
+            <DropdownMenu.Item asChild>
+              <Link
+                to={profileHref}
+                className="flex cursor-pointer items-center gap-2.5 rounded-sm px-3 py-2.5 font-body text-body-md text-ink-900 outline-none select-none data-highlighted:bg-surface-sunken"
+              >
+                <UserCircleIcon size={18} />
+                Profile
+              </Link>
+            </DropdownMenu.Item>
+          )}
           <DropdownMenu.Item
             onSelect={onLogout}
             disabled={isLoggingOut}

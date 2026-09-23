@@ -81,6 +81,7 @@ export function CitizenLayout() {
               roleLabel="Citizen"
               onLogout={logout}
               isLoggingOut={isLoggingOut}
+              profileHref="/app/profile/edit"
               trigger={
                 <button
                   type="button"

@@ -16,6 +16,7 @@ function renderLayout() {
         <Routes>
           <Route element={<CitizenLayout />}>
             <Route path="/app/home" element={<div>page content</div>} />
+            <Route path="/app/profile/edit" element={<div>edit profile screen</div>} />
           </Route>
           <Route path="/login" element={<div>login screen</div>} />
         </Routes>
@@ -62,5 +63,21 @@ describe('CitizenLayout', () => {
     expect(logoutCalled).toBe(true)
     expect(useAuthStore.getState().accessToken).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
+  })
+
+  it('navigates to Edit Profile through the account menu', async () => {
+    useAuthStore.getState().setAuth('fake-token', {
+      id: '1',
+      email: 'citizen@example.com',
+      role: 'user',
+      emailVerified: true,
+      profileComplete: true,
+    })
+    renderLayout()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Profile' }))
+
+    expect(await screen.findByText('edit profile screen')).toBeInTheDocument()
   })
 })

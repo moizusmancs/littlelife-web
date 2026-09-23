@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { CitizenLayout } from '@/layouts/CitizenLayout'
 import { OpsLayout } from '@/layouts/OpsLayout'
+import { ProfileLayout } from '@/layouts/ProfileLayout'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
@@ -8,6 +9,7 @@ import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
+import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -55,14 +57,20 @@ export function AppRouter() {
             <Route path="/app/safety-groups/:id" element={<PlaceholderPage title="Safety Group Detail" phase="Phase 4" />} />
             <Route path="/app/messages/:conversationId" element={<PlaceholderPage title="Message Thread" phase="Phase 7 (mocked)" />} />
             <Route path="/app/alerts/:id" element={<PlaceholderPage title="Alert Takeover" phase="Phase 7 (mocked)" />} />
-            <Route path="/app/profile" element={<PlaceholderPage title="Profile" phase="Phase 4" />} />
-            <Route path="/app/profile/edit" element={<PlaceholderPage title="Edit Profile" phase="Phase 1 / 4" />} />
-            <Route path="/app/profile/alert-preferences" element={<PlaceholderPage title="Alert Preferences" phase="Phase 4" />} />
-            <Route path="/app/profile/account-settings" element={<PlaceholderPage title="Account Settings" phase="Phase 1" />} />
-            <Route path="/app/profile/credibility" element={<PlaceholderPage title="Credibility" phase="Phase 4" />} />
-            <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
-            <Route path="/app/profile/ngo" element={<PlaceholderPage title="My NGO" phase="Phase 1" />} />
-            <Route path="/app/profile/invitations" element={<PlaceholderPage title="Invitations" phase="Phase 1" />} />
+            {/* Shared W-Settings sub-nav shell (ProfileLayout) — every /app/profile/* screen
+                renders inside it, even the ones still ⬜ placeholder, so the sidebar stays
+                present and consistent while navigating between built and not-yet-built
+                sub-screens; see ProfileLayout/ProfileSidebar's own comments. */}
+            <Route element={<ProfileLayout />}>
+              <Route path="/app/profile" element={<PlaceholderPage title="Profile Overview" phase="Phase 4" />} />
+              <Route path="/app/profile/edit" element={<EditProfilePage />} />
+              <Route path="/app/profile/alert-preferences" element={<PlaceholderPage title="Alert Preferences" phase="Phase 4" />} />
+              <Route path="/app/profile/account-settings" element={<PlaceholderPage title="Account Settings" phase="Phase 1" />} />
+              <Route path="/app/profile/credibility" element={<PlaceholderPage title="Credibility" phase="Phase 4" />} />
+              <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
+              <Route path="/app/profile/ngo" element={<PlaceholderPage title="My NGO" phase="Phase 1" />} />
+              <Route path="/app/profile/invitations" element={<PlaceholderPage title="Invitations" phase="Phase 1" />} />
+            </Route>
           </Route>
         </Route>
 

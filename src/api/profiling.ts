@@ -14,6 +14,12 @@ export interface ProfileResponse {
   updated_at: string
 }
 
+/** Shared TanStack Query key for `GET /profile` — every caller (the profile sidebar's header,
+ *  Edit Profile's form) reads/writes through this same key so they share one cache entry
+ *  instead of issuing duplicate fetches, and a successful `PATCH` can update it directly via
+ *  `queryClient.setQueryData` without a second round trip. */
+export const PROFILE_QUERY_KEY = ['profile'] as const
+
 /**
  * GET /profile — both aggregates (profile + alert-preferences) are created automatically at
  * registration time, atomically with the account itself, so this essentially never 404s for a

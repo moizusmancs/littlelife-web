@@ -10,9 +10,10 @@ change when that happens — that's the entire point of the service-layer split 
 
 **Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
-onboarding profile-completion step, and Forgot/Reset Password — this closes out the full
-auth-screen set (step 1 of Phase 1's build order). Not yet built: Account Settings, My NGO,
-Invitations, Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
+onboarding profile-completion step, Forgot/Reset Password, and Edit Profile (name portion) — this
+closes out the full auth-screen set plus the first W-Settings screen (steps 1–2 of Phase 1's build
+order). Not yet built: Account Settings, My NGO, Invitations, Organization Settings, NGO/Admin My
+Account, Volunteers, Users & Accounts, NGOs.
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -51,8 +52,15 @@ short version.
   pre-fills them as a convenience (real email link, or one pasted from a dev server log) but is
   never required. Forgot Password's confirmation panel now also links forward into
   `/reset-password?email=...` so the flow has a next step to take, not just "back to login."
-
-### New architecture Phase 1 revealed, beyond what Phase 0 originally scoped
+- **Edit Profile's sub-nav header drops the mockup's location/verified-badge/level chip.** The
+  only real pixel reference for the shared W-Settings sub-nav (Batch 2 §2g "Profile ›
+  Invitations") shows a header block with the account's home region ("Johi, Dadu"), a verified
+  checkmark, and a credibility "Level 4" badge next to the name. None of that data exists yet —
+  home region is Geo (Phase 2, not built — see the region-picker bullet above), verified/level
+  are Trust (Phase 4, not built). `ProfileSidebar` renders only the real field (`name`), same
+  principle as every other deviation here: build what's real, don't fabricate the rest. Same
+  reasoning for the mockup's "Invitations" nav item pending-count badge — omitted, no real count
+  exists (Invitations itself isn't built).
 
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
@@ -71,6 +79,24 @@ short version.
   `import.meta.env.DEV` — compiled away from production builds) — lets manual/E2E checks set
   auth state directly to reach onboarding-gated screens for visual verification without a real
   OTP, which isn't obtainable through any response body (the backend only logs it server-side).
+  First actually exercised in a committed test with Edit Profile (`e2e/profile-edit.spec.ts`) —
+  register + log in for a real cookie session, then flip `emailVerified`/`profileComplete`
+  client-side so the route guards let the test through; every subsequent API call (`GET`/`PATCH
+  /profile`) still hits the real backend with that real session, only the guard's opinion is
+  faked. Must navigate client-side after the override (`history.pushState` + a `popstate`
+  event), never `page.goto` — a hard reload re-bootstraps auth from the real, still-unverified
+  cookie session and wipes the override. Doing the override while still mounted on a route whose
+  own guard reacts to it (e.g. `/verify-email`) also races that guard's own redirect effect —
+  let it settle first, then navigate again.
+- **`ProfileLayout` — a new shared shell for every `/app/profile/*` screen**, nested inside
+  `CitizenLayout`'s own `<Outlet>` (so it only owns the sidebar/content split, not the top nav).
+  Fetches the account's `name` once via a shared `PROFILE_QUERY_KEY` (`src/api/profiling.ts`) so
+  the sidebar header and Edit Profile's form read the same TanStack Query cache entry instead of
+  both fetching independently — and a successful `PATCH /profile` writes straight into that same
+  cache entry (`queryClient.setQueryData`), so the sidebar's name updates immediately with no
+  second round trip. Every `/app/profile/*` route (built or still a placeholder) is nested under
+  it, so the sub-nav stays present and consistent while navigating between them instead of
+  flickering in and out per-screen.
 - **Cross-screen handoff via router state, not a global toast system.** `ResetPasswordPage`
   returns no session (the backend issues no tokens for this route), so after a successful reset
   it `navigate('/login', {state: {infoMessage}})`s — `LoginForm` reads that one optional prop
@@ -121,6 +147,14 @@ without its generated code.
   then broke multi-child buttons' flex `gap` layout (the Google button's icon+label+badge);
   fixed with `display: contents` on the label wrapper so it doesn't introduce a box that breaks
   the parent's own flex layout.
+- **`ProfileSidebar` mistook a loaded-but-empty name for "still loading."** First cut checked
+  `name ? loaded : skeleton` — but a freshly-registered account's real `name` is `""` (the
+  documented "not yet set" state, same as onboarding), and `""` is falsy in JS, so the sidebar
+  would show its loading skeleton forever for exactly the account most likely to be looking at
+  this screen. Caught during visual verification (real backend, real freshly-registered
+  account), fixed by checking `name !== null` instead — `null` means "not fetched yet," `""`
+  means "fetched, genuinely empty," and the two now render distinctly (skeleton vs. a real
+  "Add your name" fallback).
 
 ---
 
@@ -398,7 +432,7 @@ screens sit behind auth.
 | Onboarding — Complete Profile **(NEW, see Progress log — mandatory step 2/2, no name changed but not originally its own line item)** | `/app/onboarding/profile` | Citizen | W-Auth | ✅ Built |
 | Logout (via `AccountMenu`, both nav shells) | n/a — menu action | All | — | ✅ Built |
 | Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ✅ Built |
-| Edit Profile (name portion only — full profile is Phase 3) | `/app/profile/edit` | Citizen | W-Settings | ⬜ Not built |
+| Edit Profile (name portion only — full profile is Phase 4) | `/app/profile/edit` | Citizen | W-Settings | ✅ Built |
 | Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ⬜ Not built |
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ⬜ Not built |
 | Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ⬜ Not built |
@@ -415,7 +449,7 @@ screens sit behind auth.
 | `POST /auth/register` | Register | ✅ Wired |
 | `POST /auth/verify-email`, `POST /auth/resend-verification` | Verify Email | ✅ Wired |
 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Login, auth store bootstrap, global logout | ✅ Wired |
-| `GET /profile`, `PATCH /profile` | Onboarding profile step (pulled forward from Phase 4 — needed for the mandatory chain, not the full Edit Profile screen) | ✅ Wired (name field only; full profile screen still Phase 4) |
+| `GET /profile`, `PATCH /profile` | Onboarding profile step; Edit Profile (name field only, full profile screen still Phase 4) | ✅ Wired |
 | `PATCH /auth/password` | Account Settings (change password while logged in) | ⬜ Not wired |
 | `POST /auth/password/forgot`, `POST /auth/password/reset` | Forgot/Reset Password | ✅ Wired |
 | `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ⬜ Not wired |
@@ -436,9 +470,12 @@ screens sit behind auth.
    `src/api/client.ts` — every later phase depends on this working.
    - ✅ **Added, not in the original plan:** the onboarding-completion step (name via
      `PATCH /profile`) as a mandatory gate alongside email verification — see Progress log.
-3. ⬜ Account Settings, My NGO, Invitations (citizen).
-4. ⬜ Organization Settings, My Account, Volunteers (NGO).
-5. ⬜ Users & Accounts, NGOs (Admin).
+3. ✅ Edit Profile (name portion), plus the shared `ProfileLayout` W-Settings sub-nav shell every
+   later `/app/profile/*` screen (built or still placeholder) now renders inside — see Progress
+   log's "New architecture" entry.
+4. ⬜ Account Settings, My NGO, Invitations (citizen) — the remaining `/app/profile/*` screens.
+5. ⬜ Organization Settings, My Account, Volunteers (NGO).
+6. ⬜ Users & Accounts, NGOs (Admin).
 
 ### Testing
 - ✅ Component: form validation (Zod schemas matching each route's documented required fields),
@@ -446,7 +483,10 @@ screens sit behind auth.
   backend only enforces an 8-char minimum, no complexity rule**, OTP auto-submit-on-6th-digit,
   Forgot Password's confirmation state (never an "email not found" branch — see Progress log),
   Reset Password's manual `email`/`token` form fields with URL-param `defaultValues` prefill
-  (no link-validity gate — see Progress log).
+  (no link-validity gate — see Progress log), Edit Profile's loading skeleton vs. loaded-but-
+  empty-name states (the `null` vs `""` distinction — see the real-bug entry in Progress log),
+  Saved-indicator dirty-tracking, `ProfileLayout`'s shared query cache feeding both the sidebar
+  and the form.
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -456,14 +496,20 @@ screens sit behind auth.
   shows an identical confirmation for both a real and a fabricated email (proves the
   enumeration-safety actually holds, not just assumed); Reset Password with a fabricated
   token/unknown email gets the real `404 "account not found"`, a real account with a wrong token
-  gets the real `400 "invalid or expired code"` — both genuine backend round trips, not stubs.
-  - ⬜ Not yet possible: a full "register → really verify → land in the app" E2E path, or a full
-    "request reset → really reset → log in with the new password" one — both real OTP/reset
-    tokens are only server-logged, not obtainable from any response this test suite can read.
-    Revisit once/if there's a way to complete these without a human reading a server log.
+  gets the real `400 "invalid or expired code"` — both genuine backend round trips, not stubs;
+  Edit Profile loads a real freshly-registered account's real (empty) name, saves a real new name
+  via a genuine `PATCH /profile`, and the sidebar reflects it live — reached via the
+  `window.__authStore` debug-hook technique (see Progress log's "New architecture" entry), which
+  is a real backend round trip for every API call even though the route-guard pass itself is
+  faked client-side, not a genuine completed OTP flow.
+  - ⬜ Still not possible: a full "register → really verify (real OTP, no client-side override) →
+    land in the app" E2E path, or "request reset → really reset → log in with the new password"
+    — both real OTP/reset tokens are only server-logged, not obtainable from any response this
+    test suite can read. Revisit once/if there's a way to read them without a human checking a
+    server log.
   - ⬜ NGO registration → admin approval → promoted account login; volunteer invitation → accept
     → promoted to `ngo_volunteer` — blocked on Users & Accounts / NGOs / Volunteers screens
-    (steps 3–5 above) not being built yet.
+    (steps 4–5 above) not being built yet.
 - ⬜ Manual: 401-refresh-retry against a real expired token; deactivate/delete flows.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
