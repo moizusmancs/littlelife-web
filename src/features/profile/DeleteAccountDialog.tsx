@@ -14,6 +14,8 @@ export interface DeleteAccountDialogProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   isSubmitting: boolean
   serverError: string | null
+  /** Overrides the body copy (the default speaks to a citizen's reports and connections). */
+  description?: string
 }
 
 /**
@@ -31,15 +33,13 @@ export function DeleteAccountDialog({
   onSubmit,
   isSubmitting,
   serverError,
+  description = 'This is permanent. Your reports, connections, and history are gone for good — there is no way to undo this, not even by an admin. Enter your password to confirm.',
 }: DeleteAccountDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>Delete your account?</DialogTitle>
-        <DialogDescription>
-          This is permanent. Your reports, connections, and history are gone for good — there is no way to undo
-          this, not even by an admin. Enter your password to confirm.
-        </DialogDescription>
+        <DialogDescription>{description}</DialogDescription>
 
         <form onSubmit={onSubmit} noValidate className="mt-4">
           {serverError && (

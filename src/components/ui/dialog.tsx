@@ -20,7 +20,7 @@ export function DialogContent({ className, children, ...props }: React.Component
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink-900/50" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed top-1/2 left-1/2 z-50 w-full max-w-110 -translate-x-1/2 -translate-y-1/2 rounded-md border border-surface-border bg-surface-raised p-6 shadow-lg focus:outline-none',
+          'fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-110 -translate-x-1/2 -translate-y-1/2 rounded-md border border-surface-border bg-surface-raised p-6 shadow-lg focus:outline-none',
           className,
         )}
         {...props}
@@ -40,7 +40,7 @@ export function DialogContent({ className, children, ...props }: React.Component
 export function DialogTitle({ className, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-heading text-h3 font-bold text-ink-900', className)}
+      className={cn('pe-8 font-heading text-h3 font-bold text-ink-900', className)}
       {...props}
     />
   )

@@ -12,9 +12,10 @@ change when that happens — that's the entire point of the service-layer split 
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
 onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), Account
 Settings (deactivate/delete), My NGO (register + live status), Invitations, and — the first NGO
-screen — Organization Settings. That closes out the full auth-screen set plus every citizen
-`/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's build order) and starts step 6.
-Not yet built: NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
+screen — Organization Settings, My Account for both NGO staff and platform admins, and Volunteers
+(the roster, invite, and remove). That closes out the full auth-screen set plus every citizen
+`/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's build order) and all of the NGO
+half of step 6. Not yet built: Users & Accounts, NGOs (the Admin half, step 7).
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -151,6 +152,81 @@ short version.
   route (`GET /ngo/me` itself is open to volunteers, so the frontend guard is the real gate for the
   screen; `PATCH`/deactivate would `403` server-side regardless).
 
+- **My Account is one screen for four roles, and builds the real subset of the staff mockup.**
+  Pixel reference: Batch 4 NGO §4m; `WEB_DESIGN_PLAN.md` §6.3/§6.4 say only "same shape as
+  Citizen's Edit Profile/Account Settings, scoped to the staff member's own account" (the admin
+  route is "same as NGO's"), so `/ngo/settings/account` and `/admin/settings/account` mount one
+  `MyAccountPage` under their own layouts, for `ngo_admin`, `ngo_volunteer`, `admin` and
+  `super_admin` alike. Three sections, each with its own state: **Profile** (avatar with initials,
+  the name — editable via `PATCH /profile` — role chip, an organisation chip for NGO staff from
+  `GET /ngo/me`, and the email read-only since no route changes it), **Password**
+  (`PATCH /auth/password`, the first time that route is wired) and **Account** (deactivate/delete,
+  the same two routes as the citizen screen). Left out because nothing backs them: the mockup's job
+  title, mobile number, interface-language picker, notification toggles, 2FA, recovery codes,
+  "Last changed 3 months ago", the active-sessions list, "Since <date>" (`GET /auth/me` has no
+  created-at), and **"Leave organisation"** — the design's only destructive row for staff — which has
+  no route. **Changing the password is a forced sign-out, not a "saved" toast:** the API revokes
+  every refresh token — including the caller's own — and clears the cookie, so the session is dead
+  even though the access token hasn't expired; per the doc's own instruction the page clears auth
+  and goes to `/login` ("Your password was changed…"), and the E2E confirms the old session is
+  really gone and the old password stops working. **Deactivate/delete are offered to every role,
+  because the backend restricts neither** (read from the Go code: no role check, no "last admin" or
+  "last NGO admin" guard) — so an `ngo_admin` or `super_admin` can delete themselves and leave an
+  organisation or the platform without one. That's a product decision the API doesn't make for us;
+  the copy for staff says they lose their console access too, but no extra guard was invented
+  here — worth deciding whether the backend should refuse it. **Reuse, not copy:** the citizen
+  Edit Profile and Account Settings screens' logic moved into two hooks (`useEditProfile`,
+  `useAccountLifecycle`) that both screens now call, `AccountSettingsPanel`/`DeleteAccountDialog`
+  gained optional copy/placement props, and the shared sign-out-after-a-revoking-action sequence
+  became `useEndSession` — all with the citizen tests unchanged and green. The account menu's
+  avatar dropdown in the NGO/Admin shell now links to My Account (the design's "Sidebar footer,
+  avatar menu"). **Real data finding, unrelated to this screen:** two seeded accounts in the dev
+  database (`admin@test.com` `super_admin`, `ngo-admin@test.com` `ngo_admin`) have **no profile
+  row**, and the login screen calls `GET /profile`, so they cannot sign in through the web UI at all
+  (`404 "profile not found"`); real staff are promoted citizens and always have one. A profile-load
+  failure on this screen is handled anyway — it takes down only the name field, with a retry, while
+  the password and account sections keep working.
+
+- **Volunteers is the first W-List screen: the roster, invite and remove — for `ngo_admin` only, with
+  no mockup and no activity history.** There is no Volunteers pixel reference in any batch, so the
+  list borrows the nearest one (the NGO allocations table, Batch 4 §4f: uppercase 11px column labels
+  over 48px rows, pill status badges) and `WEB_DESIGN_PLAN.md` §6.3's button table supplies the
+  actions. Built from the real `GET /ngo/volunteers`, `POST /ngo/volunteers/invitations` and
+  `PATCH /ngo/volunteers/{id}/deactivate`. **Not built, because nothing backs it:** the row's "View
+  Activity" (task/observation history — no task or field-observation routes exist yet, Phase 7),
+  any name column (rows carry `id`, `email`, `status`, `created_at` only; names live in the profile,
+  which has no NGO-side route), a "joined" date (`created_at` is the *account's*, so the column says
+  "Account created" rather than pretend), and search/filter/pagination (the roster is one unpaginated
+  array and the spec lists none). **The volunteer's "read-only version" is dropped:** the doc (§6.3)
+  says a volunteer sees a read-only, task-history-only view, but `GET /ngo/volunteers` is
+  `ngo_admin`-only (verified: a volunteer gets `403 "insufficient permissions"`) and there is no task
+  history yet, so there'd be nothing to show. Instead it follows Organization Settings: the sidebar
+  link is `adminOnly` and the route sits behind the nested `RequireRole allowed={['ngo_admin']}`;
+  revisit when Tasks exists. **"Deactivate" is labelled "Remove", on purpose.** The route is named
+  deactivate, but it doesn't touch `accounts.status` — it clears `ngo_id`, resets the role to a
+  plain citizen, and revokes their sessions; the account stays active. Calling that "Deactivate"
+  would tell an admin the person's account is disabled, so the button and dialog say Remove and
+  state exactly what happens (back to a citizen, not suspended or deleted, signed out, can be invited
+  again — the E2E confirms the account is `active`, role `user`, and that the removed person can log
+  straight back in to `/app/home`). **Three real backend gaps found by probing, none papered over:**
+  (1) there is **no route listing the invitations an organisation has sent**, so a sent invitation is
+  acknowledged with a page-level notice and then can't be seen again — the person appears on the
+  roster only once they accept; (2) **duplicate invitations are allowed** — the same citizen invited
+  twice gets two `201`s and two pending rows (`ngo_volunteer_invitations` has no uniqueness
+  constraint), so they'd see two cards on their Invitations screen; (3) the API doc says an admin
+  inviting themselves gets `400 "cannot invite yourself"`, but the role check runs first and they
+  really get `409 "invited account must be a citizen…"`, a confusing message for a mistyped address —
+  so the dialog catches the caller's own email client-side (no request) and says so plainly. Worth a
+  backend follow-up for (1) and (2): a `GET /ngo/volunteers/invitations` and a unique partial index
+  on pending `(ngo_id, invited_account_id)`. **The NGO's status is read only to avoid a certain
+  failure:** `GET /ngo/me` (shared cache with Organization Settings and My Account) decides whether to
+  show Invite; a deactivated organisation would get `409 "ngo is not active"`, so the button is
+  replaced by a plain statement and removal stays available (the backend has no such guard on
+  removal). If that lookup itself fails the button stays and the server keeps the final say.
+  Removal refetches on success *and* on failure, since the likeliest failure is
+  `403 "not a volunteer under your ngo"` because the roster changed after it loaded (E2E provokes
+  exactly that by demoting the account in Postgres behind the open page).
+
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
   mandatory second gate, chained after verification. `RequireRole` (`src/routes/guards.tsx`) now
@@ -190,7 +266,12 @@ short version.
   its first login — the token's `email_verified` claim is minted at login, so the session is
   genuinely verified and onboarded. No `window.__authStore` spoofing and no stubbed responses; it
   reaches `RequireVerified` routes and every screen behind the onboarding gates for real. The
-  helper only ever writes to `e2e-` accounts / `E2E ` NGOs. This makes My NGO's stubbed states
+  helper only ever writes to `e2e-` accounts / `E2E ` NGOs. Those rows are never deleted, so they
+  accumulate in the dev database run after run — and `seedPendingInvitation`'s throwaway "founder"
+  admin was originally inserted with **no password hash**, which the backend couldn't load (a `500`
+  on any query touching it, including the default page of `GET /admin/accounts`; 40 such
+  `e2e-founder-*` rows had piled up before it was noticed). Founders now copy the invited account's
+  hash, so new runs no longer create unloadable accounts; the old rows remain until cleaned up. This makes My NGO's stubbed states
   (pending/rejected/active) replaceable with real ones — a follow-up, not yet done.)
 - **`ProfileLayout` — a new shared shell for every `/app/profile/*` screen**, nested inside
   `CitizenLayout`'s own `<Outlet>` (so it only owns the sidebar/content split, not the top nav).
@@ -312,6 +393,14 @@ without its generated code.
   `md:hidden` (never by JS state), so a rail collapsed on desktop can't leave the drawer icon-only.
   Content padding is `p-4` on phones. Measured after: `main` is the full 390px, no horizontal
   overflow; unit-tested (closed by default, open/backdrop/Escape/link-click, desktop toggle intact).
+- **The shared `Dialog` ran flush against both screen edges on a phone, and a long title ran into its
+  close button.** Found screenshotting Volunteers' Remove dialog at 390px — its title carries an email
+  address, which is long. The primitive was `w-full` with no margin, so every dialog in the app
+  (Account Settings' two, Organization Settings' deactivate, and the new ones) touched the edges, and
+  titles had no room reserved beside the absolutely positioned "X". Fixed once in `dialog.tsx`: the
+  width is `calc(100% - 2rem)` (still capped at the 440px max) and `DialogTitle` reserves padding at
+  its end. Wrapping of emails inside the roster rows also moved from `break-all` (which chopped them
+  mid-word) to `overflow-wrap: anywhere` (which breaks at the hyphens first).
 
 ---
 
@@ -594,8 +683,8 @@ screens sit behind auth.
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ✅ Built |
 | Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ✅ Built |
 | Organization Settings (profile + deactivate; region chips wait for Phase 2's picker) | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ✅ Built |
-| My Account | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ⬜ Not built |
-| Volunteers | `/ngo/volunteers` | NGO | W-List | ⬜ Not built |
+| My Account (profile name, password, deactivate/delete — one page for all four staff roles) | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ✅ Built |
+| Volunteers (roster, invite, remove — `ngo_admin` only) | `/ngo/volunteers` | NGO | W-List | ✅ Built |
 | Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ⬜ Not built |
 | NGOs (+ detail) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail | ⬜ Not built |
 
@@ -607,14 +696,14 @@ screens sit behind auth.
 | `POST /auth/verify-email`, `POST /auth/resend-verification` | Verify Email | ✅ Wired |
 | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Login, auth store bootstrap, global logout | ✅ Wired |
 | `GET /profile`, `PATCH /profile` | Onboarding profile step; Edit Profile (name field only, full profile screen still Phase 4) | ✅ Wired |
-| `PATCH /auth/password` | Account Settings (change password while logged in) | ⬜ Not wired |
+| `PATCH /auth/password` | My Account → Password (forced sign-out on success). The citizen Account Settings screen has no password row in its spec, so citizens still change theirs via Forgot Password | ✅ Wired |
 | `POST /auth/password/forgot`, `POST /auth/password/reset` | Forgot/Reset Password | ✅ Wired |
 | `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ✅ Wired |
 | `POST /ngos/register` | My NGO → Register form | ✅ Wired |
 | `GET /ngos/mine` **(added to the backend after My NGO's first build — see Progress log)** | My NGO → status card (pending / rejected / active), survives a reload | ✅ Wired |
 | `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
 | `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ✅ Wired |
-| `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) | ⬜ Not wired |
+| `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) — the last one is labelled "Remove" in the UI since it doesn't deactivate the account | ✅ Wired |
 | `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side); the count also feeds the Profile sidebar badge | ✅ Wired |
 | `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
 
@@ -639,7 +728,8 @@ screens sit behind auth.
    is complete.
 6. ✅ Organization Settings (profile edit + deactivate; the region chips are a Phase 2 retrofit),
    plus the `ngo_admin`-only nested route guard and the responsive NGO/Admin shell it needed — see
-   Progress log. ⬜ My Account, Volunteers (NGO).
+   Progress log. ✅ My Account (both roles' routes; see Progress log). ✅ Volunteers (NGO) — the roster,
+   invite and remove, `ngo_admin` only; see Progress log for the three backend gaps it surfaced.
 7. ⬜ Users & Accounts, NGOs (Admin).
 
 ### Testing
@@ -667,8 +757,22 @@ screens sit behind auth.
   when trimming changes nothing; Discard; client validation before the network; server errors;
   deactivate → refetch shows the server's status; cancel does nothing; `409` in the dialog), the
   `ngo_admin`-only route guard (admin in; volunteer, citizen and platform admin each bounced to
-  their own landing route), and the responsive NGO/Admin shell (drawer closed by default and out of
-  the tab order, open/backdrop/Escape/link-click, desktop rail toggle intact).
+  their own landing route), the responsive NGO/Admin shell (drawer closed by default and out of
+  the tab order, open/backdrop/Escape/link-click, desktop rail toggle intact), and My Account (name
+  card: read-only email, role/organisation chips, skeleton, load-failure with retry that leaves the
+  other sections alive; password card validation; the page: NGO admin vs. platform admin — no
+  `GET /ngo/me` for the latter — a failed org lookup just omitting the chip, the real partial save,
+  a password change ending the session with the message, a wrong current password staying signed in,
+  and staff-worded delete/deactivate ending the session), plus the avatar-menu "My Account" link
+  for both consoles, and Volunteers (roster rows with status and the honestly-labelled "Account
+  created" date; loading/empty/failure-with-retry as three distinct states; invite sends the trimmed
+  email, closes, and acknowledges with a notice, keeps the dialog open with the server's own message
+  on a refusal, catches a malformed email and the admin's own address before the network, and
+  reopens clean; a deactivated organisation swaps the Invite button for an explanation while removal
+  stays; an organisation-lookup failure still leaves Invite available; remove confirms first, sends
+  the right account id, refetches, and on a stale-roster `403` shows the server's message and
+  refreshes; cancel does nothing), plus the sidebar hiding Volunteers and Organization Settings from
+  an `ngo_volunteer` and showing both to an `ngo_admin`.
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -714,7 +818,31 @@ screens sit behind auth.
   phone untouched), shows the server's lower-casing of the email, confirms validation never calls
   the network, and deactivates for real (cancel does nothing; confirm flips the row to
   `deactivated` and signs nobody out). A seeded `ngo_volunteer` of the same NGO sees no sidebar link
-  and is bounced to `/ngo/dashboard` when visiting the URL directly.
+  and is bounced to `/ngo/dashboard` when visiting the URL directly. **My Account is the third**
+  (`e2e/account-my-account.spec.ts`), with a seeded `ngo_admin`, `ngo_volunteer` and platform
+  `admin`: real name/email/role/organisation, a save read back from the database and surviving a
+  reload, a blank name never calling the network, a wrong current password getting the real `401`
+  and staying signed in, a real password change that lands on `/login` with a message and *really*
+  kills the session (a protected route bounces, the old password is rejected, the new one logs in
+  to the right console), deactivate → database says `deactivated` → logging in again flips it back
+  to `active`, and delete (wrong password rejected, then the row soft-deleted). The volunteer reaches
+  it too (it isn't admin-only) and the platform admin's route shows no organisation. **Volunteers is
+  the fourth** (`e2e/ngo-volunteers.spec.ts`), the first to drive two real browser sessions against
+  each other: a seeded `ngo_admin` lists exactly its own organisation's volunteers (with their real
+  active/suspended status, and never a second organisation's), sees the empty state when there are
+  none, and reaches the screen from the sidebar. The full loop runs for real — the admin invites a
+  citizen through the dialog, the invitation is confirmed `pending` in Postgres with the citizen's
+  role untouched, the citizen logs in from a separate session and accepts it from
+  `/app/profile/invitations` (role becomes `ngo_volunteer`), and the person then appears on the
+  admin's roster. Refusals are the backend's own (`404 "account not found"`, `409 "must be a
+  citizen"` for someone already staff — the invitation count in the database stays zero), the admin's
+  own address and a malformed one never reach the network (counted with a route spy), removal is read
+  back from the database (role `user`, no `ngo_id`, account still `active`, and the removed person
+  logs straight back in to `/app/home`), cancelling changes nothing, a roster gone stale under an
+  open page gets the real `403`, and a deactivated organisation shows no Invite button but keeps its
+  roster and removal. A seeded `ngo_volunteer` has no sidebar link, is bounced from the URL, and a
+  direct `GET /ngo/volunteers` with their real token returns the real `403` — so the gate is proven
+  on both sides.
   - ⬜ Still not possible: a full "register → really verify via the real OTP → land in the app" E2E
     path and "request reset → really reset → log in with the new password" — both need a real
     OTP/reset token, only server-logged (Redis holds a hash). The DB-seeding helper is the
@@ -724,22 +852,33 @@ screens sit behind auth.
     manual check — reopen `/app/profile/ngo` and it should show the pending card, not the form.
   - ⬜ NGO registration → admin approval → promoted account login — the approval half is blocked on
     the Admin NGOs screen not being built yet. Volunteer invitation → accept → promoted is now
-    covered for the *citizen* half; the NGO-admin half (sending the invitation from
-    `POST /ngo/volunteers/invitations`) is blocked on the Volunteers screen (steps 6–7 above).
+    covered for both halves now: the admin sends it from the Volunteers screen, the citizen accepts
+    it from Invitations, and the roster shows the result (`ngo-volunteers.spec.ts`).
 - ⬜ Manual: 401-refresh-retry against a real expired token.
 - ⚠ Known environmental flake, not a code fault: with the default 4 Playwright workers on a busy
   machine (macOS background jobs pegging the CPU), a fresh page's first `page.goto` can exceed the
   30s test timeout and fail as `net::ERR_ABORTED` — a *different* test each run, while `curl` to the
   dev server stays instant. The same suite passes fully with `npx playwright test --workers=2`.
+  Seen again at `--workers=2` while finishing Volunteers (two consecutive full runs, and 9 of 30
+  executions in a repeat run of that spec): every failure was `page.goto: net::ERR_ABORTED` before
+  any assertion ran — never an assertion failure — while the dev server answered 30 parallel
+  requests in under 50 ms and the same tests passed 10/10 earlier. The machine is 8 GB with about
+  6 of 7 GB of swap in use, which fits a renderer being starved or killed under two Chromium
+  workers plus Vite, Docker and an IDE. **Checked with `--workers=1`: the full suite passed 65/65
+  (3.9 min), against the backend after it was restarted with the `COALESCE(password_hash, '')`
+  fix** — one run, but consistent with the memory-pressure explanation, and it shows the suite is
+  green on the new backend code. It was never the backend: the Go process hadn't been restarted
+  during the failing runs, and the failures are browser-side aborts before any API call. Use
+  `--workers=1` on this machine when a clean result matters.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
 met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
 Profile, Account Settings, My NGO, and Invitations are real and tested — every citizen
-`/app/profile/*` screen this phase owns — plus the first NGO screen, Organization Settings; the
-remaining NGO/admin account-lifecycle screens (My Account, Volunteers, Users & Accounts, NGOs —
-including the admin-approval half of NGO registration and the NGO side of volunteer invitations)
-remain.
+`/app/profile/*` screen this phase owns — plus Organization Settings and My Account for the NGO
+and admin consoles, and Volunteers (so the NGO side of volunteer invitations is real too); the
+remaining account-lifecycle screens (Users & Accounts, NGOs — including the admin-approval half of
+NGO registration) remain.
 
 ---
 
@@ -1056,6 +1195,11 @@ lands)
 4. As each backend domain ships for real (tracked in §1's table), swap that one service-layer file
    from MSW-backed to Axios-backed, re-run that domain's tests against the real backend, done —
    the screens themselves shouldn't need changes if the mock contract was accurate.
+5. **Retrofit into Phase 1's Volunteers screen** once Tasks and Field Observations exist: the row's
+   "View Activity" (a volunteer's task/observation history panel), and the read-only,
+   own-task-history view `WEB_DESIGN_PLAN.md` §6.3 promises an `ngo_volunteer` — dropped for now
+   because `GET /ngo/volunteers` is admin-only and there is no history to show (see the Progress
+   log's Volunteers entry).
 
 ### Testing
 - Component/E2E tests run against MSW in this phase (that's the point of MSW — deterministic tests

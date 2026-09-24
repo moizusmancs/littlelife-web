@@ -348,3 +348,82 @@ export async function deactivateMyNgo(): Promise<{ message: string }> {
   const res = await apiClient.post<{ message: string }>('/ngo/me/deactivate')
   return res.data
 }
+
+/**
+ * PATCH /auth/password — needs the *current* password even though the caller holds a valid access
+ * token (a stolen token alone can't change it). `new_password` must be 8+ characters. **On success
+ * every refresh token for the account is revoked — including the caller's own — and the web cookie
+ * is cleared**, so the session is dead even though the access token in hand hasn't expired yet.
+ * The doc is explicit that the correct UX is an immediate forced logout (clear local auth, go to
+ * `/login`), not to let the user carry on until the next silent refresh fails; the caller does
+ * exactly that and does NOT also call `logout()` (there's no session left for it to act on). A
+ * wrong current password is `401 "invalid email or password"`.
+ */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  const res = await apiClient.patch<{ message: string }>('/auth/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+  return res.data
+}
+
+/** The account's lifecycle status — what `GET /ngo/volunteers` reports per row. There is no
+ *  separate "volunteer status": a suspended or deactivated account is still on the roster. */
+export type AccountStatus = 'active' | 'suspended' | 'deactivated'
+
+export interface Volunteer {
+  id: string
+  email: string
+  status: AccountStatus
+  /** When the *account* was created — not when they joined the organisation (no such field). */
+  created_at: string
+}
+
+export const VOLUNTEERS_QUERY_KEY = ['ngo', 'volunteers'] as const
+
+/**
+ * GET /ngo/volunteers — `ngo_admin` only (`403 "insufficient permissions"` for a volunteer,
+ * `403 "account is not affiliated with an ngo"` without a membership). Every `ngo_volunteer`
+ * account currently tied to the caller's own organisation, newest first; `[]` when there are none.
+ * Rows carry no name (that lives in the profile, which has no NGO-side route) — email only.
+ */
+export async function getVolunteers(): Promise<Volunteer[]> {
+  const res = await apiClient.get<Volunteer[]>('/ngo/volunteers')
+  return res.data
+}
+
+/** `201` body of `POST /ngo/volunteers/invitations`. */
+export interface SentVolunteerInvitation {
+  id: string
+  ngo_id: string
+  invited_account_id: string
+  status: 'pending'
+  created_at: string
+}
+
+/**
+ * POST /ngo/volunteers/invitations — `ngo_admin` only. The invitee is looked up by email and must
+ * already exist as a plain citizen; nothing about their account changes until they accept. Errors:
+ * `404 "account not found"` (no such email), `409 "invited account must be a citizen…"` (already
+ * staff somewhere — which includes the caller's own email: the doc promises `400 "cannot invite
+ * yourself"`, but the role check runs first, so an `ngo_admin` inviting themselves really gets this
+ * 409), `409 "ngo is not active"`. There is no route for an NGO to list the invitations it has
+ * sent, and nothing stops the same person being invited twice — each call creates another pending
+ * invitation (verified against the real backend: two `201`s, two pending rows).
+ */
+export async function inviteVolunteer(email: string): Promise<SentVolunteerInvitation> {
+  const res = await apiClient.post<SentVolunteerInvitation>('/ngo/volunteers/invitations', { email })
+  return res.data
+}
+
+/**
+ * PATCH /ngo/volunteers/{id}/deactivate — `id` is the volunteer's *account* id. Despite the name it
+ * does not touch `accounts.status`: it removes them from the roster (`ngo_id` cleared, role reset
+ * to a plain citizen) and revokes their sessions, and the account stays fully usable. A target
+ * that isn't a volunteer of the caller's own NGO — including someone already removed — is
+ * `403 "this account is not a volunteer under your ngo"`.
+ */
+export async function removeVolunteer(accountId: string): Promise<{ message: string }> {
+  const res = await apiClient.patch<{ message: string }>(`/ngo/volunteers/${accountId}/deactivate`)
+  return res.data
+}

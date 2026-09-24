@@ -110,6 +110,8 @@ export function OpsLayout({ role }: { role: 'ngo' | 'admin' }) {
             roleLabel={user?.role ?? ''}
             onLogout={logout}
             isLoggingOut={isLoggingOut}
+            profileHref={role === 'admin' ? '/admin/settings/account' : '/ngo/settings/account'}
+            profileLabel="My Account"
             trigger={
               <button type="button" className="flex w-full items-center gap-2.5 rounded-sm" aria-label="Account menu">
                 <div className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700">

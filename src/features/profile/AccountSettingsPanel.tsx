@@ -1,9 +1,18 @@
 import { TrashIcon, WarningIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export interface AccountSettingsPanelProps {
   onDeactivateClick: () => void
   onDeleteClick: () => void
+  /** Overrides for reuse on the NGO/Admin My Account screen (same two routes, different voice and
+   *  placement); the defaults are the citizen Account Settings screen's own. */
+  title?: string
+  description?: string
+  /** `h1` when this card is the whole page, `h2` when it's a section of a larger one. */
+  titleAs?: 'h1' | 'h2'
+  deleteDescription?: string
+  className?: string
 }
 
 /**
@@ -17,11 +26,19 @@ export interface AccountSettingsPanelProps {
  * both actions open a confirm dialog owned by AccountSettingsPage, this component only reports
  * the click.
  */
-export function AccountSettingsPanel({ onDeactivateClick, onDeleteClick }: AccountSettingsPanelProps) {
+export function AccountSettingsPanel({
+  onDeactivateClick,
+  onDeleteClick,
+  title = 'Account Settings',
+  description = "Manage your account's active status.",
+  titleAs: Title = 'h1',
+  deleteDescription = "Permanent. Your reports, connections, and history are gone — this can't be undone.",
+  className,
+}: AccountSettingsPanelProps) {
   return (
-    <div className="max-w-140 rounded-md border border-surface-border bg-surface-raised p-6 md:p-8">
-      <h1 className="font-heading text-h2 font-bold text-ink-900">Account Settings</h1>
-      <p className="mt-1 font-body text-body-md text-ink-500">Manage your account's active status.</p>
+    <div className={cn('max-w-140 rounded-md border border-surface-border bg-surface-raised p-6 md:p-8', className)}>
+      <Title className="font-heading text-h2 font-bold text-ink-900">{title}</Title>
+      <p className="mt-1 font-body text-body-md text-ink-500">{description}</p>
 
       <div className="mt-6 flex flex-col">
         <div className="flex items-start gap-4 border-b border-surface-border py-5 first:pt-0 last:border-b-0 last:pb-0">
@@ -41,9 +58,7 @@ export function AccountSettingsPanel({ onDeactivateClick, onDeleteClick }: Accou
           <TrashIcon weight="fill" size={22} className="mt-0.5 flex-none text-status-critical" />
           <div className="min-w-0 flex-1">
             <p className="font-body text-body-md font-semibold text-ink-900">Delete account</p>
-            <p className="mt-0.5 font-body text-body-sm text-ink-500">
-              Permanent. Your reports, connections, and history are gone — this can't be undone.
-            </p>
+            <p className="mt-0.5 font-body text-body-sm text-ink-500">{deleteDescription}</p>
           </div>
           <Button type="button" variant="dangerOutline" size="sm" onClick={onDeleteClick} className="flex-none">
             Delete

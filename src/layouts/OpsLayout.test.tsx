@@ -2,8 +2,19 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { useAuthStore } from '@/store/auth'
 import { OpsLayout } from './OpsLayout'
+
+function signInAs(role: 'ngo_admin' | 'ngo_volunteer') {
+  useAuthStore.getState().setAuth('token', {
+    id: '1',
+    email: `${role}@example.com`,
+    role,
+    emailVerified: true,
+    profileComplete: true,
+  })
+}
 
 function renderAt(role: 'ngo' | 'admin', path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -21,6 +32,8 @@ function renderAt(role: 'ngo' | 'admin', path: string) {
 }
 
 describe('OpsLayout', () => {
+  afterEach(() => useAuthStore.getState().clearAuth())
+
   it('renders the admin sidebar with admin-only nav groups', () => {
     renderAt('admin', '/admin/dashboard')
     expect(screen.getByText('Users & Accounts')).toBeInTheDocument()
@@ -29,10 +42,29 @@ describe('OpsLayout', () => {
   })
 
   it('renders the NGO sidebar with NGO-only nav groups', () => {
+    signInAs('ngo_admin')
     renderAt('ngo', '/ngo/dashboard')
     expect(screen.getByText('Volunteers')).toBeInTheDocument()
     expect(screen.getByText('Field Observations')).toBeInTheDocument()
     expect(screen.queryByText('Users & Accounts')).not.toBeInTheDocument()
+  })
+
+  it('hides the ngo_admin-only screens (Volunteers, Organization Settings) from an NGO volunteer', () => {
+    signInAs('ngo_volunteer')
+    renderAt('ngo', '/ngo/dashboard')
+
+    expect(screen.queryByRole('link', { name: 'Volunteers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Organization Settings' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'My Account' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Incidents' })).toBeInTheDocument()
+  })
+
+  it('shows an ngo_admin both of them', () => {
+    signInAs('ngo_admin')
+    renderAt('ngo', '/ngo/dashboard')
+
+    expect(screen.getByRole('link', { name: 'Volunteers' })).toHaveAttribute('href', '/ngo/volunteers')
+    expect(screen.getByRole('link', { name: 'Organization Settings' })).toBeInTheDocument()
   })
 
   describe('responsive sidebar', () => {
@@ -83,6 +115,24 @@ describe('OpsLayout', () => {
 
       expect(label).toHaveClass('md:hidden')
       expect(drawer()).toHaveClass('md:w-18')
+    })
+  })
+
+  describe('account menu', () => {
+    it("links NGO staff to their own My Account screen from the avatar menu", async () => {
+      renderAt('ngo', '/ngo/dashboard')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+
+      expect(await screen.findByRole('menuitem', { name: 'My Account' })).toHaveAttribute('href', '/ngo/settings/account')
+    })
+
+    it("links platform admins to the admin My Account screen", async () => {
+      renderAt('admin', '/admin/dashboard')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+
+      expect(await screen.findByRole('menuitem', { name: 'My Account' })).toHaveAttribute('href', '/admin/settings/account')
     })
   })
 })

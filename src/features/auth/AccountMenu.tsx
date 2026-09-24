@@ -13,9 +13,11 @@ export interface AccountMenuProps {
   onLogout: () => void
   isLoggingOut: boolean
   align?: 'start' | 'end'
-  /** Route to this role's real profile screen — omitted where there isn't one yet (NGO/Admin's
-   *  "My Account" is still a placeholder, so OpsLayout doesn't pass this). */
+  /** Route to this role's own account/profile screen: the citizen Edit Profile, or NGO/Admin's My
+   *  Account. Optional so a caller with nothing to link to can leave the item out. */
   profileHref?: string
+  /** Text for the `profileHref` item — "Profile" for a citizen, "My Account" for NGO/Admin staff. */
+  profileLabel?: string
 }
 
 /**
@@ -32,6 +34,7 @@ export function AccountMenu({
   isLoggingOut,
   align = 'end',
   profileHref,
+  profileLabel = 'Profile',
 }: AccountMenuProps) {
   return (
     <DropdownMenu.Root>
@@ -54,7 +57,7 @@ export function AccountMenu({
                 className="flex cursor-pointer items-center gap-2.5 rounded-sm px-3 py-2.5 font-body text-body-md text-ink-900 outline-none select-none data-highlighted:bg-surface-sunken"
               >
                 <UserCircleIcon size={18} />
-                Profile
+                {profileLabel}
               </Link>
             </DropdownMenu.Item>
           )}

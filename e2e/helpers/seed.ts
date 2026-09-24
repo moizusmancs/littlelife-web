@@ -61,10 +61,14 @@ export function seedPendingInvitation(invitedEmail: string, ngoName: string): Se
   if (!ngoName.startsWith('E2E ')) throw new Error(`seed helper refuses a non-test NGO name: ${ngoName}`)
 
   const founderEmail = `e2e-founder-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`
+  // The founder borrows the invited account's password hash. A NULL hash made every backend query
+  // that loaded this account fail (e.g. the admin accounts list), and these rows are never deleted.
   const [founderId, ngoId] = psql(`
     WITH founder AS (
-      INSERT INTO accounts (email, role, status, email_verified)
-      VALUES (${lit(founderEmail)}, 'ngo_admin', 'active', true)
+      INSERT INTO accounts (email, password_hash, role, status, email_verified)
+      SELECT ${lit(founderEmail)}, invited.password_hash, 'ngo_admin', 'active', true
+      FROM accounts invited
+      WHERE lower(invited.email) = lower(${lit(invitedEmail)}) AND invited.deleted_at IS NULL
       RETURNING id
     ), ngo AS (
       INSERT INTO ngos (name, status, created_by, approved_by, approved_at)
@@ -72,6 +76,7 @@ export function seedPendingInvitation(invitedEmail: string, ngoName: string): Se
       RETURNING id
     )
     SELECT (SELECT id FROM founder) || ',' || (SELECT id FROM ngo)`).split(',')
+  if (!founderId || !ngoId) throw new Error(`no account found to invite for ${invitedEmail}`)
 
   const invitationId = psql(`
     WITH link AS (
@@ -150,4 +155,79 @@ export function readNgo(ngoId: string): { name: string; status: string; contactE
     `SELECT name || '|' || status || '|' || COALESCE(contact_email, '') || '|' || COALESCE(contact_phone, '') FROM ngos WHERE id = ${lit(ngoId)}`,
   ).split('|')
   return { name, status, contactEmail, contactPhone }
+}
+
+/** Makes a registered `e2e-` account a platform `admin` (verified + onboarded), ready for a
+ *  genuine login that lands on `/admin/dashboard`. */
+export function promoteToPlatformAdmin(email: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET role = 'admin', updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!updated) throw new Error(`no account found to make an admin: ${email}`)
+  verifyAndOnboardAccount(email, 'E2E Platform Admin')
+}
+
+/** Read-only: an account's role, lifecycle status, and whether it's soft-deleted — including
+ *  deleted rows, so a delete/deactivate can be asserted against the database itself. */
+export function readAccountState(email: string): { role: string; status: string; deleted: boolean } {
+  assertE2eEmail(email)
+  const [role, status, deleted] = psql(
+    `SELECT role || ',' || status || ',' || (deleted_at IS NOT NULL)::text FROM accounts
+     WHERE lower(email) = lower(${lit(email)}) ORDER BY created_at DESC LIMIT 1`,
+  ).split(',')
+  return { role, status, deleted: deleted === 'true' }
+}
+
+/** Read-only: the profile name stored for an account. */
+export function readProfileName(email: string): string {
+  assertE2eEmail(email)
+  return psql(
+    `SELECT p.name FROM profiles p JOIN accounts a ON a.id = p.account_id
+     WHERE lower(a.email) = lower(${lit(email)}) AND a.deleted_at IS NULL`,
+  )
+}
+
+/** Sets an `e2e-` account's lifecycle status (`active` / `suspended` / `deactivated`), e.g. to put
+ *  a volunteer on a roster in a state only a platform admin or the account itself could reach. */
+export function setAccountStatus(email: string, status: 'active' | 'suspended' | 'deactivated') {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET status = ${lit(status)}, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!updated) throw new Error(`no account found to set status on: ${email}`)
+}
+
+/** Sets an `E2E …` NGO's status, e.g. `deactivated` to see how a screen behaves once the
+ *  organisation can no longer invite. Refuses any other NGO. */
+export function setNgoStatus(ngoId: string, status: 'active' | 'suspended' | 'deactivated') {
+  const updated = psql(`
+    UPDATE ngos SET status = ${lit(status)}, updated_at = now()
+    WHERE id = ${lit(ngoId)} AND name LIKE 'E2E %'
+    RETURNING id`)
+  if (!updated) throw new Error(`no E2E NGO ${ngoId} to set status on`)
+}
+
+/** Takes an `e2e-` volunteer off their roster behind an open page's back — what an admin's remove
+ *  (or anything else) would do — so a screen showing a stale roster can be provoked for real. */
+export function demoteToCitizen(email: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET role = 'user', ngo_id = NULL, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!updated) throw new Error(`no account found to demote: ${email}`)
+}
+
+/** Read-only: the status of every volunteer invitation addressed to an `e2e-` account (oldest
+ *  first), to assert an invite really reached the database. */
+export function readInvitationStatuses(invitedEmail: string): string[] {
+  assertE2eEmail(invitedEmail)
+  const out = psql(
+    `SELECT i.status FROM ngo_volunteer_invitations i JOIN accounts a ON a.id = i.invited_account_id
+     WHERE lower(a.email) = lower(${lit(invitedEmail)}) ORDER BY i.created_at`,
+  )
+  return out === '' ? [] : out.split('\n')
 }

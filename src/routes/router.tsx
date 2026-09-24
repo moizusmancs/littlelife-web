@@ -14,6 +14,8 @@ import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
 import { OrganizationSettingsPage } from '@/pages/ngo/OrganizationSettingsPage'
+import { VolunteersPage } from '@/pages/ngo/VolunteersPage'
+import { MyAccountPage } from '@/pages/account/MyAccountPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -89,7 +91,6 @@ export function AppRouter() {
             <Route path="/ngo/missing-persons" element={<PlaceholderPage title="Missing Persons" phase="Phase 6" />} />
             <Route path="/ngo/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
             <Route path="/ngo/tasks" element={<PlaceholderPage title="Tasks" phase="Phase 7 (mocked)" />} />
-            <Route path="/ngo/volunteers" element={<PlaceholderPage title="Volunteers" phase="Phase 1" />} />
             <Route path="/ngo/shelters" element={<PlaceholderPage title="Shelters" phase="Phase 3" />} />
             <Route path="/ngo/shelters/:id" element={<PlaceholderPage title="Shelter Detail" phase="Phase 3" />} />
             <Route path="/ngo/campaigns" element={<PlaceholderPage title="Campaigns" phase="Phase 6" />} />
@@ -103,9 +104,10 @@ export function AppRouter() {
             {/* ngo_admin only — a volunteer is bounced to their own landing route by this nested
                 guard (the sidebar hides the link for them too, but hiding isn't enforcement). */}
             <Route element={<RequireRole allowed={['ngo_admin']} />}>
+              <Route path="/ngo/volunteers" element={<VolunteersPage />} />
               <Route path="/ngo/settings/organization" element={<OrganizationSettingsPage />} />
             </Route>
-            <Route path="/ngo/settings/account" element={<PlaceholderPage title="My Account" phase="Phase 1" />} />
+            <Route path="/ngo/settings/account" element={<MyAccountPage />} />
           </Route>
         </Route>
 
@@ -133,7 +135,7 @@ export function AppRouter() {
             <Route path="/admin/regions/:id" element={<PlaceholderPage title="Region Detail" phase="Phase 2" />} />
             <Route path="/admin/facilities" element={<PlaceholderPage title="Facilities" phase="Phase 3" />} />
             <Route path="/admin/offline-maps" element={<PlaceholderPage title="Offline Map Packages" phase="Phase 3" />} />
-            <Route path="/admin/settings/account" element={<PlaceholderPage title="My Account" phase="Phase 1" />} />
+            <Route path="/admin/settings/account" element={<MyAccountPage />} />
           </Route>
         </Route>
 

@@ -95,7 +95,7 @@ export const ngoNavGroups: OpsNavGroup[] = [
       { label: 'Aid Requests', to: '/ngo/aid-requests', icon: HandHeartIcon },
       { label: 'Missing Persons', to: '/ngo/missing-persons', icon: UserFocusIcon },
       { label: 'Tasks', to: '/ngo/tasks', icon: KanbanIcon },
-      { label: 'Volunteers', to: '/ngo/volunteers', icon: UsersThreeIcon },
+      { label: 'Volunteers', to: '/ngo/volunteers', icon: UsersThreeIcon, adminOnly: true },
       { label: 'Shelters', to: '/ngo/shelters', icon: HouseLineIcon },
       { label: 'Campaigns', to: '/ngo/campaigns', icon: CoinsIcon },
     ],
