@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Notice, type PageNotice } from '@/components/ui/notice'
 import { RegionDetailPanel } from '@/features/regions/RegionDetailPanel'
 import { RegionEditor, type RegionEditorTarget } from '@/features/regions/RegionEditor'
+import { RegionNgosCard } from '@/features/regions/RegionNgosCard'
 import { RegionsState } from '@/features/regions/RegionsState'
 import { RegionTreePanel } from '@/features/regions/RegionTreePanel'
 import { downloadBoundary } from '@/features/regions/downloadGeoJson'
@@ -23,7 +24,7 @@ import {
   visibleRows,
   type RegionFilter,
 } from '@/features/regions/regionTree'
-import { REGIONS_QUERY_KEY, getRegions, type Region } from '@/api/geo'
+import { REGIONS_QUERY_KEY, getRegionNgos, getRegions, regionNgosQueryKey, type Region } from '@/api/geo'
 import { extractErrorMessage } from '@/api/errors'
 import { cn } from '@/lib/utils'
 
@@ -53,9 +54,10 @@ const toParams = ({ q, level }: RegionFilter) => {
  * region whenever the selection changes — set while rendering, not in an effect.
  *
  * Add/Edit open RegionEditor's drawer. There is no delete: the API has no route for it.
- * Not built from the mockup: the map (Phase 3's shared component — an outline is drawn instead),
- * population/area/code (no such fields), assigned NGOs (no admin route lists a region's NGOs) and
- * boundary import.
+ * Each region also lists the organisations assigned to it (`GET /admin/regions/{id}/ngos`, direct
+ * assignments only), in a card that loads and fails on its own. Not built from the mockup: the map
+ * (Phase 3's shared component — an outline is drawn instead), population/area/code (no such fields),
+ * assigning an NGO from here (only an NGO's own admin can change its coverage) and boundary import.
  */
 export function RegionsPage() {
   const { id } = useParams()
@@ -85,6 +87,8 @@ export function RegionsPage() {
 
   const linkSearch = toParams(filter).toString() ? `?${toParams(filter).toString()}` : ''
   const selected = id ? regions?.find((region) => region.id === id) : undefined
+  // Its own request per selected region, so a failure stays in the card instead of taking the panel down.
+  const ngosQuery = useQuery({ queryKey: regionNgosQueryKey(id ?? ''), queryFn: () => getRegionNgos(id as string), enabled: selected !== undefined })
 
   const toggle = (regionId: string) =>
     setExpansion((previous) => {
@@ -142,6 +146,7 @@ export function RegionsPage() {
               onDownloadBoundary={() => downloadBoundary(selected)}
               linkSearch={linkSearch}
               backLink={backLink}
+              coverage={<RegionNgosCard ngos={ngosQuery.data} error={ngosQuery.isError ? extractErrorMessage(ngosQuery.error) : null} onRetry={() => void ngosQuery.refetch()} />}
             />
           ) : id ? (
             <div className="flex flex-col gap-4">

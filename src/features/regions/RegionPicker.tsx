@@ -22,6 +22,8 @@ export interface RegionPickerProps {
   onSelect: (regionId: string) => void
   /** Regions that can't be chosen, with the reason shown beside them. */
   unavailable: ReadonlyMap<string, string>
+  /** Height limit of the scrolling list, for a screen with more room than a dialog (default `max-h-72`). */
+  listClassName?: string
 }
 
 /**
@@ -44,6 +46,7 @@ export function RegionPicker({
   selectedId,
   onSelect,
   unavailable,
+  listClassName = 'max-h-72',
 }: RegionPickerProps) {
   const row = (region: Region, subtitle: string, childCount: number) => {
     const reason = unavailable.get(region.id)
@@ -130,12 +133,12 @@ export function RegionPicker({
           matches.length === 0 ? (
             <p className="py-6 text-center font-body text-body-md text-ink-500">No regions match.</p>
           ) : (
-            <ul aria-label="Matching regions" className="flex max-h-72 flex-col overflow-y-auto">
+            <ul aria-label="Matching regions" className={cn('flex flex-col overflow-y-auto', listClassName)}>
               {matches.map((region) => row(region, parentPathOf(region), 0))}
             </ul>
           )
         ) : (
-          <ul aria-label={trail.length > 0 ? `Inside ${trail[trail.length - 1].name}` : 'Regions'} className="flex max-h-72 flex-col overflow-y-auto">
+          <ul aria-label={trail.length > 0 ? `Inside ${trail[trail.length - 1].name}` : 'Regions'} className={cn('flex flex-col overflow-y-auto', listClassName)}>
             {options.map(({ region, childCount }) => row(region, '', childCount))}
           </ul>
         )}

@@ -34,7 +34,7 @@ export function useEditProfile() {
   })
 
   const mutation = useMutation({
-    mutationFn: (values: EditProfileFormValues) => updateProfile(values.name),
+    mutationFn: (values: EditProfileFormValues) => updateProfile({ name: values.name }),
     onSuccess: (updated) => {
       setServerError(null)
       queryClient.setQueryData(PROFILE_QUERY_KEY, updated)

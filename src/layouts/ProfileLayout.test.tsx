@@ -40,6 +40,29 @@ describe('ProfileLayout', () => {
     expect(screen.getByText('edit profile content')).toBeInTheDocument()
   })
 
+  it('shows the home region from the profile response, split from its path, with no region request', async () => {
+    let regionRequests = 0
+    server.use(
+      http.get('*/regions', () => ((regionRequests += 1), HttpResponse.json([]))),
+      http.get('*/profile', () =>
+        HttpResponse.json({
+          id: 'profile-1',
+          name: 'Hina Khan',
+          home_region_id: 'r-1',
+          home_region_name: 'Sukkur City',
+          home_region_level: 'tehsil',
+          home_region_path: 'Sindh › Sukkur › Sukkur City',
+          created_at: '',
+          updated_at: '',
+        }),
+      ),
+    )
+    renderProfileLayout()
+
+    expect(await screen.findByText('Sukkur City, Sukkur')).toBeInTheDocument()
+    expect(regionRequests).toBe(0)
+  })
+
   it('renders whichever nested profile route is active', async () => {
     server.use(
       http.get('*/profile', () =>

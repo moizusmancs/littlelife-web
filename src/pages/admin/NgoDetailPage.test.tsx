@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
+import type { AdminNgoRegion } from '@/api/geo'
 import type { AdminNgo, Volunteer } from '@/api/identity'
 import { makeNgo } from '@/features/ngoDirectory/testNgo'
 import { NgoDetailPage } from './NgoDetailPage'
@@ -33,7 +34,7 @@ const roster: Volunteer[] = [
   { id: 'v-1', email: 'vera@example.com', status: 'active', created_at: '2026-09-20T06:44:36Z' },
 ]
 
-function serve(ngo: AdminNgo = pending, volunteers: Volunteer[] = []) {
+function serve(ngo: AdminNgo = pending, volunteers: Volunteer[] = [], regions: AdminNgoRegion[] = []) {
   let current = ngo
   const calls = { decisions: [] as string[] }
   server.use(
@@ -41,6 +42,7 @@ function serve(ngo: AdminNgo = pending, volunteers: Volunteer[] = []) {
       params.id === current.id ? HttpResponse.json(current) : HttpResponse.json({ error: 'ngo not found' }, { status: 404 }),
     ),
     http.get('*/admin/ngos/:id/volunteers', () => HttpResponse.json(volunteers)),
+    http.get('*/admin/ngos/:id/regions', () => HttpResponse.json(regions)),
     http.post('*/admin/ngos/:id/:decision', ({ params }) => {
       calls.decisions.push(params.decision as string)
       if (current.status !== 'pending_approval') return HttpResponse.json({ error: 'ngo is not pending approval' }, { status: 409 })
@@ -55,6 +57,44 @@ function serve(ngo: AdminNgo = pending, volunteers: Volunteer[] = []) {
   )
   return { calls, setCurrent: (next: AdminNgo) => (current = next) }
 }
+
+describe('NgoDetailPage — operational regions', () => {
+  const covered: AdminNgoRegion[] = [
+    { id: 'r-1', name: 'Sindh', level: 'province', path: 'Sindh', assigned_at: '2026-08-06T07:19:47Z' },
+    { id: 'r-2', name: 'Sukkur City', level: 'tehsil', parent_region_id: 'r-3', path: 'Sindh › Sukkur › Sukkur City', assigned_at: '2026-09-01T07:19:47Z' },
+  ]
+
+  it('shows the regions the organisation covers, each linking to its Regions page', async () => {
+    serve(makeNgo(NGO_ID, 'Indus Relief', 'active'), [], covered)
+    renderPage()
+
+    const card = (await screen.findByRole('heading', { name: /Operational regions/ })).closest('section')!
+    expect(await within(card).findByRole('link', { name: 'Sukkur City' })).toHaveAttribute('href', '/admin/regions/r-2')
+    expect(within(card).getByRole('link', { name: 'Sindh' })).toHaveAttribute('href', '/admin/regions/r-1')
+    expect(card).toHaveTextContent('Tehsil · Sindh › Sukkur › Sukkur City')
+  })
+
+  it('says a pending organisation covers nothing yet', async () => {
+    serve()
+    renderPage()
+    expect(await screen.findByText("This organisation doesn't cover any region yet.")).toBeInTheDocument()
+  })
+
+  it('a failed regions load stays in its card, the rest of the page is untouched, and it retries', async () => {
+    serve()
+    let failing = true
+    server.use(http.get('*/admin/ngos/:id/regions', () => (failing ? HttpResponse.json({ error: 'regions are down' }, { status: 500 }) : HttpResponse.json([]))))
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Flood Relief Karachi', level: 1 })).toBeInTheDocument()
+    const card = screen.getByRole('heading', { name: /Operational regions/ }).closest('section')!
+    expect(await within(card).findByRole('alert')).toHaveTextContent('regions are down')
+
+    failing = false
+    await userEvent.click(within(card).getByRole('button', { name: 'Try again' }))
+    expect(await within(card).findByText("This organisation doesn't cover any region yet.")).toBeInTheDocument()
+  })
+})
 
 describe('NgoDetailPage', () => {
   it('shows the organisation, its applicant, and its volunteer roster', async () => {

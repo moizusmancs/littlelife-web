@@ -29,6 +29,8 @@ export interface RegionDetailPanelProps {
   linkSearch: string
   /** Mobile only: the way back to the tree. */
   backLink: React.ReactNode
+  /** The organisations covering this region — its own card, loaded by the container so a failure stays inside it. */
+  coverage?: React.ReactNode
 }
 
 const linkTo = (id: string, search: string) => ({ pathname: `/admin/regions/${id}`, search })
@@ -38,10 +40,10 @@ const linkTo = (id: string, search: string) => ({ pathname: `/admin/regions/${id
  * its raw details. Edit and "Add a district/tehsil" open the container's drawer; nothing here
  * fetches. The boundary is drawn as a flat outline (no map yet — that's Phase 3's shared component)
  * and can be downloaded as GeoJSON; a stored boundary that isn't a well-formed polygon (the API has
- * stored some) says so instead of drawing garbage. The mockup's population/area/code, assigned NGOs
- * and boundary import have no data or route behind them and aren't shown.
+ * stored some) says so instead of drawing garbage. The mockup's population/area/code and boundary
+ * import have no data or route behind them and aren't shown; the assigned NGOs come in as `coverage`.
  */
-export function RegionDetailPanel({ region, path, subRegions, onEdit, onAddSubRegion, onDownloadBoundary, linkSearch, backLink }: RegionDetailPanelProps) {
+export function RegionDetailPanel({ region, path, subRegions, onEdit, onAddSubRegion, onDownloadBoundary, linkSearch, backLink, coverage }: RegionDetailPanelProps) {
   const polygon = polygonFromGeometry(region.boundary)
   const summary = polygon ? summarizePolygon(polygon) : null
   const childLevel = childLevelOf(region.level)
@@ -171,6 +173,8 @@ export function RegionDetailPanel({ region, path, subRegions, onEdit, onAddSubRe
           </section>
         </div>
       </div>
+
+      {coverage}
     </div>
   )
 }

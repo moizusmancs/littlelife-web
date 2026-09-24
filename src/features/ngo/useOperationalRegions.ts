@@ -1,15 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
-import { MY_REGIONS_QUERY_KEY, REGIONS_QUERY_KEY, assignRegion, getMyRegions, getRegions, removeRegion, type Region } from '@/api/geo'
+import { MY_REGIONS_QUERY_KEY, assignRegion, getMyRegions, removeRegion, type Region } from '@/api/geo'
 import { extractErrorMessage } from '@/api/errors'
 import type { PageNotice } from '@/components/ui/notice'
-import { useRegionPicker } from '@/features/regions/useRegionPicker'
+import { useRegionChoice } from '@/features/regions/useRegionChoice'
 import type { AddRegionDialogProps } from './AddRegionDialog'
 import type { OperationalRegionsCardProps } from './OperationalRegionsCard'
 import type { RemoveRegionDialogProps } from './RemoveRegionDialog'
 
-const NO_REGIONS: Region[] = []
 const byName = (a: Region, b: Region) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
 
 /**
@@ -30,9 +29,8 @@ export function useOperationalRegions({ onNotice }: { onNotice: (notice: PageNot
 
   const [addOpen, setAddOpen] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
-  const all = useQuery({ queryKey: REGIONS_QUERY_KEY, queryFn: () => getRegions(), enabled: addOpen })
   const unavailable = useMemo(() => new Map((mine.data ?? []).map((region) => [region.id, 'Already added'])), [mine.data])
-  const { pickerProps, selected, reset } = useRegionPicker(all.data ?? NO_REGIONS, unavailable)
+  const choice = useRegionChoice(addOpen, unavailable)
 
   const [removeTarget, setRemoveTarget] = useState<Region | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
@@ -72,7 +70,7 @@ export function useOperationalRegions({ onNotice }: { onNotice: (notice: PageNot
     error: mine.isError ? extractErrorMessage(mine.error) : null,
     onRetry: () => void mine.refetch(),
     onAdd: () => {
-      reset()
+      choice.reset()
       setAddError(null)
       setAddOpen(true)
     },
@@ -85,13 +83,13 @@ export function useOperationalRegions({ onNotice }: { onNotice: (notice: PageNot
   const addDialog: AddRegionDialogProps = {
     open: addOpen,
     onOpenChange: setAddOpen,
-    state: all.isError ? 'error' : all.isPending ? 'loading' : all.data.length === 0 ? 'empty' : 'ready',
-    error: all.isError ? extractErrorMessage(all.error) : null,
-    onRetry: () => void all.refetch(),
-    picker: pickerProps,
-    hasSelection: selected !== null,
+    state: choice.state,
+    error: choice.error,
+    onRetry: choice.retry,
+    picker: choice.pickerProps,
+    hasSelection: choice.selected !== null,
     onConfirm: () => {
-      if (selected) assign.mutate(selected)
+      if (choice.selected) assign.mutate(choice.selected)
     },
     isSubmitting: assign.isPending,
     serverError: addError,

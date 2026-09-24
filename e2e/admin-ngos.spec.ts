@@ -5,6 +5,8 @@ import {
   promoteToPlatformAdmin,
   readAccountRole,
   readNgo,
+  seedNgoRegion,
+  seedRegion,
   setNgoStatus,
   verifyAndOnboardAccount,
 } from './helpers/seed'
@@ -369,3 +371,81 @@ function readNgoByApplicant(applicantEmail: string) {
   // only used after a decision that set it.
   return { id: ngoId, ...readNgo(ngoId) }
 }
+
+
+test.describe('NGO regions — real backend', () => {
+  /** A registered account made the admin of a new active `E2E …` NGO that covers the given regions. */
+  async function coveringNgo(request: APIRequestContext, name: string, regions: string[]) {
+    const email = await register(request, `regions-${Math.floor(Math.random() * 1e6)}`)
+    const ngoId = promoteToNgoAdmin(email, name)
+    for (const region of regions) seedNgoRegion(ngoId, region)
+    return ngoId
+  }
+
+  test('the detail page lists the regions an organisation covers, each with its level, where it sits and a link to it', async ({ page, request }) => {
+    await signInAsAdmin(page, request, 'ngoregions')
+    const tag = unique('Covers')
+    const province = seedRegion(`${tag} Prov`, 'province')
+    const district = seedRegion(`${tag} Dist`, 'district', province)
+    const tehsil = seedRegion(`${tag} Tehsil`, 'tehsil', district)
+    const ngoId = await coveringNgo(request, `${tag} NGO`, [province, tehsil])
+
+    await page.goto(`/admin/ngos/${ngoId}`)
+    const card = page.getByRole('heading', { name: /Operational regions/ }).locator('xpath=ancestor::section')
+    await expect(card.getByRole('listitem')).toHaveCount(2)
+    const tehsilRow = card.getByRole('listitem').filter({ hasText: `${tag} Tehsil` })
+    await expect(tehsilRow).toContainText(`Tehsil · ${tag} Prov › ${tag} Dist › ${tag} Tehsil`)
+    await expect(card.getByRole('listitem').filter({ hasText: `${tag} Prov` }).first()).toContainText('Assigned')
+
+    // Each region links to its own Regions page — where this organisation is listed back.
+    await tehsilRow.getByRole('link', { name: `${tag} Tehsil` }).click()
+    await expect(page).toHaveURL(new RegExp(`/admin/regions/${tehsil}$`))
+    await expect(page.getByRole('heading', { name: `${tag} Tehsil`, level: 2 })).toBeVisible()
+    await expect(page.getByRole('link', { name: `${tag} NGO` })).toBeVisible()
+  })
+
+  test('an organisation that covers nothing says so — including a pending application', async ({ page, request }) => {
+    await signInAsAdmin(page, request, 'ngonone')
+    const tag = unique('Nothing')
+    const ngoId = await coveringNgo(request, `${tag} NGO`, [])
+    setNgoStatus(ngoId, 'pending_approval')
+
+    await page.goto(`/admin/ngos/${ngoId}`)
+    await expect(page.getByText("This organisation doesn't cover any region yet.")).toBeVisible()
+  })
+
+  test('the list shows how many regions each organisation covers, without a request per row', async ({ page, request }) => {
+    await signInAsAdmin(page, request, 'ngocount')
+    const tag = unique('Count')
+    const a = seedRegion(`${tag} A`, 'province')
+    const b = seedRegion(`${tag} B`, 'province')
+    const c = seedRegion(`${tag} C`, 'province')
+    await coveringNgo(request, `${tag} Three`, [a, b, c])
+    await coveringNgo(request, `${tag} One`, [a])
+    await coveringNgo(request, `${tag} None`, [])
+
+    await page.goto('/admin/ngos')
+    await page.getByRole('tab', { name: /^Active/ }).click()
+    await search(page, tag)
+    await expect(rowFor(page, `${tag} Three`)).toContainText('3 regions')
+    await expect(rowFor(page, `${tag} One`)).toContainText('1 region')
+    await expect(rowFor(page, `${tag} None`)).toContainText('0 regions')
+
+    // …and the count is exactly the length of what the detail page lists.
+    await rowFor(page, `${tag} Three`).getByRole('link', { name: `View ${tag} Three` }).click()
+    await expect(page.getByRole('heading', { name: /Operational regions/ })).toContainText('3')
+  })
+
+  test('the regions route is admin-only: an NGO admin gets the real 403 and an unknown NGO a real 404', async ({ page, request }) => {
+    const adminEmail = await signInAsAdmin(page, request, 'ngoregions403')
+    const tag = unique('Guard')
+    const ngoEmail = await register(request, 'guard-ngo')
+    const ngoId = promoteToNgoAdmin(ngoEmail, `${tag} NGO`)
+
+    const tokenFor = async (email: string) => (await (await request.post(`${API}/auth/login`, { data: { email, password } })).json()).access_token as string
+    const asNgo = await request.get(`${API}/admin/ngos/${ngoId}/regions`, { headers: { Authorization: `Bearer ${await tokenFor(ngoEmail)}` } })
+    expect(asNgo.status()).toBe(403)
+    const unknown = await request.get(`${API}/admin/ngos/00000000-0000-0000-0000-000000000001/regions`, { headers: { Authorization: `Bearer ${await tokenFor(adminEmail)}` } })
+    expect(unknown.status()).toBe(404)
+  })
+})

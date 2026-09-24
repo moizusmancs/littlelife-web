@@ -270,6 +270,22 @@ describe('RegionEditor — editing a region', () => {
     expect(screen.getByLabelText('Parent')).toBeDisabled()
   })
 
+  it('explains a parent-loop refusal (another admin re-parented regions meanwhile) and refreshes the list', async () => {
+    const loop = 'parent_region_id would create a loop: that region is a descendant of this one'
+    captureWrites(() => HttpResponse.json({ error: loop }, { status: 400 }))
+    const { queryClient } = renderEditor({ mode: 'edit', region: larkana })
+    queryClient.setQueryData(['regions'], sampleRegions)
+    await userEvent.selectOptions(screen.getByLabelText('Parent province'), 'punjab')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(loop)
+    expect(alert).toHaveTextContent('Someone may have changed the regions since this list loaded')
+    expect(queryClient.getQueryState(['regions'])?.isInvalidated).toBe(true)
+    // The refused parent is dropped, so the form asks for a new one instead of resending the same loop.
+    expect(screen.getByLabelText('Parent province')).toHaveValue('')
+  })
+
   it('lets a district that already has no parent keep having none, but no other district', async () => {
     const orphan = sampleRegions.find((r) => r.id === 'orphan')!
     const writes = captureWrites((body) => HttpResponse.json({ ...orphan, ...body }))

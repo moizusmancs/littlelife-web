@@ -19,6 +19,9 @@ function renderAt(initialPath: string) {
           <Route path="/app/onboarding/profile" element={<div>onboarding profile screen</div>} />
         </Route>
         <Route element={<RequireRole allowed={['user']} />}>
+          <Route path="/app/onboarding/region" element={<div>region step screen</div>} />
+        </Route>
+        <Route element={<RequireRole allowed={['user']} />}>
           <Route path="/app/home" element={<div>citizen home</div>} />
         </Route>
         <Route element={<RequireRole allowed={['ngo_admin', 'ngo_volunteer']} />}>
@@ -224,5 +227,43 @@ describe('route guards — onboarding chain (verify email -> complete profile ->
     renderAt('/app/onboarding/profile')
 
     expect(screen.getByText('login screen')).toBeInTheDocument()
+  })
+
+  it('sends a completed profile to the one-shot next stop the name step set (the optional region step), not the landing route', () => {
+    setAuthedUser()
+    useAuthStore.getState().setPostOnboardingRoute('/app/onboarding/region')
+
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('region step screen')).toBeInTheDocument()
+    expect(screen.queryByText('citizen home')).not.toBeInTheDocument()
+  })
+
+  it('applies the next stop only while it is set: once the region step clears it, the name step sends people to the landing route', () => {
+    setAuthedUser()
+    useAuthStore.getState().setPostOnboardingRoute('/app/onboarding/region')
+    useAuthStore.getState().clearPostOnboardingRoute()
+
+    renderAt('/app/onboarding/profile')
+
+    expect(screen.getByText('citizen home')).toBeInTheDocument()
+  })
+
+  it('does not carry a next stop over to the next account: signing out drops it', () => {
+    setAuthedUser()
+    useAuthStore.getState().setPostOnboardingRoute('/app/onboarding/region')
+
+    useAuthStore.getState().clearAuth()
+    expect(useAuthStore.getState().postOnboardingRoute).toBeNull()
+
+    setAuthedUser({ id: '2', email: 'second@example.com' })
+    renderAt('/app/onboarding/profile')
+    expect(screen.getByText('citizen home')).toBeInTheDocument()
+  })
+
+  it('leaves the region step to verified, onboarded citizens only — it is not one of the mandatory steps', () => {
+    setAuthedUser({ emailVerified: false, profileComplete: false })
+    renderAt('/app/onboarding/region')
+    expect(screen.getByText('verify email screen')).toBeInTheDocument()
   })
 })

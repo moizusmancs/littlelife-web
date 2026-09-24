@@ -2,10 +2,13 @@ import { readFileSync } from 'node:fs'
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
 import {
   countRegionsNamed,
+  promoteToNgoAdmin,
   promoteToPlatformAdmin,
   readRegion,
   readRegionByName,
+  seedNgoRegion,
   seedRegion,
+  setNgoStatus,
   squareRing,
   verifyAndOnboardAccount,
 } from './helpers/seed'
@@ -371,6 +374,35 @@ test.describe('Regions — editing, real backend', () => {
     expect(readRegion(districtId).name).toBe(`${tag} Dist`)
   })
 
+  test('a parent loop that only someone else’s edit makes possible is refused by the real API, explained, and the list refreshed', async ({ page, request }) => {
+    const adminEmail = await signInAsAdmin(page, request, 'loop')
+    const tag = unique('Loop')
+    const p1 = seedRegion(`${tag} P1`, 'province')
+    const p2 = seedRegion(`${tag} P2`, 'province', undefined, squareRing(70, 25))
+    const b = seedRegion(`${tag} B`, 'district', p1)
+
+    await page.goto(`/admin/regions/${b}`)
+    await page.getByRole('button', { name: 'Edit region' }).click()
+    const parent = drawer(page).getByLabel('Parent province')
+    await expect(parent.locator('option', { hasText: `${tag} P2` })).toHaveCount(1)
+
+    // Behind the page's back another admin makes P2 a district *under* B — so choosing P2 as B's parent is now a loop.
+    const login = await request.post(`${API}/auth/login`, { data: { email: adminEmail, password } })
+    const { access_token: token } = await login.json()
+    const behind = await request.patch(`${API}/admin/regions/${p2}`, { headers: { Authorization: `Bearer ${token}` }, data: { level: 'district', parent_region_id: b } })
+    expect(behind.status()).toBe(200)
+
+    await parent.selectOption({ label: `${tag} P2` })
+    await drawer(page).getByRole('button', { name: 'Save changes' }).click()
+
+    await expect(drawer(page).getByRole('alert')).toContainText('parent_region_id would create a loop')
+    await expect(drawer(page).getByRole('alert')).toContainText('it has been refreshed')
+    expect(readRegion(b).parentId).toBe(p1)
+    // The list refreshed under the open drawer: P2 is no longer a province, so it's no longer offered, and the stale choice is gone.
+    await expect(parent.locator('option', { hasText: `${tag} P2` })).toHaveCount(0)
+    await expect(parent).toHaveValue('')
+  })
+
   test('a save with nothing changed is caught before it becomes the API’s 400', async ({ page, request }) => {
     await signInAsAdmin(page, request, 'nochange')
     const id = seedRegion(unique('Unchanged'), 'province')
@@ -466,5 +498,84 @@ test.describe('Regions — on a phone, real backend', () => {
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBe(0)
+  })
+})
+
+
+test.describe('Regions — NGO coverage, real backend', () => {
+  /** A registered account made the admin of a new `E2E …` NGO that covers the given regions. */
+  async function coveringNgo(request: APIRequestContext, name: string, regions: string[], status: 'active' | 'pending_approval' = 'active') {
+    const email = await register(request, `ngo-${Math.floor(Math.random() * 1e6)}`)
+    const ngoId = promoteToNgoAdmin(email, name)
+    for (const region of regions) seedNgoRegion(ngoId, region)
+    if (status !== 'active') setNgoStatus(ngoId, status)
+    return ngoId
+  }
+
+  test('lists the organisations assigned to a region — direct assignments only, with their status — and links to each', async ({ page, request }) => {
+    await signInAsAdmin(page, request, 'coverage')
+    const tag = unique('Cover')
+    const province = seedRegion(`${tag} Prov`, 'province')
+    const district = seedRegion(`${tag} Dist`, 'district', province)
+    const lonely = seedRegion(`${tag} Lonely`, 'district', province)
+    const both = await coveringNgo(request, `${tag} Both`, [province, district])
+    await coveringNgo(request, `${tag} Waiting`, [district], 'pending_approval')
+    await coveringNgo(request, `${tag} ProvinceOnly`, [province])
+
+    // The district: two organisations, one of them still pending — and not the one that only covers the province.
+    await page.goto(`/admin/regions/${district}`)
+    const card = page.getByRole('heading', { name: /NGOs covering this region/ }).locator('xpath=ancestor::section')
+    await expect(card.getByRole('listitem')).toHaveCount(2)
+    await expect(card.getByRole('listitem').filter({ hasText: `${tag} Both` })).toContainText('Active')
+    await expect(card.getByRole('listitem').filter({ hasText: `${tag} Both` })).toContainText('covers 2 regions')
+    await expect(card.getByRole('listitem').filter({ hasText: `${tag} Waiting` })).toContainText('Pending approval')
+    await expect(card).not.toContainText(`${tag} ProvinceOnly`)
+    await expect(card).toContainText("One assigned to a parent region isn't listed here")
+
+    // The province is covered by two organisations: the one that covers both regions, and the province-only one.
+    await page.goto(`/admin/regions/${province}`)
+    await expect(card.getByRole('listitem')).toHaveCount(2)
+    await expect(card).not.toContainText(`${tag} Waiting`)
+
+    // A region nobody covers says so.
+    await page.goto(`/admin/regions/${lonely}`)
+    await expect(card.getByText('No organisation has been assigned to this region.')).toBeVisible()
+
+    // Each organisation links through to its own page.
+    await page.goto(`/admin/regions/${district}`)
+    await card.getByRole('link', { name: `${tag} Both` }).click()
+    await expect(page).toHaveURL(new RegExp(`/admin/ngos/${both}$`))
+    await expect(page.getByRole('heading', { name: `${tag} Both`, level: 1 })).toBeVisible()
+  })
+
+  test('the card follows the selected region: moving between regions asks again for each', async ({ page, request }) => {
+    await signInAsAdmin(page, request, 'coverage2')
+    const tag = unique('Cover Two')
+    const a = seedRegion(`${tag} A`, 'province')
+    const b = seedRegion(`${tag} B`, 'province', undefined, squareRing(70, 25))
+    await coveringNgo(request, `${tag} OnlyA`, [a])
+
+    await page.goto(`/admin/regions/${a}`)
+    const card = page.getByRole('heading', { name: /NGOs covering this region/ }).locator('xpath=ancestor::section')
+    await expect(card.getByRole('link', { name: `${tag} OnlyA` })).toBeVisible()
+
+    await page.getByRole('searchbox', { name: 'Search regions' }).fill(tag)
+    await page.getByRole('list', { name: 'Matching regions' }).locator(`a[href*="${b}"]`).click()
+    await expect(page.getByRole('heading', { name: `${tag} B`, level: 2 })).toBeVisible()
+    await expect(card.getByText('No organisation has been assigned to this region.')).toBeVisible()
+    await expect(card.getByRole('link', { name: `${tag} OnlyA` })).toHaveCount(0)
+  })
+
+  test('the route itself is admin-only: a citizen is refused with the real 403, and an unknown region is a real 404', async ({ page, request }) => {
+    const admin = await signInAsAdmin(page, request, 'coverage403')
+    const citizen = await register(request, 'coverage-citizen')
+    verifyAndOnboardAccount(citizen, 'Coverage Citizen')
+
+    const tokenFor = async (email: string) => (await (await request.post(`${API}/auth/login`, { data: { email, password } })).json()).access_token as string
+    const region = seedRegion(unique('Cover 403'), 'province')
+    const asCitizen = await request.get(`${API}/admin/regions/${region}/ngos`, { headers: { Authorization: `Bearer ${await tokenFor(citizen)}` } })
+    expect(asCitizen.status()).toBe(403)
+    const unknown = await request.get(`${API}/admin/regions/00000000-0000-0000-0000-000000000001/ngos`, { headers: { Authorization: `Bearer ${await tokenFor(admin)}` } })
+    expect(unknown.status()).toBe(404)
   })
 })

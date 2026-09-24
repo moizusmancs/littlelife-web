@@ -3,13 +3,22 @@ import { apiClient } from '@/api/client'
 /**
  * Profiling — personal profile, alert preferences.
  * Backend doc: supporting-material/api/05-profiling.md (built).
- * Only the profile-name half is built here so far, needed by the onboarding gate — alert
- * preferences come later (FRONTEND_IMPLEMENTATION_PLAN.md Phase 4).
+ * Only the profile half (name and home region) is built here so far — alert preferences come later
+ * (FRONTEND_IMPLEMENTATION_PLAN.md Phase 4).
  */
 
 export interface ProfileResponse {
   id: string
   name: string
+  /** The citizen's home region, if they picked one. **All four `home_region_*` keys are omitted
+   *  entirely — not `null`, not `""` — while none is set**, so test for presence. Optional and
+   *  skippable: the backend never requires it, and a profile without one is complete. */
+  home_region_id?: string
+  home_region_name?: string
+  home_region_level?: 'province' | 'district' | 'tehsil'
+  /** The region's name preceded by its ancestors', root first, joined with ` › `
+   *  ("Sindh › Sukkur › Sukkur City"); just its own name for a province. */
+  home_region_path?: string
   created_at: string
   updated_at: string
 }
@@ -38,12 +47,25 @@ export async function getProfile(accessToken?: string): Promise<ProfileResponse>
   return res.data
 }
 
+export interface UpdateProfileInput {
+  name?: string
+  /** A region id to set or change it (any level), `''` to clear it, `undefined` to leave it alone. */
+  homeRegionId?: string
+}
+
 /**
- * PATCH /profile — `name` is currently the ONLY field this route accepts (api/05-profiling.md).
- * It cannot be set back to blank/whitespace-only once real — the empty initial state is a
- * one-way "not yet set" marker, not a value a citizen can deliberately choose again.
+ * PATCH /profile — a real partial patch of `name` and `home_region_id`; at least one must be sent
+ * (`400 "at least one field must be provided to update"`). `name` cannot be set back to
+ * blank/whitespace-only once real — the empty initial state is a one-way "not yet set" marker, not a
+ * value a citizen can deliberately choose again. `home_region_id`: omit to leave it, `""` to clear,
+ * a UUID to set (`400 "home_region_id must be a valid uuid"`, `404 "region not found"`). Validation is
+ * all-or-nothing, so a good name beside a bad region saves nothing. Returns the freshly re-read profile,
+ * already carrying the new region's name, level and path.
  */
-export async function updateProfile(name: string): Promise<ProfileResponse> {
-  const res = await apiClient.patch<ProfileResponse>('/profile', { name })
+export async function updateProfile(patch: UpdateProfileInput): Promise<ProfileResponse> {
+  const body: Record<string, string> = {}
+  if (patch.name !== undefined) body.name = patch.name
+  if (patch.homeRegionId !== undefined) body.home_region_id = patch.homeRegionId
+  const res = await apiClient.patch<ProfileResponse>('/profile', body)
   return res.data
 }

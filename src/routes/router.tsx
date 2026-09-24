@@ -9,6 +9,7 @@ import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
+import { OnboardingRegionPage } from '@/pages/onboarding/OnboardingRegionPage'
 import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
@@ -52,8 +53,10 @@ export function AppRouter() {
 
         {/* Citizen Web */}
         <Route element={<RequireRole allowed={['user']} />}>
+          {/* Optional last onboarding step (choose a home region, or skip) — full viewport, no nav
+              chrome, and never forced: nothing in the backend requires a home region. */}
+          <Route path="/app/onboarding/region" element={<OnboardingRegionPage />} />
           <Route element={<CitizenLayout />}>
-            <Route path="/app/onboarding/region" element={<PlaceholderPage title="Onboarding — Region Picker" phase="Phase 2" />} />
             <Route path="/app/home" element={<PlaceholderPage title="Home" phase="Phase 8" />} />
             <Route path="/app/map" element={<PlaceholderPage title="Map" phase="Phase 3" />} />
             <Route path="/app/map/shelters/:id" element={<PlaceholderPage title="Shelter Detail" phase="Phase 3" />} />

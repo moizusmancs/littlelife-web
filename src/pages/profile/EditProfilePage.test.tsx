@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
+import type { ProfileResponse } from '@/api/profiling'
+import { sampleRegions } from '@/features/regions/testRegion'
 import { EditProfilePage } from './EditProfilePage'
 
 function renderEditProfilePage() {
@@ -91,5 +93,131 @@ describe('EditProfilePage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('name is required')
     expect(screen.queryByText('Saved')).not.toBeInTheDocument()
+  })
+})
+
+describe('EditProfilePage — home region', () => {
+  const base: ProfileResponse = { id: 'profile-1', name: 'Hina Khan', created_at: '', updated_at: '' }
+  const withRegion: ProfileResponse = {
+    ...base,
+    home_region_id: 'sukkur-city',
+    home_region_name: 'Sukkur City',
+    home_region_level: 'tehsil',
+    home_region_path: 'Sindh › Sukkur › Sukkur City',
+  }
+
+  function serve(initial: ProfileResponse = base) {
+    let current = initial
+    const calls = { regions: 0, patches: [] as unknown[] }
+    server.use(
+      http.get('*/profile', () => HttpResponse.json(current)),
+      http.get('*/regions', () => {
+        calls.regions += 1
+        return HttpResponse.json(sampleRegions)
+      }),
+      http.patch('*/profile', async ({ request }) => {
+        const body = (await request.json()) as { home_region_id?: string; name?: string }
+        calls.patches.push(body)
+        if (body.name) current = { ...current, name: body.name }
+        if (body.home_region_id === '') {
+          const { home_region_id: _a, home_region_name: _b, home_region_level: _c, home_region_path: _d, ...rest } = current
+          void [_a, _b, _c, _d]
+          current = rest
+        } else if (body.home_region_id) {
+          const region = sampleRegions.find((r) => r.id === body.home_region_id)
+          if (!region) return HttpResponse.json({ error: 'region not found' }, { status: 404 })
+          current = { ...current, home_region_id: region.id, home_region_name: region.name, home_region_level: region.level, home_region_path: region.name }
+        }
+        return HttpResponse.json(current)
+      }),
+    )
+    return calls
+  }
+
+  it('says "Not set" for a citizen without one, and does not load the region list until asked', async () => {
+    const calls = serve()
+    renderEditProfilePage()
+    expect(await screen.findByText('Not set')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Choose region' })).toBeInTheDocument()
+    expect(calls.regions).toBe(0)
+  })
+
+  it('shows the current home region from the profile response alone', async () => {
+    const calls = serve(withRegion)
+    renderEditProfilePage()
+    expect(await screen.findByText('Sukkur City, Sukkur')).toBeInTheDocument()
+    expect(screen.getByText('Tehsil · Sindh › Sukkur › Sukkur City')).toBeInTheDocument()
+    expect(calls.regions).toBe(0)
+  })
+
+  it('chooses one by drilling down, saves only home_region_id, and shows it', async () => {
+    const calls = serve()
+    renderEditProfilePage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose region' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Choose your home region' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Save home region' })).toBeDisabled()
+    await userEvent.click(await within(dialog).findByRole('radio', { name: /Punjab/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save home region' }))
+
+    expect(await screen.findByText('Punjab')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calls.patches).toEqual([{ home_region_id: 'punjab' }])
+  })
+
+  it('lists the current region in the picker but will not let it be picked again, and offers Change', async () => {
+    serve(withRegion)
+    renderEditProfilePage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Change' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Change your home region' })).toBeInTheDocument()
+    await userEvent.type(await within(dialog).findByRole('searchbox', { name: 'Search regions' }), 'sukkur city')
+    const current = await within(dialog).findByRole('radio', { name: /Sukkur City/ })
+    expect(current).toBeDisabled()
+    expect(current.closest('label')).toHaveTextContent('Current home region')
+  })
+
+  it('removes it with one click by sending an empty home_region_id, and goes back to "Not set"', async () => {
+    const calls = serve(withRegion)
+    renderEditProfilePage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove' }))
+
+    expect(await screen.findByText('Not set')).toBeInTheDocument()
+    expect(calls.patches).toEqual([{ home_region_id: '' }])
+  })
+
+  it('shows a failed removal in the card and keeps the region', async () => {
+    serve(withRegion)
+    server.use(http.patch('*/profile', () => HttpResponse.json({ error: 'boom' }, { status: 500 })))
+    renderEditProfilePage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('boom')
+    expect(screen.getByText('Sukkur City, Sukkur')).toBeInTheDocument()
+  })
+
+  it('keeps the dialog open with the server’s message when saving is refused (a region that is gone)', async () => {
+    serve()
+    server.use(http.patch('*/profile', () => HttpResponse.json({ error: 'region not found' }, { status: 404 })))
+    renderEditProfilePage()
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose region' }))
+    const dialog = await screen.findByRole('dialog')
+    await userEvent.click(await within(dialog).findByRole('radio', { name: /Punjab/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save home region' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('region not found')
+    expect(screen.getByText('Not set')).toBeInTheDocument()
+  })
+
+  it('a name save never sends the home region along (a stray one would change it)', async () => {
+    const calls = serve(withRegion)
+    renderEditProfilePage()
+    const name = await screen.findByLabelText('Your name')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Hina K')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByText('Saved')
+    expect(calls.patches).toEqual([{ name: 'Hina K' }])
   })
 })

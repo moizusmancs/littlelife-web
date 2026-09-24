@@ -346,3 +346,35 @@ export function readNgoRegionIds(ngoId: string): string[] {
   const rows = psql(`SELECT region_id FROM ngo_regions WHERE ngo_id = ${lit(ngoId)}::uuid ORDER BY region_id`)
   return rows ? rows.split('\n') : []
 }
+
+/** Marks a registered `e2e-` account verified + active but leaves its profile name empty — the state
+ *  right after the OTP step, so a real login lands on the name step of onboarding. */
+export function verifyAccountOnly(email: string) {
+  assertE2eEmail(email)
+  const id = psql(`
+    UPDATE accounts SET email_verified = true, status = 'active', updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!id) throw new Error(`no account found to verify for ${email}`)
+}
+
+/** The home region stored on an `e2e-` account's profile, or `null` when none is set. */
+export function readHomeRegionId(email: string): string | null {
+  assertE2eEmail(email)
+  const id = psql(`
+    SELECT COALESCE(p.home_region_id::text, '') FROM profiles p
+    JOIN accounts a ON a.id = p.account_id
+    WHERE lower(a.email) = lower(${lit(email)}) AND a.deleted_at IS NULL`)
+  return id === '' ? null : id
+}
+
+/** Sets an `e2e-` account's home region directly (what `PATCH /profile` does), to a test-owned region. */
+export function seedHomeRegion(email: string, regionId: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE profiles SET home_region_id = ${lit(regionId)}::uuid, updated_at = now()
+    WHERE account_id = (SELECT id FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL)
+      AND ${lit(regionId)}::uuid IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
+    RETURNING id`)
+  if (!updated) throw new Error(`could not set a home region for ${email} (not an E2E region?)`)
+}

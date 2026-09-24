@@ -5,7 +5,8 @@ import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
-import type { Region } from '@/api/geo'
+import type { Region, RegionNgo } from '@/api/geo'
+import { makeNgo } from '@/features/ngoDirectory/testNgo'
 import { SQUARE_BOUNDARY, makeRegion, sampleRegions } from '@/features/regions/testRegion'
 import { RegionsPage } from './RegionsPage'
 
@@ -35,10 +36,22 @@ function renderPage(initial = '/admin/regions') {
   )
 }
 
+/** Sukkur is covered by two organisations (one still pending); nothing else is covered. */
+const coverage: Record<string, RegionNgo[]> = {
+  sukkur: [
+    { ...makeNgo('n-1', 'Indus Relief Foundation', 'active', { volunteer_count: 3, region_count: 2 }), assigned_at: '2026-09-21T08:15:00Z' },
+    { ...makeNgo('n-2', 'Sindh Response Network', 'pending_approval', { region_count: 1 }), assigned_at: '2026-09-22T08:15:00Z' },
+  ],
+}
+
 function serve(initial: Region[] = sampleRegions) {
   let all = initial
-  const calls = { list: 0, posts: [] as Array<Record<string, unknown>>, patches: [] as Array<{ id: string; body: Record<string, unknown> }> }
+  const calls = { list: 0, ngos: [] as string[], posts: [] as Array<Record<string, unknown>>, patches: [] as Array<{ id: string; body: Record<string, unknown> }> }
   server.use(
+    http.get('*/admin/regions/:id/ngos', ({ params }) => {
+      calls.ngos.push(params.id as string)
+      return HttpResponse.json(coverage[params.id as string] ?? [])
+    }),
     http.get('*/regions', () => {
       calls.list += 1
       return HttpResponse.json(all)
@@ -190,6 +203,55 @@ describe('RegionsPage — browsing', () => {
     renderPage()
     const empty = (await screen.findByText('Select a region')).closest('.max-md\\:hidden')
     expect(empty).not.toBeNull()
+  })
+})
+
+describe('RegionsPage — NGO coverage', () => {
+  it('lists the organisations assigned to the selected region, with their status and a link to each', async () => {
+    const calls = serve()
+    renderPage('/admin/regions/sukkur')
+
+    const card = (await screen.findByRole('heading', { name: /NGOs covering this region/ })).closest('section')!
+    expect(await within(card).findByRole('link', { name: 'Indus Relief Foundation' })).toHaveAttribute('href', '/admin/ngos/n-1')
+    expect(within(card).getByText('Active')).toBeInTheDocument()
+    expect(within(card).getByText('Pending approval')).toBeInTheDocument()
+    expect(calls.ngos).toEqual(['sukkur'])
+  })
+
+  it('says so when a region has no organisation, and asks again for each region selected — not for the tree', async () => {
+    const calls = serve()
+    renderPage('/admin/regions/larkana')
+
+    expect(await screen.findByText('No organisation has been assigned to this region.')).toBeInTheDocument()
+    expect(calls.ngos).toEqual(['larkana'])
+
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Region path' })).getByRole('link', { name: 'Sindh' }))
+    await screen.findByRole('heading', { name: 'Sindh', level: 2 })
+    await waitFor(() => expect(calls.ngos).toEqual(['larkana', 'sindh']))
+  })
+
+  it('asks for nothing until a region is selected, and not at all for an unknown one', async () => {
+    const calls = serve()
+    renderPage()
+    await screen.findByRole('link', { name: /^Sindh/ })
+    expect(calls.ngos).toEqual([])
+  })
+
+  it('a failure loading the organisations stays in their card — the region is still shown — and retries', async () => {
+    serve()
+    let failing = true
+    server.use(
+      http.get('*/admin/regions/:id/ngos', () => (failing ? HttpResponse.json({ error: 'coverage is down' }, { status: 500 }) : HttpResponse.json([]))),
+    )
+    renderPage('/admin/regions/sukkur')
+
+    expect(await screen.findByRole('heading', { name: 'Sukkur', level: 2 })).toBeInTheDocument()
+    const card = screen.getByRole('heading', { name: /NGOs covering this region/ }).closest('section')!
+    expect(await within(card).findByRole('alert')).toHaveTextContent('coverage is down')
+
+    failing = false
+    await userEvent.click(within(card).getByRole('button', { name: 'Try again' }))
+    expect(await within(card).findByText('No organisation has been assigned to this region.')).toBeInTheDocument()
   })
 })
 

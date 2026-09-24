@@ -3,10 +3,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { ProfileSidebar } from './ProfileSidebar'
 
-function renderSidebar(name: string | null, invitationCount?: number) {
+function renderSidebar(name: string | null, invitationCount?: number, homeRegion?: string | null) {
   return render(
     <MemoryRouter initialEntries={['/app/profile/edit']}>
-      <ProfileSidebar name={name} invitationCount={invitationCount} />
+      <ProfileSidebar name={name} invitationCount={invitationCount} homeRegion={homeRegion} />
     </MemoryRouter>,
   )
 }
@@ -30,6 +30,15 @@ describe('ProfileSidebar', () => {
     renderSidebar('')
 
     expect(screen.getByText('Add your name')).toBeInTheDocument()
+  })
+
+  it('shows the home region under the name when one is set, and nothing when it is not', () => {
+    const { unmount } = renderSidebar('Hina Khan', undefined, 'Sukkur City, Sukkur')
+    expect(screen.getByText('Sukkur City, Sukkur')).toBeInTheDocument()
+    unmount()
+
+    renderSidebar('Hina Khan', undefined, null)
+    expect(screen.queryByText(/Sukkur/)).not.toBeInTheDocument()
   })
 
   it('links every sub-nav item to a real route', () => {

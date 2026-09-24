@@ -41,6 +41,16 @@ interface AuthState {
    *  makes it to screen in dev. `useEffect`'s double-fire is safe here since `clearPendingMessage`
    *  is idempotent. */
   pendingMessage: string | null
+  /** A one-shot "where to go next" for the moment onboarding's name step finishes, so that a citizen
+   *  is offered the optional home-region step before landing in the app. It exists for the same reason
+   *  as `pendingMessage`: `markProfileComplete()` makes `RequireIncompleteProfile` redirect the
+   *  now-complete profile away *in the same update* as the page's own `navigate()`, and the guard's
+   *  redirect wins — so a route passed only to `navigate()` is lost (it reached `/app/home`, found by
+   *  the E2E, invisible to a unit test with no guard around the page). The guard sends a completed
+   *  profile here instead of to the landing route when this is set; the step it names clears it on
+   *  mount (`clearPostOnboardingRoute`), so it only ever applies once, and `clearAuth()` drops it so
+   *  it can't leak to the next account in the tab. Held in memory only, so a reload forgets it. */
+  postOnboardingRoute: string | null
   setAuth: (accessToken: string, user: AuthUser) => void
   clearAuth: () => void
   setBootstrapped: () => void
@@ -49,6 +59,8 @@ interface AuthState {
   markProfileComplete: () => void
   setPendingMessage: (message: string) => void
   clearPendingMessage: () => void
+  setPostOnboardingRoute: (route: string) => void
+  clearPostOnboardingRoute: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -56,14 +68,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isBootstrapping: true,
   pendingMessage: null,
+  postOnboardingRoute: null,
   setAuth: (accessToken, user) => set({ accessToken, user }),
-  clearAuth: () => set({ accessToken: null, user: null }),
+  clearAuth: () => set({ accessToken: null, user: null, postOnboardingRoute: null }),
   setBootstrapped: () => set({ isBootstrapping: false }),
   markProfileComplete: () =>
     set((state) => (state.user ? { user: { ...state.user, profileComplete: true } } : state)),
   setPendingMessage: (message) => set({ pendingMessage: message }),
   clearPendingMessage: () => set({ pendingMessage: null }),
+  setPostOnboardingRoute: (route) => set({ postOnboardingRoute: route }),
+  clearPostOnboardingRoute: () => set({ postOnboardingRoute: null }),
 }))
+
+/** The optional last onboarding step — choosing a home region (skippable). Not a guarded step. */
+export const ONBOARDING_REGION_ROUTE = '/app/onboarding/region'
 
 /** Login always resolves to exactly one landing route per role — no in-app role switcher
  *  (WEB_DESIGN_PLAN.md §0). */

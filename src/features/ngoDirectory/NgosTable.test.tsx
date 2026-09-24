@@ -7,7 +7,7 @@ import { makeNgo } from './testNgo'
 
 const ngos = [
   makeNgo('n-1', 'Flood Relief Karachi', 'pending_approval', { contact_email: 'help@flood.example', contact_phone: '+92 300 1', volunteer_count: 0 }),
-  makeNgo('n-2', 'Indus Relief Foundation', 'active', { volunteer_count: 3 }),
+  makeNgo('n-2', 'Indus Relief Foundation', 'active', { volunteer_count: 3, region_count: 2 }),
   makeNgo('n-3', 'Sindh Response Network', 'rejected'),
 ]
 
@@ -36,6 +36,14 @@ describe('NgosTable', () => {
     expect(within(rows[1]).getByText('Active')).toBeInTheDocument()
     expect(within(rows[1]).getByText(/^3/)).toBeInTheDocument()
     expect(within(rows[2]).getByText('Rejected')).toBeInTheDocument()
+  })
+
+  it('shows how many regions each organisation covers, worded for a screen reader ("2 regions", not a bare 2)', () => {
+    renderTable()
+    const rows = screen.getAllByRole('listitem')
+    expect(rows[1]).toHaveTextContent('2 regions')
+    expect(rows[2]).toHaveTextContent('0 regions')
+    expect(screen.getByText('Regions', { selector: 'div' })).toBeInTheDocument()
   })
 
   it("links View to the organisation's detail page", () => {

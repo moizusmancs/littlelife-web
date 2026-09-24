@@ -12,6 +12,7 @@ function ngo(id: string, name: string, status: NgoStatus, extra: Partial<AdminNg
     created_at: '2026-09-20T00:00:00Z',
     updated_at: '2026-09-20T00:00:00Z',
     volunteer_count: 0,
+    region_count: 0,
     ...extra,
   }
 }

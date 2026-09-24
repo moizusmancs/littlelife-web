@@ -5,6 +5,7 @@ import {
   ClockCounterClockwiseIcon,
   EnvelopeOpenIcon,
   GearIcon,
+  MapPinIcon,
   PencilSimpleIcon,
   SealCheckIcon,
   UserCircleIcon,
@@ -33,10 +34,13 @@ export interface ProfileSidebarProps {
    *  account's real `name` is `""` (api/05-profiling.md's documented "not yet set" state), and
    *  that's a loaded value, not a loading one — collapsing the two would leave the sidebar
    *  stuck on its skeleton forever for exactly the account most likely to be looking at this
-   *  screen. No location/verified-badge/level chip here (unlike the Profile › Invitations pixel
-   *  reference, Batch 2 §2g) — those come from Geo/Trust (Phases 2/4), not built yet; showing
-   *  them now would mean fabricating data. */
+   *  screen. No verified-badge/level chip here (unlike the Profile › Invitations pixel reference,
+   *  Batch 2 §2g) — that comes from Trust (Phase 4), not built yet; showing it now would mean
+   *  fabricating data. */
   name: string | null
+  /** The home region as a short line ("Sukkur City, Sukkur"), or `null`/`undefined` when none is set
+   *  (it's optional) — nothing is drawn in that case. */
+  homeRegion?: string | null
   /** Real count of pending volunteer invitations (`GET /volunteer-invitations`), shown as the
    *  pink pill on the Invitations item exactly as in the mockup. `undefined` while it's loading
    *  or if the fetch failed, `0` when there are none — neither shows a badge. */
@@ -49,11 +53,12 @@ export interface ProfileSidebarProps {
  * `profNav` item set/icons/layout) even though Edit Profile itself isn't separately pictured.
  * Every listed destination already exists as a real route (PlaceholderPage or the real screen) —
  * see router.tsx — so nothing here links to a dead route. The mockup's "Invitations" item carries
- * a pending-count badge, now backed by the real `GET /volunteer-invitations` count.
+ * a pending-count badge, now backed by the real `GET /volunteer-invitations` count, and its header
+ * shows the account's home region (the mockup's "Johi, Dadu") when one is set.
  * Purely presentational: `NavLink`'s own active-route detection is the only "state" here, same
  * precedent as `CitizenLayout`'s top nav.
  */
-export function ProfileSidebar({ name, invitationCount }: ProfileSidebarProps) {
+export function ProfileSidebar({ name, homeRegion, invitationCount }: ProfileSidebarProps) {
   const isLoaded = name !== null
   const initials = getInitials(name ?? '')
 
@@ -72,6 +77,12 @@ export function ProfileSidebar({ name, invitationCount }: ProfileSidebarProps) {
             <p className="truncate font-heading text-body-lg font-bold text-ink-900">{name || 'Add your name'}</p>
           ) : (
             <div className="h-5 w-32 animate-pulse rounded-sm bg-surface-sunken" aria-hidden="true" />
+          )}
+          {homeRegion && (
+            <p className="mt-0.5 flex items-center gap-1 font-body text-body-sm text-ink-500">
+              <MapPinIcon size={14} className="flex-none" aria-hidden="true" />
+              <span className="truncate">{homeRegion}</span>
+            </p>
           )}
         </div>
       </div>

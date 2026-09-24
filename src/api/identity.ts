@@ -546,7 +546,9 @@ export async function updateAccountStatus(id: string, action: AccountStatusActio
 /** One NGO as the admin routes return it (`GET /admin/ngos` per item, and `GET /admin/ngos/{id}`).
  *  `approved_by_email`/`approved_at` are the admin's *decision*, whichever way it went — the schema
  *  has no separate "rejected by", so a rejected NGO carries them too — and are absent while it's
- *  still pending. `volunteer_count` is the number of `ngo_volunteer` accounts tied to it. */
+ *  still pending. `volunteer_count` is the number of `ngo_volunteer` accounts tied to it, and
+ *  `region_count` the number of regions it covers in total (always the length of
+ *  `GET /admin/ngos/{id}/regions`), so a list can show a Regions column without a request per row. */
 export interface AdminNgo {
   id: string
   name: string
@@ -560,6 +562,7 @@ export interface AdminNgo {
   created_at: string
   updated_at: string
   volunteer_count: number
+  region_count: number
 }
 
 interface NgosPage {

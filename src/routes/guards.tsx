@@ -71,16 +71,18 @@ export function RequireUnverifiedSession() {
  * RequireUnverifiedSession's shape one step later in the chain:
  * - Not authenticated -> /login (there's nothing mid-registration to resume without a session).
  * - Authenticated but not yet email-verified -> back to /verify-email, step one isn't done yet.
- * - Authenticated, verified, profile already complete -> nothing to do here, role landing route.
+ * - Authenticated, verified, profile already complete -> nothing to do here: role landing route — or,
+ *   the one time a citizen has *just* finished this step, the optional home-region step the store's
+ *   `postOnboardingRoute` names (see there for why `navigate()` alone can't carry it).
  * - Authenticated, verified, profile incomplete -> this is the mandatory step; render it.
  */
 export function RequireIncompleteProfile() {
-  const { user, accessToken, isBootstrapping } = useAuthStore()
+  const { user, accessToken, isBootstrapping, postOnboardingRoute } = useAuthStore()
 
   if (isBootstrapping) return <BootstrappingScreen />
   if (!accessToken || !user) return <Navigate to="/login" replace />
   if (!user.emailVerified) return <Navigate to="/verify-email" replace />
-  if (user.profileComplete) return <Navigate to={roleLandingRoute(user.role)} replace />
+  if (user.profileComplete) return <Navigate to={postOnboardingRoute ?? roleLandingRoute(user.role)} replace />
 
   return <Outlet />
 }

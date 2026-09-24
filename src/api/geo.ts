@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client'
+import type { AdminNgo, NgoStatus } from '@/api/identity'
 
 /**
  * Geo — regions (province/district/tehsil), NGO operational-region coverage.
@@ -124,4 +125,47 @@ export async function assignRegion(regionId: string): Promise<Region> {
  */
 export async function removeRegion(regionId: string): Promise<void> {
   await apiClient.delete(`/ngo/me/regions/${regionId}`)
+}
+
+/** One NGO in `GET /admin/regions/{id}/ngos`: exactly a `GET /admin/ngos` item, plus when *this* region was assigned to it. */
+export interface RegionNgo extends AdminNgo {
+  assigned_at: string
+}
+
+export const regionNgosQueryKey = (regionId: string) => ['admin', 'region', regionId, 'ngos'] as const
+
+/**
+ * GET /admin/regions/{regionID}/ngos?status= — `admin`/`super_admin` only. The NGOs **explicitly
+ * assigned to this region**, alphabetical, a bare array (not paginated). Direct assignments only: an
+ * NGO assigned to a parent region ("Sindh") is not listed under its child ("Sukkur"). Every status
+ * unless `status` narrows it. `404 "region not found"` for an unknown id, so `[]` reliably means
+ * "none"; a `status` that isn't one of the five values is a `400`.
+ */
+export async function getRegionNgos(regionId: string, status?: NgoStatus): Promise<RegionNgo[]> {
+  const res = await apiClient.get<RegionNgo[]>(`/admin/regions/${regionId}/ngos`, { params: { status } })
+  return res.data
+}
+
+/** One region an NGO covers, as the admin route returns it — no `boundary`, but with its `path`. */
+export interface AdminNgoRegion {
+  id: string
+  name: string
+  level: RegionLevel
+  parent_region_id?: string
+  /** Ancestors from the top, then the region, joined with ` › ` ("Sindh › Sukkur"); just its name for a top-level region. */
+  path: string
+  assigned_at: string
+}
+
+export const adminNgoRegionsQueryKey = (ngoId: string) => ['admin', 'ngo', ngoId, 'regions'] as const
+
+/**
+ * GET /admin/ngos/{ngoID}/regions — `admin`/`super_admin` only: the regions any NGO covers,
+ * alphabetical, a bare array. Unlike `GET /ngo/me/regions` it carries no `boundary`. `[]` means the
+ * NGO exists and covers nothing (e.g. still pending); an unknown NGO is `404 "ngo not found"`, and a
+ * malformed id `400` — branch on the status code, since Identity's sibling routes word it differently.
+ */
+export async function getAdminNgoRegions(ngoId: string): Promise<AdminNgoRegion[]> {
+  const res = await apiClient.get<AdminNgoRegion[]>(`/admin/ngos/${ngoId}/regions`)
+  return res.data
 }

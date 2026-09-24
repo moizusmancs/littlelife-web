@@ -105,11 +105,20 @@ export function RegionEditor({ target, regions, onClose, onSaved }: RegionEditor
     },
     onError: (error, save) => {
       const sentBoundary = save.kind === 'created' || save.sendsBoundary
-      setServerError(
-        isAxiosError(error) && error.response?.status === 500 && sentBoundary
-          ? "The server couldn't store that boundary. It gives this generic error for shapes its database refuses, so check the polygon and try again."
-          : extractErrorMessage(error),
-      )
+      const status = isAxiosError(error) ? error.response?.status : undefined
+      const message = extractErrorMessage(error)
+      if (status === 500 && sentBoundary) {
+        setServerError("The server couldn't store that boundary. It gives this generic error for shapes its database refuses, so check the polygon and try again.")
+      } else if (status === 400 && message.includes('would create a loop')) {
+        // The parent choices already leave out this region's descendants, so this only happens when
+        // another admin re-parented regions after the list loaded: refresh it, drop the stale choice (a
+        // retry would only be refused again) and say so.
+        void queryClient.invalidateQueries({ queryKey: REGIONS_QUERY_KEY })
+        setValue('parentRegionId', '')
+        setServerError(`${message}. Someone may have changed the regions since this list loaded, so it has been refreshed — check the parent and try again.`)
+      } else {
+        setServerError(message)
+      }
     },
   })
 

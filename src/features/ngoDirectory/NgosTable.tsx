@@ -11,7 +11,7 @@ import { canDecide } from './ngoFilters'
 /** One shared column template so the header and every row line up from `md` up. Everything after
  *  the two flexible columns is fixed-width: each row is its own grid, so an `auto` column would size
  *  to that row's buttons and push its neighbours out of line (see the accounts table). */
-const COLUMNS = 'md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_5.5rem_7rem_9.5rem_14rem]'
+const COLUMNS = 'md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_5.5rem_4.5rem_6.5rem_8rem_15.5rem]'
 
 export interface NgosTableProps {
   ngos: AdminNgo[]
@@ -24,8 +24,8 @@ export interface NgosTableProps {
 /**
  * The organisations table for one page. Pattern W-List; pixel reference Batch 5 §5e (uppercase 11px
  * column labels, a rounded tile, pills, actions at the end). Only what an admin-side NGO carries is
- * shown — name, contact, applicant, volunteer count, submitted date, status — so the mockup's
- * regions, tasks-done, response-time and feedback columns are absent. Pending rows offer Approve
+ * shown — name, contact, applicant, volunteer and region counts, submitted date, status — so the
+ * mockup's tasks-done, response-time and feedback columns are absent. Pending rows offer Approve
  * and Reject next to View; every other row offers View only. Below `md` each row is a small card.
  * Purely presentational.
  */
@@ -39,6 +39,7 @@ export function NgosTable({ ngos, onApprove, onReject, detailState }: NgosTableP
         <div>Organisation</div>
         <div>Applicant</div>
         <div>Volunteers</div>
+        <div>Regions</div>
         <div>Submitted</div>
         <div>Status</div>
         <div />
@@ -76,6 +77,10 @@ export function NgosTable({ ngos, onApprove, onReject, detailState }: NgosTableP
               <span className="md:text-ink-700">
                 {ngo.volunteer_count}
                 <span className="md:sr-only"> {ngo.volunteer_count === 1 ? 'volunteer' : 'volunteers'}</span>
+              </span>
+              <span className="md:text-ink-700">
+                {ngo.region_count}
+                <span className="md:sr-only"> {ngo.region_count === 1 ? 'region' : 'regions'}</span>
               </span>
               <span>
                 <span className="md:sr-only">Submitted </span>

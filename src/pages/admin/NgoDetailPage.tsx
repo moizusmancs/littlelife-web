@@ -7,9 +7,11 @@ import { NgoDecisionDialog } from '@/features/ngoDirectory/NgoDecisionDialog'
 import { NgoDetailHeader } from '@/features/ngoDirectory/NgoDetailHeader'
 import { NgoDetailState } from '@/features/ngoDirectory/NgoDetailState'
 import { NgoProfileCard } from '@/features/ngoDirectory/NgoProfileCard'
+import { NgoRegionsCard } from '@/features/ngoDirectory/NgoRegionsCard'
 import { NgoVolunteersCard } from '@/features/ngoDirectory/NgoVolunteersCard'
 import { useNgoDecision } from '@/features/ngoDirectory/useNgoDecision'
 import { adminNgoQueryKey, adminNgoVolunteersQueryKey, getAdminNgo, getAdminNgoVolunteers } from '@/api/identity'
+import { adminNgoRegionsQueryKey, getAdminNgoRegions } from '@/api/geo'
 import { extractErrorMessage } from '@/api/errors'
 
 /**
@@ -19,8 +21,8 @@ import { extractErrorMessage } from '@/api/errors'
  * in the URL) and a load error with retry. Approve/Reject (pending only) share the list's
  * `useNgoDecision`, which refreshes this page's data afterwards.
  *
- * Not built: the mockup's operational-regions map. The regions live in the Geo module with no
- * admin-side read route, and the map itself is Phase 3's shared component.
+ * A third read, the organisation's operational regions (`GET /admin/ngos/{id}/regions`), fails in its
+ * own card too. Shown as a list rather than the mockup's map, which is Phase 3's shared component.
  */
 export function NgoDetailPage() {
   const { id = '' } = useParams()
@@ -35,6 +37,7 @@ export function NgoDetailPage() {
     queryKey: adminNgoVolunteersQueryKey(id),
     queryFn: () => getAdminNgoVolunteers(id),
   })
+  const regionsQuery = useQuery({ queryKey: adminNgoRegionsQueryKey(id), queryFn: () => getAdminNgoRegions(id) })
   const decision = useNgoDecision({ onNotice: setNotice })
 
   if (ngoQuery.isPending) return <NgoDetailState kind="loading" onRetry={() => undefined} backTo={backTo} />
@@ -73,6 +76,12 @@ export function NgoDetailPage() {
           onRetry={() => void volunteersQuery.refetch()}
         />
       </div>
+
+      <NgoRegionsCard
+        regions={regionsQuery.data}
+        error={regionsQuery.isError ? extractErrorMessage(regionsQuery.error) : null}
+        onRetry={() => void regionsQuery.refetch()}
+      />
 
       <NgoDecisionDialog {...decision.dialogProps} />
     </div>
