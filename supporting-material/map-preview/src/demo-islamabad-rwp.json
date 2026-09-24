@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "note": "FAKE demo data, not from the real model. Illustrates a flood scenario near Islamabad/Rawalpindi (Nullah Lai area) for map-rendering purposes only.",
+  "patch_size": 128,
+  "crs": "EPSG:4326",
+  "n_patches": 9,
+  "patches": [
+    { "png_filename": "demo_NW.png", "row": -1, "col": -1, "leaflet_bounds": [[33.67, 72.84], [33.81, 72.98]], "peak_probability": 0.15 },
+    { "png_filename": "demo_N.png",  "row": -1, "col": 0,  "leaflet_bounds": [[33.67, 72.98], [33.81, 73.12]], "peak_probability": 0.35 },
+    { "png_filename": "demo_NE.png", "row": -1, "col": 1,  "leaflet_bounds": [[33.67, 73.12], [33.81, 73.26]], "peak_probability": 0.20 },
+    { "png_filename": "demo_W.png",  "row": 0,  "col": -1, "leaflet_bounds": [[33.53, 72.84], [33.67, 72.98]], "peak_probability": 0.30 },
+    { "png_filename": "demo_C.png",  "row": 0,  "col": 0,  "leaflet_bounds": [[33.53, 72.98], [33.67, 73.12]], "peak_probability": 0.65 },
+    { "png_filename": "demo_E.png",  "row": 0,  "col": 1,  "leaflet_bounds": [[33.53, 73.12], [33.67, 73.26]], "peak_probability": 0.40 },
+    { "png_filename": "demo_SW.png", "row": 1,  "col": -1, "leaflet_bounds": [[33.39, 72.84], [33.53, 72.98]], "peak_probability": 0.55 },
+    { "png_filename": "demo_S.png",  "row": 1,  "col": 0,  "leaflet_bounds": [[33.39, 72.98], [33.53, 73.12]], "peak_probability": 0.95 },
+    { "png_filename": "demo_SE.png", "row": 1,  "col": 1,  "leaflet_bounds": [[33.39, 73.12], [33.53, 73.26]], "peak_probability": 0.60 }
+  ]
+}

@@ -4,6 +4,12 @@
 backend ships more of `IMPLEMENTATION_ROADMAP.md`; nothing else about a phase should need to
 change when that happens — that's the entire point of the service-layer split in Phase 0.
 
+**Working agreement — testing cadence (agreed 2026-09-24, applies from Phase 3):** testing is light per screen and
+heavy per phase. **Per screen:** unit tests, a probe of any new backend routes, *one* focused real-backend E2E spec run
+on its own, and the visual check. **Not run per screen:** the full E2E suite and the edge-case matrix — those are written
+down in the phase's *Deferred tests* list and run at **phase end**, together with the full suite. Details, and why it's a
+middle path rather than "all E2E at the end", are under *Cross-cutting testing strategy*.
+
 ## Progress so far
 
 **Phase 0 — Foundation & Architecture: ✅ Done.**
@@ -1344,6 +1350,13 @@ rendering are both corrected from what the design mockups show.
   translation from raw manifest to backend `confidence_score` actually holds (per the open
   question flagged in §2.3).
 
+### Deferred tests (run before closing the phase)
+
+_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
+matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
+phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+the `E2E …` test data.
+
 **Exit criteria:** the shared map component is real, correct per §2.3, and reused (not
 reimplemented) by every screen above.
 
@@ -1398,6 +1411,13 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 - Manual: verify the WS auth gate really does reject when there's no active emergency, per the
   backend's documented pre-upgrade checks.
 
+### Deferred tests (run before closing the phase)
+
+_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
+matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
+phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+the `E2E …` test data.
+
 **Exit criteria:** the WS pattern is proven here before Phase 7 needs the same pattern for chat/nav.
 
 ---
@@ -1447,6 +1467,13 @@ it directly beyond rendering whatever classification/credibility fields the resp
 - E2E: submit incident with media → appears in feed → upvote persists per-account (one vote per
   account, matching the backend's `UNIQUE(incident_report_id, account_id)`) → NGO verifies within
   their region → admin can see it in the admin queue.
+
+### Deferred tests (run before closing the phase)
+
+_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
+matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
+phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+the `E2E …` test data.
 
 **Exit criteria:** the full incident lifecycle (submit → vote → NGO verify → admin oversight) works
 end-to-end against the real backend.
@@ -1498,6 +1525,13 @@ community feedback (M16 FE-11). Both move to Phase 7.
 - E2E: submit aid request → NGO updates status → citizen sees it reflected; create campaign →
   donate → NGO allocates donation to an aid request → marks delivered; report missing person →
   sighting submitted → status updates.
+
+### Deferred tests (run before closing the phase)
+
+_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
+matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
+phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+the `E2E …` test data.
 
 **Exit criteria:** full aid/donation/missing-person lifecycles work end-to-end for real.
 
@@ -1573,6 +1607,13 @@ lands)
   since MSW and Playwright-against-real-backend exercise the same service-layer interface.
 - Track "mocked vs. real" per domain explicitly in test file names or tags, so it's obvious at a
   glance which suites need re-verification after a swap.
+
+### Deferred tests (run before closing the phase)
+
+_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
+matrix, phone runs, cross-role flows (here against MSW rather than the real backend) — per the testing cadence under *Cross-cutting testing strategy*. Before this
+phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+the `E2E …` test data.
 
 **Exit criteria:** every screen in this phase is fully interactive and passes its tests against
 MSW. Re-open this phase's exit criteria per-domain (not all at once) as each backend piece ships.
@@ -1658,6 +1699,31 @@ is actually meaningful to check.
 | E2E (mocked backend) | Playwright against MSW | End of Phase 7, until each domain's real swap |
 | Manual QA | Browser, both themes, both locales | End of every phase minimum; full matrix in Phase 9 |
 
+### Testing cadence — light per screen, heavy per phase (agreed 2026-09-24, from Phase 3 on)
+
+Phases 1 and 2 ran the full E2E suite as each screen landed; the full suite is ~20 minutes (plus re-runs for the
+known `page.goto` load-stall flake) while a single spec run alone is 1–2 minutes. So from Phase 3 the work is split:
+
+| When | What | Notes |
+|---|---|---|
+| **Every screen** | Unit tests (Vitest + RTL + MSW) | Fast; the whole unit suite runs in a couple of minutes |
+| | A probe of any new backend route (`curl`/a throwaway script with a throwaway `e2e-` admin) | Confirms the real shapes and error texts *before* building, as in Phase 2 |
+| | **One focused E2E spec, run alone** | The happy path plus the main real-backend edge (the refusal or race that only the real server shows). Same style as before: real backend + Postgres reads, fresh login per test |
+| | The visual check | Screenshots at 1440×900 and 390×844, zero horizontal overflow |
+| | Update this plan | As-built record: deviations, bugs, and the screen's **deferred tests** |
+| **Written down, not run** | The rest of the E2E scenarios — the edge-case matrix, phone runs, cross-role flows | Listed under the phase's *Deferred tests*, in enough detail to implement later without re-deriving them |
+| **Phase end** | Implement and run the deferred list; run the **full** E2E suite | Fix what fails; re-run load-stall timeouts (`page.goto: net::ERR_ABORTED`) alone before suspecting code; then the guarded, dry-run-first cleanup of `e2e-…` accounts and `E2E …` rows |
+
+**Why not all E2E at the end:** real-backend E2E found things unit tests structurally cannot — Phase 2's onboarding step
+landed on the wrong page because a route guard's redirect beat the page's own `navigate()` (only visible with the real
+guard and store), and the real API's behaviour differed from its docs more than once (which `409` text, which
+uniqueness rules). Found on the day, each cost minutes; found after several more screens were built on the same
+assumption, each would cost far more to trace. So each screen still gets its one focused real-backend spec.
+
+**One judgment call to keep in view:** a change to *shared* code — route guards, the auth store, a UI primitive, global
+styles (Phase 2's `cn` fix was one) — can break screens built long ago, so that is the one case where the full suite is
+worth running early. Say so when doing it.
+
 ## How to keep this document current
 
 When a backend domain in §1's table flips from ❌ to ✅: update that row, move its screens'
@@ -1673,3 +1739,7 @@ sync with what the phase sections themselves say. Add new "Real deviations"/"Rea
 found"/"New architecture" entries there as they happen, in the same style as Phase 1's — the
 value of this document is as an honest record of what actually happened, not a restatement of
 the original plan.
+
+When a screen is built under the testing cadence: put the E2E scenarios you *didn't* run into that phase's *Deferred
+tests* list (specific enough to implement later), and keep the phase's *Testing* section to what was actually run. When
+the phase closes, move the deferred items into *Testing* as done — or record honestly which were dropped and why.

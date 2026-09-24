@@ -11,16 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-.env
-.env.*
-!.env.example
-
-# Test artifacts
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/coverage/
 
 # Editor directories and files
 .vscode/*
@@ -32,9 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-
-# supporting-material
-# ./supporting-material
-# /supporting-material
-supporting-material/map-preview/node_modules

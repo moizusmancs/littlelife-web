@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#FFFBF9;font-family:Inter,system-ui,sans-serif;color:#221019}a{color:#B81F55;text-decoration:none}a:hover{color:#DB2E68;text-decoration:underline}</style></helmet>
+<div style="max-width:1100px;margin:0 auto;padding:48px 40px 80px;display:flex;flex-direction:column;gap:32px">
+  <div style="display:flex;align-items:center;gap:14px"><div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#F2477D,#FF9563)"></div><div><div style="font:800 28px Manrope,sans-serif">LittleLife Web — UI mockups</div><div style="font:400 14px Inter,sans-serif;color:#7A5A68">All screens from WEB_DESIGN_PLAN.md · 1440 desktop · Rose/Peach tokens from the mobile plan · Pakistan flood scenario (Aug 2026)</div></div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px">
+    <sc-for list="{{ batches }}" as="b" hint-placeholder-count="5">
+      <a href="{{ b.href }}" style="display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(34,16,25,.08);color:#221019" style-hover="box-shadow:0 4px 12px rgba(34,16,25,.12);text-decoration:none">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font:600 11px ui-monospace,Menlo,monospace;background:#221019;color:#fff;border-radius:4px;padding:3px 7px">{{ b.id }}</span><span style="font:700 17px Manrope,sans-serif">{{ b.title }}</span><span style="margin-left:auto;font:600 11px Inter,sans-serif;color:#B81F55;background:#FFF0F4;border-radius:999px;padding:2px 8px">{{ b.count }} screens</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ b.screens }}" as="s" hint-placeholder-count="8"><div style="display:flex;gap:8px;font:400 13px/18px Inter,sans-serif;color:#4A2E3C"><span style="font:600 11px ui-monospace,Menlo,monospace;color:#B79AA6;min-width:22px;padding-top:2px">{{ s.id }}</span><span>{{ s.name }}</span></div></sc-for>
+        </div>
+      </a>
+    </sc-for>
+  </div>
+  <div style="font:400 13px/20px Inter,sans-serif;color:#7A5A68;max-width:760px;text-wrap:pretty">Maps are Mapbox GL placeholders. Every ops screen shares the <span style="font-weight:600;color:#221019">Ops Sidebar</span> component (role: admin / ngo, collapsible). Screens are grouped into separate files to keep each page fast; ids like <span style="font:600 12px ui-monospace,Menlo,monospace">4f</span> are stable references you can use in chat.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const mk = (id, title, href, list) => ({ id, title, href, count: list.length, screens: list.map(([i, name]) => ({ id: i, name })) });
+    return { batches: [
+      mk('1', 'Foundations & core screens', 'LittleLife Web Mockups - Batch 1.dc.html', [['1a', 'Login'], ['1b', 'Admin Dashboard — shell A (expanded sidebar)'], ['1c', 'Admin Dashboard — shell B (icon rail, map wall)'], ['1d', 'NGO Dashboard'], ['1e', 'Incident Reports (admin table)'], ['1f', 'Hazard Zones & Predictions + Declare dialog'], ['1g', 'NGO Task Board (Kanban)'], ['1h', 'Alerts & Broadcasts console'], ['1i', 'Citizen Home'], ['1j', 'Alert Takeover'], ['1k', 'Community feed + Report Incident drawer'], ['1l', 'NGO Detail + Approve dialog']]),
+      mk('2', 'Coordination, analytics, accounts', 'LittleLife Web Mockups.dc.html', [['2a', 'Escalations & Coordination'], ['2b', 'Analytics'], ['2c', 'Account Detail + moderation dialog'], ['2d', 'NGO Volunteers + Invite dialog'], ['2e', 'NGO Shelters (inline occupancy)'], ['2f', 'Citizen Map split-view'], ['2g', 'Profile › Invitations'], ['2h', 'Missing Person Detail + Report Sighting']]),
+      mk('3', 'Auth & Citizen Web', 'LittleLife Web Mockups - Batch 3 Citizen.dc.html', [['3a', 'Register'], ['3b', 'OTP verification'], ['3c', 'Resources hub'], ['3d', 'Safe Route Navigation'], ['3e', 'Safety Groups / family check-in'], ['3f', 'Chat + AI assistant'], ['3g', 'Alert Preferences'], ['3h', 'Credibility'], ['3i', 'Request Help drawer']]),
+      mk('4', 'NGO Console', 'LittleLife Web Mockups - Batch 4 NGO.dc.html', [['4a', 'Incidents list'], ['4b', 'Incident Detail + verification'], ['4c', 'Aid Requests list'], ['4d', 'Aid Request Detail + fulfilment'], ['4e', 'Missing Persons'], ['4f', 'Campaign Detail + Record Allocation'], ['4g', 'Community Updates composer'], ['4h', 'Field Observations'], ['4i', 'Feedback'], ['4j', 'Coordination channels + resource board'], ['4k', 'Reports + Generate dialog'], ['4l', 'Organization Settings'], ['4m', 'My Account']]),
+      mk('5', 'Admin Console', 'LittleLife Web Mockups - Batch 5 Admin.dc.html', [['5a', 'Relief Operations (Shelters tab)'], ['5b', 'Reports + schedules'], ['5c', 'Audit Log with diff'], ['5d', 'Users & Accounts'], ['5e', 'NGOs list'], ['5f', 'Regions tree + boundaries'], ['5g', 'Facilities + Add drawer'], ['5h', 'Offline Map Packages'], ['5i', 'Escalations › Messages'], ['5j', 'Create Alert dialog + preview']]),
+    ] };
+  }
+}
+</script>
+</body>
+</html>

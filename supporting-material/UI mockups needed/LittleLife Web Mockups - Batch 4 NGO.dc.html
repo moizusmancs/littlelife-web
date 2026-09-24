@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"><link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css"><link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>body{margin:0;background:#EFE7E3;font-family:Inter,system-ui,sans-serif;color:#221019}a{color:#B81F55}a:hover{color:#DB2E68}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#221019;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Inter,sans-serif;color:#221019}.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(34,16,25,.08);color:#221019;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 Inter,sans-serif;color:rgba(34,16,25,.6)}.dv-card{max-width:100%;background:#FFFBF9;border:1px solid rgba(34,16,25,.1);border-radius:12px;box-shadow:0 4px 12px rgba(34,16,25,.12);overflow:hidden}.dv-opt:target .dv-oid{background:#F2477D;color:#fff}</style></helmet>
+<div style="padding:14px 44px;font:500 12px Inter,sans-serif;color:#4A2E3C;background:#fff;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:18px;flex-wrap:wrap"><a href="LittleLife Web Mockups - Index.dc.html">Index</a><a href="LittleLife Web Mockups - Batch 1.dc.html">Batch 1</a><a href="LittleLife Web Mockups.dc.html">Batch 2</a><a href="LittleLife Web Mockups - Batch 3 Citizen.dc.html">Batch 3 Citizen</a><span style="font-weight:700">Batch 4 NGO</span><a href="LittleLife Web Mockups - Batch 5 Admin.dc.html">Batch 5 Admin</a></div>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">NGO Console — Incidents, Incident Detail, Aid Requests, Aid Request Detail, Missing Persons, Campaigns + Campaign Detail, Community Updates composer, Field Observations, Feedback, Coordination, Reports, Organization Settings, My Account</span></div>
+<div class="dv-opts">
+
+<!-- 4a INCIDENTS LIST -->
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Incidents — region-scoped list with Verify actions · /ngo/incidents</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Incidents" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Incidents</div><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 12px Inter,sans-serif"><i class="ph-fill ph-map-pin" style="font-size:14px"></i>Dadu · Jamshoro · Sehwan</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph ph-export" style="font-size:16px"></i>Export</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;border-bottom:1px solid #F0DCD6;gap:24px"><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#B81F55;border-bottom:2px solid #F2477D">Needs verification <span style="color:#7A5A68;font-weight:500">9</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Verified <span style="font-weight:500">41</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">In-Progress <span style="font-weight:500">12</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Resolved <span style="font-weight:500">186</span></div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:8px;width:300px;height:36px;padding:0 12px;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;font:400 13px Inter,sans-serif;color:#7A5A68"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>Search incidents…</div><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Category ▾</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Severity ▾</span><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1px solid #FFB8CD;border-radius:999px;padding:6px 12px">District: Dadu ✕</span><div style="flex:1"></div><div style="display:flex;background:#FDEFEA;border-radius:999px;padding:3px;font:600 12px Inter,sans-serif"><span style="padding:6px 14px;background:#F2477D;color:#fff;border-radius:999px"><i class="ph-bold ph-list"></i> List</span><span style="padding:6px 14px;color:#4A2E3C"><i class="ph-bold ph-map-trifold"></i> Map</span></div></div>
+      <div style="flex:1;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);overflow:hidden;display:flex;flex-direction:column;min-height:0">
+        <div style="display:grid;grid-template-columns:minmax(0,2.4fr) 130px 120px 130px 110px 90px 190px;align-items:center;height:44px;padding:0 20px;border-bottom:1px solid #F0DCD6;font:600 11px Inter,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#7A5A68;background:#FFFBF9"><div>Incident</div><div>Category</div><div>Severity</div><div>Reporter cred.</div><div>Priority</div><div>Votes</div><div style="text-align:right">Actions</div></div>
+        <sc-for list="{{ incidents }}" as="r" hint-placeholder-count="9">
+          <div style="display:grid;grid-template-columns:minmax(0,2.4fr) 130px 120px 130px 110px 90px 190px;align-items:center;height:56px;padding:0 20px;border-bottom:1px solid #EDE3E7;font:400 13px Inter,sans-serif" style-hover="background:#FDEFEA">
+            <div style="min-width:0;padding-right:12px;display:flex;align-items:center;gap:12px"><div style="width:44px;height:36px;border-radius:8px;flex:none;background:repeating-linear-gradient(135deg,#F0DCD6 0 5px,#FDEFEA 5px 10px)"></div><div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</div><div style="font-size:11px;color:#7A5A68">{{ r.meta }}</div></div></div>
+            <div><span style="font:600 11px Inter,sans-serif;color:{{ r.cc }};background:{{ r.cbg }};border-radius:999px;padding:3px 9px">{{ r.cat }}</span></div>
+            <div><span style="font:600 11px Inter,sans-serif;color:{{ r.sc }};background:{{ r.sbg }};border-radius:999px;padding:3px 9px">{{ r.sev }}</span></div>
+            <div><span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:3px 9px">{{ r.cred }}</span></div>
+            <div style="font:700 14px Manrope,sans-serif">{{ r.score }}</div>
+            <div style="color:#4A2E3C">▲ {{ r.votes }}</div>
+            <div style="display:flex;justify-content:flex-end;gap:6px"><div style="height:32px;padding:0 12px;border-radius:8px;background:#1F7A8C;color:#fff;display:flex;align-items:center;gap:5px;font:600 12px Inter,sans-serif"><i class="ph-bold ph-check-circle"></i>Verify</div><div style="height:32px;padding:0 12px;border-radius:8px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;gap:5px;font:600 12px Inter,sans-serif">Assign</div></div>
+          </div>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:16px;height:48px;padding:0 16px;border-top:1px solid #F0DCD6;font:500 12px Inter,sans-serif;color:#7A5A68"><div style="flex:1"></div><span>1–9 of 9</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4b INCIDENT DETAIL -->
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Incident Detail — media, map, votes, verification panel with status timeline · /ngo/incidents/:id</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Incidents" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:8px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff;font:500 14px Inter,sans-serif;color:#7A5A68">
+      <span>Incidents</span><i class="ph ph-caret-right" style="font-size:12px"></i><span style="font:700 16px Manrope,sans-serif;color:#221019">#IR-10482</span><span style="font:600 11px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:3px 9px;margin-left:6px">Pending verification</span>
+      <div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #D42E2E;color:#D42E2E;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-x-circle"></i>Reject</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-arrow-bend-up-right"></i>Create task</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#1F7A8C;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-check-circle"></i>Verify incident</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;min-height:0">
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font:600 11px Inter,sans-serif;color:#2F6FED;background:#2F6FED26;border-radius:999px;padding:3px 9px">Flooding</span><span style="font:600 11px Inter,sans-serif;color:#D42E2E;background:#FDE4E4;border-radius:999px;padding:3px 9px">Critical</span><span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:3px 9px">Reporter 88% credible</span><div style="flex:1"></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Reported 14 min ago · Johi Bypass, Dadu</span></div>
+          <div style="font:700 24px/30px Manrope,sans-serif">Indus embankment seeping near Johi Bypass</div>
+          <div style="font:400 14px/21px Inter,sans-serif;color:#4A2E3C;text-wrap:pretty">Water has been seeping through the embankment since about 13:00. Sandbags are not holding on the north side; local men are trying to shore it up but need machinery. Approximately 40 houses immediately downstream.</div>
+          <div style="display:flex;align-items:center;gap:10px;font:400 13px Inter,sans-serif;color:#7A5A68"><div style="width:28px;height:28px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 10px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div><span style="font-weight:600;color:#221019">Hina Khan</span>· Level 4 · 34 reports, 29 verified<div style="flex:1"></div><span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:#FFF0F4;color:#B81F55;font-weight:600"><i class="ph-bold ph-arrow-fat-up"></i>214</span><span style="display:flex;align-items:center;gap:5px;padding:5px 10px;color:#B79AA6"><i class="ph ph-arrow-fat-down"></i>3</span><span><i class="ph ph-chat-circle"></i> 38</span></div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0">
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="padding:12px 16px;border-bottom:1px solid #F0DCD6;font:600 14px Manrope,sans-serif">Media · 2</div><div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px"><div style="border-radius:8px;background:repeating-linear-gradient(135deg,#F0DCD6 0 8px,#FDEFEA 8px 16px);display:flex;align-items:flex-end;padding:8px"><span style="font:500 10px ui-monospace,Menlo,monospace;color:#7A5A68;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:4px">photo · 13:41 · GPS ✓</span></div><div style="border-radius:8px;background:repeating-linear-gradient(135deg,#F0DCD6 0 8px,#FDEFEA 8px 16px);display:flex;align-items:flex-end;padding:8px"><span style="font:500 10px ui-monospace,Menlo,monospace;color:#7A5A68;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:4px">photo · 13:43 · GPS ✓</span></div></div></div>
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="padding:12px 16px;border-bottom:1px solid #F0DCD6;font:600 14px Manrope,sans-serif;display:flex;justify-content:space-between">Location <span style="font:400 12px Inter,sans-serif;color:#7A5A68">26.79°N 67.61°E · ±12 m</span></div><div style="flex:1;position:relative;background:repeating-linear-gradient(135deg,#F9F1EE 0 12px,#FDF7F4 12px 24px)"><div style="position:absolute;left:20%;top:20%;width:60%;height:60%;border-radius:52% 48% 60% 40%;background:rgba(212,46,46,.3);border:2px solid #D42E2E"></div><div style="position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:999px;background:#2F6FED;border:3px solid #fff;margin:-9px 0 0 -9px;box-shadow:0 0 0 6px rgba(47,111,237,.2)"></div><div style="position:absolute;left:54%;top:40%;padding:3px 7px;background:#221019;color:#fff;border-radius:6px;font:600 10px Inter,sans-serif">inside Dadu – Johi zone</div><div style="position:absolute;left:34%;top:28%;width:12px;height:12px;border-radius:999px;background:#2F6FED;border:2px solid #fff;opacity:.7"></div><div style="position:absolute;left:62%;top:66%;width:12px;height:12px;border-radius:999px;background:#2F6FED;border:2px solid #fff;opacity:.7"></div><div style="position:absolute;right:8px;bottom:8px;font:500 10px ui-monospace,Menlo,monospace;color:#7A5A68;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:4px">2 related reports within 300 m</div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 15px Manrope,sans-serif">Verification</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font:500 13px Inter,sans-serif"><div style="display:flex;align-items:center;gap:10px"><i class="ph-fill ph-check-circle" style="color:#2E9E5B;font-size:18px"></i>GPS within 50 m of media metadata</div><div style="display:flex;align-items:center;gap:10px"><i class="ph-fill ph-check-circle" style="color:#2E9E5B;font-size:18px"></i>2 corroborating reports nearby</div><div style="display:flex;align-items:center;gap:10px"><i class="ph-fill ph-check-circle" style="color:#2E9E5B;font-size:18px"></i>Reporter above 70% credibility</div><div style="display:flex;align-items:center;gap:10px"><i class="ph-fill ph-warning-circle" style="color:#E0A100;font-size:18px"></i>No field observation yet</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 12px Inter,sans-serif;color:#4A2E3C">Verification note</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:10px;min-height:56px;font:400 13px Inter,sans-serif;color:#7A5A68">Optional — visible to admins and in the audit log</div></div>
+          <div style="height:44px;border-radius:10px;background:#1F7A8C;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><i class="ph-bold ph-check-circle"></i>Mark verified</div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(34,16,25,.08);flex:1;min-height:0">
+          <div style="padding:12px 18px;border-bottom:1px solid #F0DCD6;font:600 15px Manrope,sans-serif">Status timeline</div>
+          <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;padding:10px 18px"><div style="display:flex;flex-direction:column;align-items:center"><span style="width:12px;height:12px;border-radius:999px;background:{{ t.c }};border:2px solid #fff;box-shadow:0 0 0 1.5px {{ t.c }}"></span><span style="flex:1;width:2px;background:#EDE3E7;margin-top:4px"></span></div><div style="flex:1;padding-bottom:6px"><div style="font:600 13px Inter,sans-serif">{{ t.what }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ t.who }} · {{ t.t }}</div></div></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4c AID REQUESTS -->
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Aid Requests — urgency-sorted list with Fulfil/Assign · /ngo/aid-requests</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Aid Requests" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Aid Requests</div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">22 open · 6 urgent · 4 unassigned</span><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 12px Inter,sans-serif"><i class="ph-fill ph-map-pin" style="font-size:14px"></i>Dadu · Jamshoro · Sehwan</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;border-bottom:1px solid #F0DCD6;gap:24px"><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#B81F55;border-bottom:2px solid #F2477D">Pending <span style="color:#7A5A68;font-weight:500">10</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Assigned <span style="font-weight:500">7</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">In Progress <span style="font-weight:500">5</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Fulfilled <span style="font-weight:500">312</span></div><div style="padding:10px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Cancelled <span style="font-weight:500">18</span></div></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font:600 12px Inter,sans-serif;background:#FDE4E4;color:#D42E2E;border:1px solid #F5B5B5;border-radius:999px;padding:6px 12px">Urgent only</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Type ▾</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Vulnerable groups ▾</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Within 10 km ▾</span><div style="flex:1"></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Sorted by urgency, then age</span></div>
+      <div style="flex:1;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);overflow:hidden;display:flex;flex-direction:column;min-height:0">
+        <div style="display:grid;grid-template-columns:120px minmax(0,2.2fr) 120px 110px 160px 100px 200px;align-items:center;height:44px;padding:0 20px;border-bottom:1px solid #F0DCD6;font:600 11px Inter,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#7A5A68;background:#FFFBF9"><div>Urgency</div><div>Request</div><div>Type</div><div>People</div><div>Assigned</div><div>Age</div><div style="text-align:right">Actions</div></div>
+        <sc-for list="{{ aidRows }}" as="a" hint-placeholder-count="9">
+          <div style="display:grid;grid-template-columns:120px minmax(0,2.2fr) 120px 110px 160px 100px 200px;align-items:center;height:56px;padding:0 20px;border-bottom:1px solid #EDE3E7;font:400 13px Inter,sans-serif;background:{{ a.rowBg }}" style-hover="background:#FDEFEA">
+            <div><span style="font:600 11px Inter,sans-serif;color:{{ a.uc }};background:{{ a.ubg }};border-radius:999px;padding:3px 9px">{{ a.urg }}</span></div>
+            <div style="min-width:0;padding-right:12px"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.title }}</div><div style="font-size:11px;color:#7A5A68">{{ a.meta }}</div></div>
+            <div style="display:flex;align-items:center;gap:6px;color:#4A2E3C"><i class="{{ a.icon }}" style="font-size:16px;color:#B81F55"></i>{{ a.type }}</div>
+            <div style="color:#4A2E3C">{{ a.people }} <sc-if value="{{ a.vuln }}" hint-placeholder-val="{{ false }}"><span style="font:600 10px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:1px 6px;margin-left:4px">{{ a.vuln }}</span></sc-if></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#4A2E3C"><sc-if value="{{ a.who }}" hint-placeholder-val="{{ true }}"><div style="width:24px;height:24px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 9px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">{{ a.whoIni }}</div>{{ a.who }}</sc-if><sc-if value="{{ a.unassigned }}" hint-placeholder-val="{{ false }}"><span style="color:#D42E2E;font-weight:600">Unassigned</span></sc-if></div>
+            <div style="color:{{ a.ageC }};font-weight:500">{{ a.age }}</div>
+            <div style="display:flex;justify-content:flex-end;gap:6px"><div style="height:32px;padding:0 12px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:5px;font:600 12px Inter,sans-serif">Assign</div><div style="height:32px;padding:0 12px;border-radius:8px;background:#2E9E5B;color:#fff;display:flex;align-items:center;gap:5px;font:600 12px Inter,sans-serif"><i class="ph-bold ph-check"></i>Fulfil</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4d AID REQUEST DETAIL -->
+<div class="dv-opt" id="4d"><div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Aid Request Detail — requester, needs, chat with requester, fulfilment panel · /ngo/aid-requests/:id</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Aid Requests" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:8px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff;font:500 14px Inter,sans-serif;color:#7A5A68">
+      <span>Aid Requests</span><i class="ph ph-caret-right" style="font-size:12px"></i><span style="font:700 16px Manrope,sans-serif;color:#221019">#AR-3390</span><span style="font:600 11px Inter,sans-serif;color:#D42E2E;background:#FDE4E4;border-radius:999px;padding:3px 9px;margin-left:6px">Life-threatening</span><span style="font:600 11px Inter,sans-serif;color:#3A5FCD;background:#E7ECFB;border-radius:999px;padding:3px 9px">Assigned</span>
+      <div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-arrow-bend-up-right"></i>Escalate to admin</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#2E9E5B;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-check"></i>Mark fulfilled</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;min-height:0">
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:700 22px/28px Manrope,sans-serif">Rescue + insulin — family of 6 on rooftop, Wahi Pandhi</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font:600 11px Inter,sans-serif;color:#B81F55;background:#FFF0F4;border-radius:999px;padding:3px 9px;display:inline-flex;align-items:center;gap:4px"><i class="ph-fill ph-lifebuoy"></i>Rescue</span><span style="font:600 11px Inter,sans-serif;color:#B81F55;background:#FFF0F4;border-radius:999px;padding:3px 9px;display:inline-flex;align-items:center;gap:4px"><i class="ph-fill ph-first-aid-kit"></i>Medical</span><span style="font:600 11px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:3px 9px">2 children</span><span style="font:600 11px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:3px 9px">1 elderly · diabetic</span></div>
+          <div style="font:400 14px/21px Inter,sans-serif;color:#4A2E3C">Roof of two-storey house, water at first floor. Grandmother is diabetic, insulin ran out this morning. Two children under 5. Phone battery at 20%.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid #EDE3E7;padding-top:14px"><div><div style="font:500 11px Inter,sans-serif;color:#7A5A68">Requested</div><div style="font:600 13px Inter,sans-serif">Today 13:22 · 38 min ago</div></div><div><div style="font:500 11px Inter,sans-serif;color:#7A5A68">Location</div><div style="font:600 13px Inter,sans-serif">Wahi Pandhi, house 14 · GPS ±9 m · live</div></div><div><div style="font:500 11px Inter,sans-serif;color:#7A5A68">Linked</div><div style="font:600 13px Inter,sans-serif;color:#B81F55">Incident #IR-10475 · Task #T-2288</div></div></div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0">
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="padding:12px 16px;border-bottom:1px solid #F0DCD6;font:600 14px Manrope,sans-serif;display:flex;justify-content:space-between">Live location <span style="font:600 11px Inter,sans-serif;color:#2E9E5B;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:999px;background:#2E9E5B"></span>updated 40s ago</span></div><div style="flex:1;position:relative;background:repeating-linear-gradient(135deg,#F9F1EE 0 12px,#FDF7F4 12px 24px)"><div style="position:absolute;left:10%;top:10%;width:80%;height:80%;border-radius:52% 48% 60% 40%;background:rgba(212,46,46,.3);border:2px solid #D42E2E"></div><div style="position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:999px;background:#D42E2E;border:3px solid #fff;margin:-9px 0 0 -9px;box-shadow:0 0 0 8px rgba(212,46,46,.2)"></div><div style="position:absolute;left:30%;top:70%;width:16px;height:16px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div><div style="position:absolute;left:24%;top:78%;padding:3px 7px;background:#221019;color:#fff;border-radius:6px;font:600 10px Inter,sans-serif">Tariq M. · boat · 1.1 km away</div></div></div>
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="padding:12px 16px;border-bottom:1px solid #F0DCD6;font:600 14px Manrope,sans-serif">Requester</div><div style="padding:16px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:48px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:700 15px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">RB</div><div style="flex:1"><div style="font:600 15px Inter,sans-serif">Rukhsana Bibi</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Level 2 · 64% credible · 3 prior requests, 3 fulfilled</div></div></div><div style="display:flex;gap:8px"><div style="flex:1;height:40px;border-radius:10px;background:#2E9E5B;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font:600 13px Inter,sans-serif"><i class="ph-fill ph-phone"></i>Call</div><div style="flex:1;height:40px;border-radius:10px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;justify-content:center;gap:6px;font:600 13px Inter,sans-serif"><i class="ph-fill ph-chat-circle"></i>Message</div></div><div style="font:400 12px/17px Inter,sans-serif;color:#7A5A68;background:#FFFBF9;border:1px solid #F0DCD6;border-radius:8px;padding:10px">Consent: sharing live location with responders until fulfilled. Phone battery 20% — prefer SMS over calls.</div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 15px Manrope,sans-serif">Fulfilment</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:#E7ECFB"><div style="width:32px;height:32px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 11px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">TM</div><div style="flex:1"><div style="font:600 13px Inter,sans-serif">Tariq Mallah · boat team</div><div style="font:400 11px Inter,sans-serif;color:#3A5FCD">En route · ETA 8 min</div></div><span style="font:600 12px Inter,sans-serif;color:#B81F55">Reassign</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;font:500 13px Inter,sans-serif"><div style="display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:4px;background:#2E9E5B;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-check" style="color:#fff;font-size:11px"></i></div>Rescue boat dispatched</div><div style="display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:4px;background:#2E9E5B;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-check" style="color:#fff;font-size:11px"></i></div>Insulin (2 vials) loaded from GBHS Johi medical desk</div><div style="display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:4px;border:1.5px solid #B79AA6"></div>Family transported to shelter</div><div style="display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:4px;border:1.5px solid #B79AA6"></div>Medical check completed</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(34,16,25,.08);flex:1;min-height:0">
+          <div style="padding:12px 18px;border-bottom:1px solid #F0DCD6;font:600 15px Manrope,sans-serif;display:flex;align-items:center;gap:8px">Chat with requester <span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:2px 8px">shared with volunteer</span></div>
+          <div style="flex:1;overflow:hidden;padding:14px 18px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ arChat }}" as="m" hint-placeholder-count="4">
+              <div style="display:flex;flex-direction:column;gap:3px;align-items:{{ m.align }}"><div style="max-width:88%;padding:9px 12px;border-radius:12px;background:{{ m.bg }};color:{{ m.fg }};font:400 13px/18px Inter,sans-serif">{{ m.text }}</div><span style="font:500 10px Inter,sans-serif;color:#B79AA6">{{ m.who }} · {{ m.t }}</span></div>
+            </sc-for>
+          </div>
+          <div style="padding:12px 18px;border-top:1px solid #F0DCD6;display:flex;align-items:center;gap:8px"><div style="flex:1;height:40px;border-radius:8px;background:#FDEFEA;border:1px solid #F0DCD6;display:flex;align-items:center;padding:0 12px;font:400 13px Inter,sans-serif;color:#7A5A68">Message Rukhsana…</div><div style="width:40px;height:40px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-paper-plane-right"></i></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4e MISSING PERSONS -->
+<div class="dv-opt" id="4e"><div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Missing Persons — card grid with sightings + Mark Found · /ngo/missing-persons</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Missing Persons" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Missing Persons</div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">6 active · 14 found this week</span><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 12px Inter,sans-serif"><i class="ph-fill ph-map-pin" style="font-size:14px"></i>Dadu · Jamshoro · Sehwan</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-plus" style="font-size:14px"></i>New case</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:20px 28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="display:flex;background:#FDEFEA;border-radius:999px;padding:3px;font:600 12px Inter,sans-serif"><span style="padding:6px 14px;background:#F2477D;color:#fff;border-radius:999px">Active · 6</span><span style="padding:6px 14px;color:#4A2E3C">Found · 14</span><span style="padding:6px 14px;color:#4A2E3C">All</span></div><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Age group ▾</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Has sightings</span><div style="flex:1"></div><div style="display:flex;align-items:center;gap:8px;width:280px;height:36px;padding:0 12px;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;font:400 13px Inter,sans-serif;color:#7A5A68"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>Search name, location…</div></div>
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:min-content;gap:16px;min-height:0;align-content:start">
+        <sc-for list="{{ mpCards }}" as="p" hint-placeholder-count="6">
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)" style-hover="box-shadow:0 4px 12px rgba(34,16,25,.12)">
+            <div style="display:flex;gap:14px"><div style="width:72px;height:72px;border-radius:12px;flex:none;background:repeating-linear-gradient(135deg,#F0DCD6 0 7px,#FDEFEA 7px 14px)"></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span style="font:700 16px Manrope,sans-serif">{{ p.name }}</span><span style="font:600 11px Inter,sans-serif;color:{{ p.sc }};background:{{ p.sbg }};border-radius:999px;padding:2px 8px">{{ p.status }}</span></div><div style="font:400 12px Inter,sans-serif;color:#4A2E3C">{{ p.desc }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68"><i class="ph ph-map-pin"></i> {{ p.last }}</div></div></div>
+            <div style="display:flex;align-items:center;gap:8px;font:500 12px Inter,sans-serif;color:#7A5A68;border-top:1px solid #EDE3E7;padding-top:10px"><i class="ph-fill ph-eye" style="color:#7C4DFF"></i>{{ p.sightings }} sightings · latest {{ p.latest }}<div style="flex:1"></div><div style="width:24px;height:24px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 9px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">{{ p.vol }}</div></div>
+            <div style="display:flex;gap:8px"><div style="flex:1;height:36px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif">View case</div><div style="flex:1;height:36px;border-radius:8px;background:#2E9E5B;color:#fff;display:flex;align-items:center;justify-content:center;gap:5px;font:600 12px Inter,sans-serif"><i class="ph-bold ph-check"></i>Mark found</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4f CAMPAIGN DETAIL -->
+<div class="dv-opt" id="4f"><div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Campaign Detail — progress, allocations table, Record Allocation dialog · /ngo/campaigns/:id</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019;position:relative">
+  <dc-import name="Ops Sidebar" role="ngo" active="Campaigns" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:8px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff;font:500 14px Inter,sans-serif;color:#7A5A68">
+      <span>Campaigns</span><i class="ph ph-caret-right" style="font-size:12px"></i><span style="font:700 16px Manrope,sans-serif;color:#221019">Dadu Flood Relief — August</span><span style="font:600 11px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:3px 9px;margin-left:6px">Active</span>
+      <div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph ph-share-network"></i>Share</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph ph-pencil-simple"></i>Edit</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-plus"></i>Record allocation</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 32px Manrope,sans-serif">PKR 6.42M</span><span style="font:500 14px Inter,sans-serif;color:#7A5A68">raised of PKR 10M goal</span><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#2E9E5B">64%</span></div>
+          <div style="height:12px;border-radius:999px;background:#FDEFEA;overflow:hidden;display:flex"><div style="width:48%;background:#F2477D"></div><div style="width:16%;background:#FF9563"></div></div>
+          <div style="display:flex;gap:20px;font:500 12px Inter,sans-serif;color:#4A2E3C"><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F2477D;margin-right:5px;vertical-align:-1px"></span>Allocated PKR 4.80M</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FF9563;margin-right:5px;vertical-align:-1px"></span>Unallocated PKR 1.62M</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FDEFEA;margin-right:5px;vertical-align:-1px"></span>Remaining PKR 3.58M</span><div style="flex:1"></div><span>1,842 donors · ends 31 Aug · 13 days left</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Families reached</span><span style="font:700 24px Manrope,sans-serif">2,140</span></div>
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Allocations</span><span style="font:700 24px Manrope,sans-serif">14</span></div>
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Linked aid requests</span><span style="font:700 24px Manrope,sans-serif">86</span></div>
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Avg. cost / family</span><span style="font:700 24px Manrope,sans-serif">PKR 2,243</span></div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);overflow:hidden;display:flex;flex-direction:column;min-height:0">
+        <div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid #F0DCD6"><div style="font:600 15px Manrope,sans-serif">Allocations</div><span style="margin-left:8px;font:500 12px Inter,sans-serif;color:#7A5A68">public ledger — visible to donors and admins</span><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">Export CSV</span></div>
+        <div style="display:grid;grid-template-columns:110px minmax(0,2fr) 140px 150px 140px 120px;align-items:center;height:40px;padding:0 20px;border-bottom:1px solid #F0DCD6;font:600 11px Inter,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#7A5A68;background:#FFFBF9"><div>Date</div><div>Purpose</div><div>Category</div><div style="text-align:right">Amount</div><div>Recorded by</div><div>Receipt</div></div>
+        <sc-for list="{{ allocations }}" as="a" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:110px minmax(0,2fr) 140px 150px 140px 120px;align-items:center;height:48px;padding:0 20px;border-bottom:1px solid #EDE3E7;font:400 13px Inter,sans-serif"><div style="color:#7A5A68;font-size:12px">{{ a.date }}</div><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px">{{ a.purpose }}</div><div><span style="font:600 11px Inter,sans-serif;color:#4A2E3C;background:#FDEFEA;border-radius:999px;padding:3px 9px">{{ a.cat }}</span></div><div style="text-align:right;font:700 14px Manrope,sans-serif;font-variant-numeric:tabular-nums">PKR {{ a.amt }}</div><div style="color:#4A2E3C;font-size:12px">{{ a.by }}</div><div><span style="font:600 11px Inter,sans-serif;color:{{ a.rc }};background:{{ a.rbg }};border-radius:999px;padding:3px 9px">{{ a.receipt }}</span></div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(34,16,25,.35);display:flex;align-items:center;justify-content:center">
+    <div style="width:480px;background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(34,16,25,.16);padding:28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between"><div><div style="font:700 20px/26px Manrope,sans-serif">Record allocation</div><div style="font:400 13px/18px Inter,sans-serif;color:#7A5A68;margin-top:4px">Added to the public ledger. PKR 1.62M unallocated.</div></div><i class="ph ph-x" style="font-size:20px;color:#7A5A68"></i></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Amount (PKR)</label><div style="display:flex;align-items:center;background:#fff;border:2px solid #F2477D;border-radius:8px;padding:0 12px;height:44px;font:700 16px Manrope,sans-serif">420,000</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Category</label><div style="display:flex;align-items:center;justify-content:space-between;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;font:400 14px Inter,sans-serif">Medical<i class="ph ph-caret-down" style="color:#7A5A68"></i></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Purpose</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:12px;min-height:60px;font:400 14px/20px Inter,sans-serif">Insulin, ORS and antibiotics for GBHS Johi medical desk — 2 weeks supply</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Link to aid requests <span style="font-weight:400;color:#7A5A68">(optional)</span></label><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1px solid #FFB8CD;border-radius:999px;padding:5px 10px">#AR-3390 ✕</span><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1px solid #FFB8CD;border-radius:999px;padding:5px 10px">#AR-3371 ✕</span><span style="font:600 12px Inter,sans-serif;color:#7A5A68;border:1px dashed #B79AA6;border-radius:999px;padding:5px 10px">+ Add</span></div></div>
+      <div style="display:flex;align-items:center;gap:12px;border:1.5px dashed #B79AA6;border-radius:12px;padding:12px 14px;font:400 12px Inter,sans-serif;color:#7A5A68"><i class="ph ph-receipt" style="font-size:22px;color:#B81F55"></i><span style="flex:1">Attach receipt or invoice · PDF or photo</span><span style="font:600 12px Inter,sans-serif;color:#B81F55">Upload</span></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px"><div style="height:44px;padding:0 18px;border-radius:12px;display:flex;align-items:center;font:600 14px Inter,sans-serif;color:#B81F55">Cancel</div><div style="height:44px;padding:0 18px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;font:600 14px Inter,sans-serif">Record PKR 420,000</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4g COMMUNITY UPDATES COMPOSER -->
+<div class="dv-opt" id="4g"><div class="dv-olabel"><a class="dv-oid" href="#4g">4g</a>Alerts &amp; Community Updates — NGO composer with live preview + past updates · /ngo/updates</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Alerts & Community Updates" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Alerts &amp; Community Updates</div><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 12px Inter,sans-serif"><i class="ph-fill ph-map-pin" style="font-size:14px"></i>Dadu · Jamshoro · Sehwan</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid #F0DCD6;padding:0 28px;gap:24px;background:#fff"><div style="padding:12px 0;font:600 13px Inter,sans-serif;color:#7A5A68">Alerts in my regions <span style="font-weight:500">6</span></div><div style="padding:12px 0;font:600 13px Inter,sans-serif;color:#B81F55;border-bottom:2px solid #F2477D">Community Updates</div></div>
+    <div style="flex:1;display:grid;grid-template-columns:minmax(0,1fr) 440px;min-height:0">
+      <div style="padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-height:0;overflow:hidden">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="display:flex;align-items:center;gap:10px"><div style="font:600 15px Manrope,sans-serif">New community update</div><div style="flex:1"></div><span style="font:400 12px Inter,sans-serif;color:#7A5A68">Posted as <span style="font-weight:600;color:#221019">Al-Khidmat Foundation</span> <i class="ph-fill ph-check-circle" style="color:#1F7A8C"></i></span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Type</label><div style="display:grid;grid-template-columns:repeat(3,1fr);background:#FDEFEA;border-radius:999px;padding:4px;font:600 12px Inter,sans-serif;text-align:center"><span style="padding:8px 0;color:#fff;background:#F2477D;border-radius:999px">Shelter</span><span style="padding:8px 0;color:#4A2E3C">Distribution</span><span style="padding:8px 0;color:#4A2E3C">Advisory</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Audience</label><div style="display:flex;align-items:center;justify-content:space-between;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:40px;font:400 14px Inter,sans-serif">Citizens within 10 km of Johi · ~18,400<i class="ph ph-caret-down" style="color:#7A5A68"></i></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Title</label><div style="display:flex;align-items:center;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;font:400 14px Inter,sans-serif">Medical desk now open at GBHS Johi shelter</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Message</label><div style="background:#fff;border:2px solid #F2477D;border-radius:8px;padding:12px;min-height:90px;font:400 14px/20px Inter,sans-serif;position:relative">Free medical desk with a doctor and insulin storage is open 24h at GBHS Johi (Station Road). Bring your medicine list. Transport available from Johi Bypass every 30 minutes.<span style="position:absolute;right:10px;bottom:8px;font:500 11px Inter,sans-serif;color:#7A5A68">212 / 500</span></div></div>
+          <div style="display:flex;align-items:center;gap:14px"><div style="display:flex;align-items:center;gap:8px;font:500 13px Inter,sans-serif"><div style="width:36px;height:20px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#fff"></div></div>Auto-translate to Urdu &amp; Sindhi</div><div style="display:flex;align-items:center;gap:8px;font:500 13px Inter,sans-serif"><div style="width:36px;height:20px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#fff"></div></div>Pin shelter on map</div><div style="display:flex;align-items:center;gap:8px;font:500 13px Inter,sans-serif"><div style="width:36px;height:20px;border-radius:999px;background:#EDE3E7;position:relative"><div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff"></div></div>Also send as push</div><div style="flex:1"></div><div style="height:40px;padding:0 14px;border-radius:10px;display:flex;align-items:center;font:600 13px Inter,sans-serif;color:#B81F55">Save draft</div><div style="height:40px;padding:0 16px;border-radius:10px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:6px;font:600 13px Inter,sans-serif"><i class="ph-fill ph-megaphone"></i>Publish update</div></div>
+        </div>
+        <div style="font:700 11px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#7A5A68">Published · 9</div>
+        <sc-for list="{{ updates }}" as="u" hint-placeholder-count="3">
+          <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:600 11px Inter,sans-serif;color:{{ u.tc }};background:{{ u.tbg }};border-radius:999px;padding:3px 9px">{{ u.type }}</span><div style="flex:1;min-width:0"><div style="font:600 14px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.title }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ u.meta }}</div></div><span style="font:500 12px Inter,sans-serif;color:#4A2E3C"><i class="ph ph-eye"></i> {{ u.views }}</span><span style="font:500 12px Inter,sans-serif;color:#4A2E3C"><i class="ph ph-arrow-fat-up"></i> {{ u.votes }}</span><i class="ph ph-dots-three-vertical" style="color:#7A5A68"></i></div>
+        </sc-for>
+      </div>
+      <div style="border-left:1px solid #F0DCD6;background:#EFE7E3;display:flex;flex-direction:column;align-items:center;padding:24px;gap:12px">
+        <div style="font:700 11px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#7A5A68;align-self:flex-start">Preview · citizen feed card</div>
+        <div style="width:100%;background:#fff;border:1px solid #F0DCD6;border-left:4px solid #1F7A8C;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 4px 12px rgba(34,16,25,.12)">
+          <div style="display:flex;align-items:center;gap:8px;font:400 12px Inter,sans-serif;color:#7A5A68"><div style="width:28px;height:28px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 10px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AK</div><span style="font-weight:600;color:#221019">Al-Khidmat Foundation</span><i class="ph-fill ph-check-circle" style="color:#1F7A8C;font-size:14px"></i><span>· now</span><div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:2px 8px">Shelter</span></div>
+          <div style="font:600 16px/22px Inter,sans-serif">Medical desk now open at GBHS Johi shelter</div>
+          <div style="font:400 13px/19px Inter,sans-serif;color:#4A2E3C">Free medical desk with a doctor and insulin storage is open 24h at GBHS Johi (Station Road). Bring your medicine list. Transport available from Johi Bypass every 30 minutes.</div>
+          <div style="height:90px;border-radius:8px;position:relative;background:repeating-linear-gradient(135deg,#F9F1EE 0 12px,#FDF7F4 12px 24px);border:1px solid #F0DCD6"><div style="position:absolute;left:50%;top:50%;width:24px;height:24px;border-radius:999px;background:#fff;border:3px solid #2E9E5B;margin:-12px 0 0 -12px;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-house-line" style="color:#2E9E5B;font-size:12px"></i></div></div>
+          <div style="display:flex;gap:8px"><div style="flex:1;height:36px;border-radius:10px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif">Navigate</div><div style="flex:1;height:36px;border-radius:10px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;justify-content:center;font:600 12px Inter,sans-serif">Share</div></div>
+        </div>
+        <div style="font:400 12px Inter,sans-serif;color:#7A5A68;text-align:center">Also shown in اردو and سنڌي based on each reader's preference.</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4h FIELD OBSERVATIONS -->
+<div class="dv-opt" id="4h"><div class="dv-olabel"><a class="dv-oid" href="#4h">4h</a>Field Observations — volunteer-submitted, map + feed · /ngo/observations</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Field Observations" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Field Observations</div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">31 today · from 9 volunteers</span><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;font:600 12px Inter,sans-serif"><i class="ph-fill ph-map-pin" style="font-size:14px"></i>Dadu · Jamshoro · Sehwan</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-plus" style="font-size:14px"></i>Log observation</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;display:flex;min-height:0">
+      <div style="width:480px;flex:none;border-right:1px solid #F0DCD6;background:#fff;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:12px 20px;border-bottom:1px solid #F0DCD6;display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 12px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:5px 11px">All</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 11px">Water level</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 11px">Road</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 11px">Shelter</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 11px">Health</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 11px">Needs</span></div>
+        <sc-for list="{{ observations }}" as="o" hint-placeholder-count="6">
+          <div style="display:flex;gap:12px;padding:14px 20px;border-bottom:1px solid #EDE3E7;background:{{ o.bg }}" style-hover="background:#FDEFEA">
+            <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 12px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;flex:none">{{ o.ini }}</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><div style="display:flex;align-items:center;gap:8px;font:400 12px Inter,sans-serif;color:#7A5A68"><span style="font-weight:600;color:#221019">{{ o.who }}</span>· {{ o.t }}<div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:{{ o.tc }};background:{{ o.tbg }};border-radius:999px;padding:2px 8px">{{ o.type }}</span></div><div style="font:400 13px/18px Inter,sans-serif;color:#221019">{{ o.text }}</div><div style="display:flex;align-items:center;gap:10px;font:400 11px Inter,sans-serif;color:#7A5A68"><i class="ph ph-map-pin"></i>{{ o.loc }}<sc-if value="{{ o.media }}" hint-placeholder-val="{{ false }}"><span><i class="ph ph-camera"></i> {{ o.media }}</span></sc-if><div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:#B81F55">{{ o.action }}</span></div></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:1;position:relative;background:repeating-linear-gradient(135deg,#F9F1EE 0 12px,#FDF7F4 12px 24px);overflow:hidden">
+        <div style="position:absolute;left:14%;top:26%;width:260px;height:170px;border-radius:52% 48% 60% 40%;background:rgba(212,46,46,.25);border:2px solid #D42E2E"></div>
+        <div style="position:absolute;left:52%;top:52%;width:200px;height:120px;border-radius:40% 60% 50% 50%;background:rgba(240,116,11,.25);border:2px solid #F0740B"></div>
+        <div style="position:absolute;left:22%;top:38%;width:30px;height:30px;border-radius:999px;background:#1F7A8C;border:3px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,16,25,.2)"><i class="ph-fill ph-binoculars" style="color:#fff;font-size:14px"></i></div>
+        <div style="position:absolute;left:30%;top:52%;width:24px;height:24px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div>
+        <div style="position:absolute;left:44%;top:32%;width:24px;height:24px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div>
+        <div style="position:absolute;left:58%;top:60%;width:24px;height:24px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div>
+        <div style="position:absolute;left:66%;top:24%;width:24px;height:24px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div>
+        <div style="position:absolute;left:38%;top:70%;width:24px;height:24px;border-radius:999px;background:#1F7A8C;border:3px solid #fff"></div>
+        <div style="position:absolute;left:26%;top:30%;padding:4px 8px;background:#221019;color:#fff;border-radius:6px;font:600 11px Inter,sans-serif">Embankment · +18 cm in 2h</div>
+        <div style="position:absolute;right:20px;top:20px;display:flex;flex-direction:column;gap:8px"><div style="width:40px;height:40px;border-radius:10px;background:#fff;box-shadow:0 4px 12px rgba(34,16,25,.12);display:flex;align-items:center;justify-content:center"><i class="ph ph-stack" style="font-size:20px;color:#4A2E3C"></i></div><div style="width:40px;height:40px;border-radius:10px;background:#fff;box-shadow:0 4px 12px rgba(34,16,25,.12);display:flex;align-items:center;justify-content:center"><i class="ph ph-clock-counter-clockwise" style="font-size:20px;color:#4A2E3C"></i></div></div>
+        <div style="position:absolute;left:20px;bottom:20px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(34,16,25,.16);padding:12px 16px;display:flex;align-items:center;gap:14px;font:500 12px Inter,sans-serif"><span><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#1F7A8C;margin-right:5px;vertical-align:-1px"></span>Observation</span><span style="color:#7A5A68">Time range:</span><span style="font-weight:600">Last 6h</span><div style="width:160px;height:4px;border-radius:2px;background:#FDEFEA;position:relative"><div style="position:absolute;left:60%;right:0;top:0;bottom:0;background:#F2477D;border-radius:2px"></div><div style="position:absolute;left:60%;top:-5px;width:14px;height:14px;border-radius:999px;background:#fff;border:2px solid #F2477D;margin-left:-7px"></div></div></div>
+        <div style="position:absolute;right:16px;bottom:16px;font:500 11px ui-monospace,Menlo,monospace;color:#7A5A68;background:rgba(255,255,255,.85);padding:4px 8px;border-radius:6px">mapbox gl · observation pins + time scrubber</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4i FEEDBACK -->
+<div class="dv-opt" id="4i"><div class="dv-olabel"><a class="dv-oid" href="#4i">4i</a>Feedback — citizen ratings on fulfilled requests · /ngo/feedback</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Feedback" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Feedback</div><div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #F0DCD6;border-radius:8px;background:#fff;font:500 13px Inter,sans-serif;color:#4A2E3C"><i class="ph ph-calendar-blank" style="font-size:16px;color:#7A5A68"></i>Last 30 days</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:grid;grid-template-columns:280px minmax(0,1fr) minmax(0,1fr);gap:16px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><span style="font:800 48px/1 Manrope,sans-serif">4.6</span><div style="display:flex;gap:2px;color:#E0A100;font-size:18px"><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star-half"></i></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">218 ratings · 312 fulfilled requests</span></div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(34,16,25,.08);justify-content:center">
+          <sc-for list="{{ stars }}" as="s" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:10px;font:500 12px Inter,sans-serif"><span style="width:14px;text-align:right">{{ s.n }}</span><i class="ph-fill ph-star" style="color:#E0A100;font-size:12px"></i><div style="flex:1;height:8px;border-radius:999px;background:#FDEFEA;overflow:hidden"><div style="height:100%;width:{{ s.pct }};background:#F2477D;border-radius:999px"></div></div><span style="width:32px;color:#7A5A68">{{ s.count }}</span></div></sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 3px rgba(34,16,25,.08);justify-content:center">
+          <div style="font:600 13px Manrope,sans-serif">Common themes</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 12px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:5px 10px">Fast response · 84</span><span style="font:600 12px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:5px 10px">Kind volunteers · 61</span><span style="font:600 12px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:5px 10px">Wrong quantity · 12</span><span style="font:600 12px Inter,sans-serif;color:#D42E2E;background:#FDE4E4;border-radius:999px;padding:5px 10px">Late · 9</span><span style="font:600 12px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:5px 10px">Couldn't reach · 7</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font:600 12px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:6px 12px">All · 218</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Needs reply · 6</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">≤ 2 stars · 14</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Volunteer ▾</span></div>
+      <div style="flex:1;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);overflow:hidden;display:flex;flex-direction:column;min-height:0">
+        <sc-for list="{{ feedback }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;gap:14px;padding:14px 20px;border-bottom:1px solid #EDE3E7"><div style="width:40px;height:40px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;flex:none">{{ f.ini }}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><div style="display:flex;align-items:center;gap:8px"><span style="font:600 14px Inter,sans-serif">{{ f.who }}</span><span style="display:flex;gap:1px;color:#E0A100;font-size:13px">{{ f.starsTxt }}</span><span style="font:400 12px Inter,sans-serif;color:#7A5A68">· {{ f.t }} · on <span style="color:#B81F55;font-weight:600">{{ f.req }}</span></span><div style="flex:1"></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Volunteer: {{ f.vol }}</span></div><div style="font:400 13px/18px Inter,sans-serif;color:#4A2E3C">{{ f.text }}</div><sc-if value="{{ f.needsReply }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;margin-top:2px"><span style="font:600 12px Inter,sans-serif;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 12px">Reply</span><span style="font:600 12px Inter,sans-serif;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 12px">Create follow-up task</span></div></sc-if></div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4j COORDINATION -->
+<div class="dv-opt" id="4j"><div class="dv-olabel"><a class="dv-oid" href="#4j">4j</a>Coordination — inter-NGO channels + resource sharing board · /ngo/coordination</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Coordination" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Coordination</div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">4 NGOs active in your regions · NDMA Dadu</span><div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-arrow-bend-up-right"></i>Escalate to NDMA</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;display:grid;grid-template-columns:300px minmax(0,1fr) 380px;min-height:0">
+      <div style="border-right:1px solid #F0DCD6;background:#fff;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:14px 20px 8px;font:700 11px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#B79AA6">Channels</div>
+        <sc-for list="{{ channelsC }}" as="c" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-left:4px solid {{ c.bl }};background:{{ c.bg }}" style-hover="background:#FDEFEA"><div style="width:36px;height:36px;border-radius:10px;background:{{ c.avbg }};color:{{ c.avc }};display:flex;align-items:center;justify-content:center;font:600 11px Manrope,sans-serif;flex:none"><i class="{{ c.icon }}" style="font-size:18px"></i></div><div style="flex:1;min-width:0"><div style="font:600 13px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.last }}</div></div><sc-if value="{{ c.unread }}" hint-placeholder-val="{{ false }}"><span style="font:600 10px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:1px 6px">{{ c.unread }}</span></sc-if></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="height:56px;display:flex;align-items:center;gap:10px;padding:0 24px;border-bottom:1px solid #F0DCD6;background:#fff"><i class="ph-fill ph-hash" style="color:#7A5A68"></i><span style="font:700 15px Manrope,sans-serif">dadu-ops</span><span style="font:400 12px Inter,sans-serif;color:#7A5A68">Al-Khidmat · HANDS · Indus Aid · Sindh Relief · NDMA Dadu</span><div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:3px 9px">14 members online</span></div>
+        <div style="flex:1;overflow:hidden;padding:18px 24px;display:flex;flex-direction:column;gap:14px">
+          <sc-for list="{{ coordMsgs }}" as="m" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:{{ m.avbg }};color:{{ m.avc }};font:600 11px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;flex:none">{{ m.ini }}</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font:600 13px Inter,sans-serif">{{ m.who }}</span><span style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ m.org }} · {{ m.t }}</span></div><div style="font:400 13px/19px Inter,sans-serif;color:#221019;text-wrap:pretty">{{ m.text }}</div><sc-if value="{{ m.card }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #F0DCD6;border-radius:10px;background:#FFFBF9;max-width:420px"><i class="ph-fill ph-package" style="font-size:22px;color:#B81F55"></i><div style="flex:1"><div style="font:600 13px Inter,sans-serif">{{ m.card }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ m.cardMeta }}</div></div><span style="font:600 12px Inter,sans-serif;color:#B81F55">Claim</span></div></sc-if></div></div>
+          </sc-for>
+        </div>
+        <div style="padding:12px 24px 16px;border-top:1px solid #F0DCD6;background:#fff;display:flex;align-items:center;gap:8px"><div style="width:40px;height:40px;border-radius:8px;border:1px solid #F0DCD6;display:flex;align-items:center;justify-content:center;color:#4A2E3C"><i class="ph ph-plus"></i></div><div style="flex:1;height:40px;border-radius:8px;background:#FDEFEA;border:1px solid #F0DCD6;display:flex;align-items:center;padding:0 12px;font:400 13px Inter,sans-serif;color:#7A5A68">Message #dadu-ops…</div><div style="width:40px;height:40px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-paper-plane-right"></i></div></div>
+      </div>
+      <div style="border-left:1px solid #F0DCD6;background:#fff;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:14px 20px;border-bottom:1px solid #F0DCD6;display:flex;align-items:center"><div style="font:600 15px Manrope,sans-serif">Resource board</div><div style="flex:1"></div><span style="font:600 12px Inter,sans-serif;color:#B81F55">+ Offer / request</span></div>
+        <sc-for list="{{ resources }}" as="r" hint-placeholder-count="5">
+          <div style="padding:12px 20px;border-bottom:1px solid #EDE3E7;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font:600 11px Inter,sans-serif;color:{{ r.tc }};background:{{ r.tbg }};border-radius:999px;padding:2px 8px">{{ r.kind }}</span><span style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ r.org }} · {{ r.t }}</span></div><div style="font:600 13px Inter,sans-serif">{{ r.what }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ r.meta }}</div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4k NGO REPORTS -->
+<div class="dv-opt" id="4k"><div class="dv-olabel"><a class="dv-oid" href="#4k">4k</a>Reports — generated report library + Generate dialog · /ngo/reports</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019;position:relative">
+  <dc-import name="Ops Sidebar" role="ngo" active="Reports" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Reports</div><div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-plus" style="font-size:14px"></i>Generate report</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+        <sc-for list="{{ reportTypes }}" as="r" hint-placeholder-count="4"><div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;display:flex;gap:12px;align-items:center;box-shadow:0 1px 3px rgba(34,16,25,.08)" style-hover="box-shadow:0 4px 12px rgba(34,16,25,.12)"><div style="width:40px;height:40px;border-radius:10px;background:#FDEFEA;display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" style="font-size:22px;color:#B81F55"></i></div><div><div style="font:600 14px Inter,sans-serif">{{ r.name }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ r.sub }}</div></div></div></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="display:flex;align-items:center;gap:8px;width:300px;height:36px;padding:0 12px;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;font:400 13px Inter,sans-serif;color:#7A5A68"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>Search reports…</div><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Type ▾</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:6px 12px">Period ▾</span></div>
+      <div style="flex:1;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);overflow:hidden;display:flex;flex-direction:column;min-height:0">
+        <div style="display:grid;grid-template-columns:minmax(0,2fr) 160px 200px 150px 120px 130px;align-items:center;height:44px;padding:0 20px;border-bottom:1px solid #F0DCD6;font:600 11px Inter,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#7A5A68;background:#FFFBF9"><div>Report</div><div>Type</div><div>Period</div><div>Generated</div><div>Status</div><div style="text-align:right">Actions</div></div>
+        <sc-for list="{{ reports }}" as="r" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:minmax(0,2fr) 160px 200px 150px 120px 130px;align-items:center;height:56px;padding:0 20px;border-bottom:1px solid #EDE3E7;font:400 13px Inter,sans-serif" style-hover="background:#FDEFEA"><div style="display:flex;align-items:center;gap:12px;min-width:0"><i class="ph-fill ph-file-pdf" style="font-size:24px;color:#D42E2E"></i><div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</div><div style="font-size:11px;color:#7A5A68">{{ r.meta }}</div></div></div><div><span style="font:600 11px Inter,sans-serif;color:#4A2E3C;background:#FDEFEA;border-radius:999px;padding:3px 9px">{{ r.type }}</span></div><div style="color:#4A2E3C;font-size:12px">{{ r.period }}</div><div style="color:#7A5A68;font-size:12px">{{ r.gen }}</div><div><span style="font:600 11px Inter,sans-serif;color:{{ r.sc }};background:{{ r.sbg }};border-radius:999px;padding:3px 9px">{{ r.status }}</span></div><div style="display:flex;justify-content:flex-end;gap:4px"><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#4A2E3C" style-hover="background:#EDE3E7"><i class="ph-bold ph-eye" style="font-size:16px"></i></div><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#4A2E3C" style-hover="background:#EDE3E7"><i class="ph-bold ph-download-simple" style="font-size:16px"></i></div><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#4A2E3C" style-hover="background:#EDE3E7"><i class="ph-bold ph-share-network" style="font-size:16px"></i></div></div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(34,16,25,.35);display:flex;align-items:center;justify-content:center">
+    <div style="width:520px;background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(34,16,25,.16);padding:28px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between"><div><div style="font:700 20px/26px Manrope,sans-serif">Generate report</div><div style="font:400 13px/18px Inter,sans-serif;color:#7A5A68;margin-top:4px">PDF with charts and a CSV appendix. Takes about a minute.</div></div><i class="ph ph-x" style="font-size:20px;color:#7A5A68"></i></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Report type</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="border:2px solid #F2477D;background:#FFF0F4;border-radius:10px;padding:10px 12px;font:600 13px Inter,sans-serif;display:flex;align-items:center;gap:8px"><i class="ph-fill ph-hand-heart" style="color:#B81F55"></i>Aid distribution</div><div style="border:1px solid #F0DCD6;border-radius:10px;padding:10px 12px;font:600 13px Inter,sans-serif;display:flex;align-items:center;gap:8px"><i class="ph-fill ph-warning" style="color:#7A5A68"></i>Incident summary</div><div style="border:1px solid #F0DCD6;border-radius:10px;padding:10px 12px;font:600 13px Inter,sans-serif;display:flex;align-items:center;gap:8px"><i class="ph-fill ph-users-three" style="color:#7A5A68"></i>Volunteer activity</div><div style="border:1px solid #F0DCD6;border-radius:10px;padding:10px 12px;font:600 13px Inter,sans-serif;display:flex;align-items:center;gap:8px"><i class="ph-fill ph-coins" style="color:#7A5A68"></i>Campaign finance</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Period</label><div style="display:flex;align-items:center;justify-content:space-between;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;font:400 14px Inter,sans-serif">1 – 18 Aug 2026<i class="ph ph-calendar-blank" style="color:#7A5A68"></i></div></div><div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Regions</label><div style="display:flex;align-items:center;justify-content:space-between;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;font:400 14px Inter,sans-serif">All assigned (3)<i class="ph ph-caret-down" style="color:#7A5A68"></i></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Include</label><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 12px">Charts</span><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 12px">Per-request table</span><span style="font:600 12px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 12px">Campaign ledger</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 12px">Beneficiary names</span><span style="font:600 12px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 12px">Photos</span></div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Beneficiary names are excluded by default to protect privacy.</div></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px"><div style="height:44px;padding:0 18px;border-radius:12px;display:flex;align-items:center;font:600 14px Inter,sans-serif;color:#B81F55">Cancel</div><div style="height:44px;padding:0 18px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 14px Inter,sans-serif"><i class="ph-bold ph-file-text"></i>Generate</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4l ORG SETTINGS -->
+<div class="dv-opt" id="4l"><div class="dv-olabel"><a class="dv-oid" href="#4l">4l</a>Organization Settings — W-Settings with left sub-nav · /ngo/settings</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="Organization Settings" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">Organization Settings</div><div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;display:flex;align-items:center;font:600 13px Inter,sans-serif;color:#B81F55">Discard</div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif">Save changes</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;min-height:0">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-for list="{{ settingsNav }}" as="n" hint-placeholder-count="6"><div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;background:{{ n.bg }};color:{{ n.fg }};font:500 13px Inter,sans-serif" style-hover="background:#FDEFEA"><i class="{{ n.icon }}" style="font-size:18px"></i>{{ n.label }}</div></sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0;max-width:820px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 16px Manrope,sans-serif">Organization profile</div>
+          <div style="display:flex;gap:18px;align-items:flex-start"><div style="width:88px;height:88px;border-radius:16px;background:#E1F1F4;color:#1F7A8C;font:800 26px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;flex:none;position:relative">AK<span style="position:absolute;right:-6px;bottom:-6px;width:28px;height:28px;border-radius:999px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid #fff"><i class="ph-bold ph-camera" style="font-size:13px"></i></span></div>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Organization name</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">Al-Khidmat Foundation Pakistan</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Registration no.</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif;color:#7A5A68">SWD-1990-0027 <i class="ph-fill ph-lock" style="margin-left:auto;font-size:14px"></i></div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Public contact email</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">sindh.ops@alkhidmat.org</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Emergency phone</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">+92 21 111 000 990</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Description <span style="font-weight:400;color:#7A5A68">(shown to citizens)</span></label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:12px;min-height:64px;font:400 14px/20px Inter,sans-serif">Disaster response and relief across Sindh since 1990. Running shelters, medical desks and food distribution in Dadu, Jamshoro and Sehwan during the 2026 floods.</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="display:flex;align-items:center"><div style="font:600 16px Manrope,sans-serif">Operational regions</div><span style="margin-left:8px;font:400 12px Inter,sans-serif;color:#7A5A68">assigned by NDMA — request changes below</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font:600 12px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px"><i class="ph-fill ph-map-pin"></i>Dadu</span><span style="font:600 12px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px"><i class="ph-fill ph-map-pin"></i>Jamshoro</span><span style="font:600 12px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px"><i class="ph-fill ph-map-pin"></i>Sehwan</span><span style="font:600 12px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px"><i class="ph-fill ph-clock"></i>Khairpur Nathan Shah · requested</span><span style="font:600 12px Inter,sans-serif;color:#B81F55;border:1px dashed #F2477D;border-radius:999px;padding:6px 12px">+ Request region</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 16px Manrope,sans-serif">Notifications &amp; defaults</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE3E7"><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Auto-accept tasks from NDMA</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Tasks assigned by admins go straight to Accepted</div></div><div style="width:40px;height:22px;border-radius:999px;background:#EDE3E7;position:relative"><div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE3E7"><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Urgent aid request pager</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">SMS all on-duty volunteers when a life-threatening request lands in our regions</div></div><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Public campaign ledger</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Show allocation entries to donors and citizens</div></div><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 4m MY ACCOUNT -->
+<div class="dv-opt" id="4m"><div class="dv-olabel"><a class="dv-oid" href="#4m">4m</a>My Account — NGO staff profile, security, sessions · /ngo/account</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <dc-import name="Ops Sidebar" role="ngo" active="My Account" hint-size="240px,900px"></dc-import>
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #F0DCD6;background:#fff">
+      <div style="font:700 20px Manrope,sans-serif">My Account</div><div style="flex:1"></div>
+      <div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;gap:8px;font:600 13px Inter,sans-serif"><i class="ph ph-sign-out"></i>Log out</div>
+      <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px 28px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;min-height:0;max-width:1120px">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="display:flex;align-items:center;gap:16px"><div style="width:72px;height:72px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:700 22px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">AS</div><div><div style="font:700 20px Manrope,sans-serif">Ayesha Siddiqui</div><div style="display:flex;gap:6px;margin-top:6px"><span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:3px 9px">ngo_admin</span><span style="font:600 11px Inter,sans-serif;color:#4A2E3C;background:#FDEFEA;border-radius:999px;padding:3px 9px">Al-Khidmat Foundation</span><span style="font:600 11px Inter,sans-serif;color:#4A2E3C;background:#FDEFEA;border-radius:999px;padding:3px 9px">Since Jan 2025</span></div></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Full name</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">Ayesha Siddiqui</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Title</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">Regional Coordinator, Sindh</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Email</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">ayesha.s@alkhidmat.org <i class="ph-fill ph-check-circle" style="margin-left:auto;color:#1F7A8C"></i></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Mobile</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:44px;display:flex;align-items:center;font:400 14px Inter,sans-serif">+92 321 4470912</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Interface language</label><div style="display:grid;grid-template-columns:repeat(3,1fr);background:#FDEFEA;border-radius:999px;padding:4px;font:600 13px Inter,sans-serif;text-align:center"><span style="padding:8px 0;color:#fff;background:#F2477D;border-radius:999px">English</span><span style="padding:8px 0;color:#4A2E3C">اردو</span><span style="padding:8px 0;color:#4A2E3C">سنڌي</span></div></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end"><div style="height:40px;padding:0 16px;border-radius:10px;background:#F2477D;color:#fff;display:flex;align-items:center;font:600 13px Inter,sans-serif">Save profile</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 16px Manrope,sans-serif">Notifications</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #EDE3E7"><span style="flex:1;font:500 14px Inter,sans-serif">New task assigned to me</span><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #EDE3E7"><span style="flex:1;font:500 14px Inter,sans-serif">Escalation in my regions</span><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0"><span style="flex:1;font:500 14px Inter,sans-serif">Daily summary email at 08:00</span><div style="width:40px;height:22px;border-radius:999px;background:#EDE3E7;position:relative"><div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 16px Manrope,sans-serif">Security</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE3E7"><i class="ph-fill ph-lock-key" style="font-size:22px;color:#4A2E3C"></i><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Password</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Last changed 3 months ago</div></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">Change</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE3E7"><i class="ph-fill ph-shield-check" style="font-size:22px;color:#2E9E5B"></i><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Two-factor authentication</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">SMS to +92 321 ••• 0912 · required for ngo_admin</div></div><span style="font:600 11px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:3px 9px">On</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0"><i class="ph-fill ph-key" style="font-size:22px;color:#4A2E3C"></i><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Recovery codes</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">8 of 10 unused</div></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">View</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 3px rgba(34,16,25,.08);flex:1;min-height:0">
+          <div style="display:flex;align-items:center;padding:14px 22px;border-bottom:1px solid #F0DCD6"><div style="font:600 16px Manrope,sans-serif">Active sessions</div><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#D42E2E">Sign out all others</span></div>
+          <sc-for list="{{ sessions }}" as="s" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid #EDE3E7"><i class="{{ s.icon }}" style="font-size:22px;color:#4A2E3C"></i><div style="flex:1"><div style="font:600 13px Inter,sans-serif">{{ s.device }} <sc-if value="{{ s.current }}" hint-placeholder-val="{{ false }}"><span style="font:600 10px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:1px 6px;margin-left:4px">This device</span></sc-if></div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ s.meta }}</div></div><sc-if value="{{ s.other }}" hint-placeholder-val="{{ true }}"><span style="font:600 12px Inter,sans-serif;color:#B81F55">Sign out</span></sc-if></div>
+          </sc-for>
+        </div>
+        <div style="background:#FDE4E4;border:1px solid #F5B5B5;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px"><i class="ph-fill ph-warning" style="font-size:22px;color:#D42E2E"></i><div style="flex:1"><div style="font:600 14px Inter,sans-serif">Leave organisation</div><div style="font:400 12px Inter,sans-serif;color:#4A2E3C">Reverts this account to a citizen account. Another ngo_admin must exist first.</div></div><span style="font:600 13px Inter,sans-serif;color:#D42E2E">Leave…</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S = { safe: ['#2E9E5B', '#E3F6EA'], caution: ['#8A6400', '#FFF4D9'], high: ['#F0740B', '#FFE9D6'], critical: ['#D42E2E', '#FDE4E4'], trust: ['#1F7A8C', '#E1F1F4'], info: ['#3A5FCD', '#E7ECFB'] };
+    const C = { Flooding: '#2F6FED', 'Blocked Road': '#8A5A2B', Fire: '#C1440E', Medical: '#7C4DFF', Infrastructure: '#5C6B7A', Cloudburst: '#4F8FE0', Other: '#7A5A68' };
+    const sev = (k) => ({ sc: S[k][0], sbg: S[k][1] });
+    const cat = (k) => ({ cc: C[k], cbg: C[k] + '26' });
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const inc = (title, meta, c, s, cred, score, votes) => ({ title, meta, cat: c, ...cat(c), sev: cap(s), ...sev(s), cred, score, votes });
+    const incidents = [
+      inc('Indus embankment seeping near Johi Bypass', '#IR-10482 · Hina Khan · 14 min ago · 2 photos', 'Flooding', 'critical', '88%', 97, 214),
+      inc('Mehar–Johi road under 1m water, buses turning back', '#IR-10479 · Saeed Ahmed · 22 min ago · video', 'Blocked Road', 'critical', '91%', 94, 187),
+      inc('Manchar Lake outflow rising at Bubak', '#IR-10477 · Zulfiqar Solangi · 35 min ago', 'Flooding', 'high', '76%', 88, 96),
+      inc('Family of 6 stranded on rooftop, Wahi Pandhi', '#IR-10475 · Rukhsana Bibi · 41 min ago · 1 photo', 'Medical', 'critical', '64%', 86, 142),
+      inc('Transformer sparking in floodwater, Sehwan Sharif', '#IR-10471 · Imran Jokhio · 1h ago', 'Infrastructure', 'high', '82%', 79, 58),
+      inc('Cloudburst over Kirthar foothills, sudden runoff', '#IR-10468 · Mumtaz Ali · 1h ago · 3 photos', 'Cloudburst', 'high', '71%', 74, 44),
+      inc('Cooking gas cylinder fire at relief camp', '#IR-10466 · Farida Shah · 2h ago', 'Fire', 'caution', '58%', 61, 23),
+      inc('Livestock carcasses in canal near Bubak', '#IR-10463 · Ali Nawaz · 2h ago · 1 photo', 'Other', 'caution', '69%', 52, 17),
+      inc('Sehwan bypass culvert partially collapsed', '#IR-10460 · Nazia Laghari · 3h ago', 'Infrastructure', 'high', '84%', 70, 39),
+    ];
+    const timeline = [
+      { what: 'Report submitted with 2 photos', who: 'Hina Khan', t: '13:44', c: '#7A5A68' },
+      { what: 'Auto-linked to Dadu – Johi hazard zone', who: 'System', t: '13:44', c: '#7C4DFF' },
+      { what: '2 corroborating reports detected within 300 m', who: 'System', t: '13:52', c: '#7C4DFF' },
+      { what: 'Reached priority 97 — surfaced to NGO queue', who: 'System', t: '13:55', c: '#F0740B' },
+      { what: 'Opened by Ayesha Siddiqui', who: 'Al-Khidmat', t: '13:58', c: '#1F7A8C' },
+    ];
+    const urgMap = { 'Life-threatening': { uc: '#D42E2E', ubg: '#FDE4E4' }, 'Within hours': { uc: '#F0740B', ubg: '#FFE9D6' }, 'Can wait': { uc: '#8A6400', ubg: '#FFF4D9' } };
+    const ar = (urg, title, meta, type, icon, people, vuln, who, whoIni, age, late, sel) => ({ urg, ...urgMap[urg], title, meta, type, icon, people, vuln, who, whoIni, unassigned: !who, age, ageC: late ? '#D42E2E' : '#4A2E3C', rowBg: sel ? '#FFF0F4' : '#fff' });
+    const aidRows = [
+      ar('Life-threatening', 'Rescue + insulin — family of 6 on rooftop', '#AR-3390 · Rukhsana Bibi · Wahi Pandhi · 1.1 km', 'Rescue', 'ph-fill ph-lifebuoy', 6, '2 kids', 'Tariq M.', 'TM', '38m', false, true),
+      ar('Life-threatening', 'Elderly man, chest pain, no transport', '#AR-3388 · Ghulam Hussain · Johi · 2.4 km', 'Medical', 'ph-fill ph-first-aid-kit', 1, 'elderly', '', '', '52m', true, false),
+      ar('Life-threatening', 'Infant with fever, no clean water', '#AR-3386 · Shazia Mallah · Mehar · 9 km', 'Medical', 'ph-fill ph-first-aid-kit', 3, 'infant', 'Sana K.', 'SK', '1h 04m', true, false),
+      ar('Within hours', 'Clean water for 40 families — Johi camp', '#AR-3384 · camp coordinator · Johi · 1.2 km', 'Water', 'ph-fill ph-drop', 160, '', 'Faisal A.', 'FA', '1h 20m', false, false),
+      ar('Within hours', 'Food packs — 25 families, Bubak', '#AR-3381 · Abdul Sattar · Bubak · 14 km', 'Food', 'ph-fill ph-bowl-food', 110, '', '', '', '2h', false, false),
+      ar('Within hours', 'Tents ×15 — displaced from Wahi Pandhi', '#AR-3379 · Mumtaz Ali · KNS · 18 km', 'Shelter', 'ph-fill ph-tent', 62, '', 'Rabia B.', 'RB', '2h 30m', false, false),
+      ar('Within hours', 'Transport to shelter — 3 wheelchair users', '#AR-3377 · Nadia Farooq · Sehwan · 22 km', 'Transport', 'ph-fill ph-truck', 3, 'disabled', '', '', '3h', false, false),
+      ar('Can wait', 'Dry clothes and blankets — 12 families', '#AR-3372 · Farida Shah · Johi · 1.8 km', 'Clothing', 'ph-fill ph-t-shirt', 48, '', '', '', '5h', false, false),
+      ar('Can wait', 'Mosquito nets — Degree College shelter', '#AR-3370 · shelter manager · Johi · 5 km', 'Other', 'ph-fill ph-dots-three-circle', 380, '', 'Imran J.', 'IJ', '6h', false, false),
+    ];
+    const bub = (who, text, t, mine) => ({ who, text, t, align: mine ? 'flex-end' : 'flex-start', bg: mine ? '#F2477D' : '#FDEFEA', fg: mine ? '#fff' : '#221019' });
+    const arChat = [
+      bub('Rukhsana Bibi', 'Water is at the first floor now. We are on the roof. My mother needs insulin.', '13:22', false),
+      bub('Ayesha S.', 'We have you. A boat with Tariq is coming from Johi with insulin. Stay on the roof and keep your phone on low power.', '13:31', true),
+      bub('Rukhsana Bibi', 'Ok. Battery 20%. Children are scared but fine.', '13:33', false),
+      bub('Tariq M.', 'I can see the house. 5 minutes. Wave a cloth if you can.', '13:58', true),
+    ];
+    const mp = (name, desc, last, status, sightings, latest, vol) => ({ name, desc, last, status, ...(status === 'Missing' ? { sc: '#D42E2E', sbg: '#FDE4E4' } : status === 'Sighted' ? { sc: '#7C4DFF', sbg: '#7C4DFF26' } : { sc: '#2E9E5B', sbg: '#E3F6EA' }), sightings, latest, vol });
+    const mpCards = [
+      mp('Ahmed Bux, 9', 'Male · ~125 cm · blue kurta, grey shalwar, barefoot · scar above left eyebrow', 'Mehar bus stand · today 09:30', 'Sighted', 2, '14:12', 'SK'),
+      mp('Ghulam Rasool, 71', 'Male · white beard · grey shalwar kameez · uses a walking stick · hard of hearing', 'Johi relief camp · yesterday 18:00', 'Missing', 0, '—', 'RB'),
+      mp('Sakina Bibi, 34', 'Female · red dupatta · with 2-year-old daughter', 'KNS bypass · 2 days ago', 'Missing', 1, 'yesterday', 'FA'),
+      mp('Waqar Solangi, 16', 'Male · tall, thin · black t-shirt · was helping with sandbags', 'Bubak embankment · today 06:00', 'Missing', 0, '—', 'TM'),
+      mp('Noor Jehan, 58', 'Female · diabetic · green shawl · speaks Sindhi only', 'Sehwan Sharif shrine · yesterday 20:30', 'Sighted', 1, '10:05', 'IJ'),
+      mp('Bilal Chandio, 6', 'Male · yellow shirt · with a blue plastic bag', 'Degree College shelter · today 11:15', 'Missing', 0, '—', 'NL'),
+    ];
+    const alloc = (date, purpose, cat, amt, by, receipt) => ({ date, purpose, cat, amt, by, receipt, ...(receipt === 'Attached' ? { rc: '#2E9E5B', rbg: '#E3F6EA' } : { rc: '#8A6400', rbg: '#FFF4D9' }) });
+    const allocations = [
+      alloc('18 Aug', 'Food packs ×200 for Johi relief camp (rice, lentils, oil)', 'Food', '640,000', 'Ayesha S.', 'Attached'),
+      alloc('17 Aug', 'Diesel for 2 rescue boats — 5 days', 'Logistics', '185,000', 'Faisal A.', 'Attached'),
+      alloc('17 Aug', 'Water purification tablets ×20,000', 'Water', '260,000', 'Ayesha S.', 'Attached'),
+      alloc('16 Aug', 'Tents ×60 — KNS relief camp', 'Shelter', '1,140,000', 'Rabia B.', 'Attached'),
+      alloc('15 Aug', 'Medical desk setup — GBHS Johi (doctor stipend, fridge)', 'Medical', '410,000', 'Ayesha S.', 'Pending'),
+      alloc('14 Aug', 'Hygiene kits ×500', 'Health', '375,000', 'Sana K.', 'Attached'),
+      alloc('13 Aug', 'Transport — 6 coaster trips Johi ↔ shelters', 'Logistics', '96,000', 'Faisal A.', 'Attached'),
+      alloc('12 Aug', 'Mosquito nets ×800', 'Health', '520,000', 'Rabia B.', 'Attached'),
+    ];
+    const updates = [
+      { type: 'Distribution', tc: '#B81F55', tbg: '#FFF0F4', title: 'Food distribution at Johi camp — 17:00 today', meta: 'Yesterday 15:10 · 18.2k reached · Urdu, Sindhi', views: '9.4k', votes: 312 },
+      { type: 'Shelter', tc: '#2E9E5B', tbg: '#E3F6EA', title: 'Govt. Degree College Johi shelter open — 450 places', meta: '16 Aug 09:40 · 22k reached', views: '14.1k', votes: 540 },
+      { type: 'Advisory', tc: '#8A6400', tbg: '#FFF4D9', title: 'Boil water advisory — Khairpur Nathan Shah', meta: '15 Aug 08:45 · 10k reached · pinned', views: '7.8k', votes: 201 },
+    ];
+    const ob = (ini, who, t, type, text, loc, media, action, sel) => ({ ini, who, t, type, ...({ 'Water level': { tc: '#2F6FED', tbg: '#2F6FED26' }, Road: { tc: '#8A5A2B', tbg: '#8A5A2B26' }, Shelter: { tc: '#2E9E5B', tbg: '#E3F6EA' }, Health: { tc: '#7C4DFF', tbg: '#7C4DFF26' }, Needs: { tc: '#B81F55', tbg: '#FFF0F4' } })[type], text, loc, media, action, bg: sel ? '#FFF0F4' : '#fff' });
+    const observations = [
+      ob('TM', 'Tariq Mallah', '12 min ago', 'Water level', 'Embankment seepage widening; water up 18 cm in 2h at the marker post. Sandbag line failing on the north side.', 'Johi Bypass embankment', '2 photos', 'Link to #IR-10482', true),
+      ob('SK', 'Sana Khaskheli', '35 min ago', 'Road', 'Mehar–Johi road impassable for all vehicles at the culvert. Two motorbikes abandoned.', 'Mehar checkpost', '1 video', 'Confirms closure', false),
+      ob('RB', 'Rabia Brohi', '1h ago', 'Shelter', 'Degree College at 380/450. Toilets overflowing in block B — need a tanker.', 'Govt. Degree College Johi', '', 'Create task', false),
+      ob('NL', 'Nazia Laghari', '1h ago', 'Health', 'Six cases of diarrhoea in children at KNS camp since morning. ORS stock low.', 'KNS relief camp', '', 'Create aid request', false),
+      ob('FA', 'Faisal Abro', '2h ago', 'Needs', 'Bubak families asking for baby formula and sanitary pads — not in current packs.', 'Bubak village', '1 photo', 'Add to campaign', false),
+      ob('IJ', 'Imran Jokhio', '3h ago', 'Road', 'Sehwan bypass open but shoulder collapsed — single lane, no lights.', 'Sehwan bypass km 4', '2 photos', 'Report incident', false),
+    ];
+    const stars = [[5, 152, '70%'], [4, 41, '19%'], [3, 11, '5%'], [2, 8, '4%'], [1, 6, '3%']].map(([n, count, pct]) => ({ n, count, pct }));
+    const fb = (ini, who, n, t, req, vol, text, needsReply) => ({ ini, who, starsTxt: '★'.repeat(n) + '☆'.repeat(5 - n), t, req, vol, text, needsReply });
+    const feedback = [
+      fb('ZB', 'Zainab Bux', 5, '2h ago', '#AR-3352', 'Sana K.', 'They found my son and brought him to me within 5 hours. I cannot thank Sana and her team enough.', false),
+      fb('GN', 'Ghulam Nabi', 4, 'yesterday', '#AR-3311', 'Faisal A.', 'Food arrived same evening. Packs had no salt or sugar though, please include next time.', false),
+      fb('AS', 'Abdul Sattar', 2, 'yesterday', '#AR-3298', 'Imran J.', 'We asked for 25 families and got food for 12. The volunteer said more would come but nobody came back.', true),
+      fb('FS', 'Farida Shah', 5, '2 days ago', '#AR-3270', 'Rabia B.', 'Very respectful with the women in the camp. Tents were up before dark.', false),
+      fb('MA', 'Mumtaz Ali', 1, '2 days ago', '#AR-3251', 'Tariq M.', 'Nobody answered the phone number given. We waited 6 hours then walked to the shelter ourselves.', true),
+    ];
+    const channelsC = [
+      { name: '# dadu-ops', last: 'HANDS: 2 boats free from 16:00 …', icon: 'ph-fill ph-hash', avbg: '#FFF0F4', avc: '#B81F55', unread: 3, bl: '#F2477D', bg: '#FFF0F4' },
+      { name: '# shelters-sindh', last: 'Indus Aid: Mehar Sports Complex at 98%', icon: 'ph-fill ph-house-line', avbg: '#E3F6EA', avc: '#2E9E5B', unread: false, bl: 'transparent', bg: 'transparent' },
+      { name: 'NDMA Dadu · Bilal Rehman', last: 'Please confirm boat count for tonight', icon: 'ph-fill ph-shield', avbg: '#FDE4E4', avc: '#D42E2E', unread: 1, bl: 'transparent', bg: 'transparent' },
+      { name: 'HANDS Pakistan · Omar F.', last: 'Sending the insulin list now', icon: 'ph-fill ph-buildings', avbg: '#E1F1F4', avc: '#1F7A8C', unread: false, bl: 'transparent', bg: 'transparent' },
+      { name: '# missing-persons', last: 'Sighting near Mehar Sports Complex', icon: 'ph-fill ph-user-focus', avbg: '#7C4DFF26', avc: '#7C4DFF', unread: false, bl: 'transparent', bg: 'transparent' },
+    ];
+    const coordMsgs = [
+      { ini: 'BR', who: 'Bilal Rehman', org: 'NDMA Dadu', t: '13:10', avbg: '#FDE4E4', avc: '#D42E2E', text: 'Evacuation alert A-2291 is live for Johi & Mehar. Expecting 2,600+ need-help responses. Please post your available rescue capacity for tonight here.', card: '' },
+      { ini: 'OF', who: 'Omar Farooq', org: 'HANDS Pakistan', t: '13:18', avbg: '#E1F1F4', avc: '#1F7A8C', text: '2 boats + 6 crew free from 16:00, based at Mehar. Can cover Wahi Pandhi and Bubak.', card: '2 rescue boats + crew', cardMeta: 'HANDS · Mehar · available 16:00–06:00' },
+      { ini: 'AS', who: 'Ayesha Siddiqui', org: 'Al-Khidmat', t: '13:24', avbg: '#FFF0F4', avc: '#B81F55', text: 'We have 1 boat on #AR-3390 now. Insulin storage is running at GBHS Johi — can take up to 60 diabetic evacuees. Need a water tanker for Degree College toilets urgently.', card: '' },
+      { ini: 'FQ', who: 'Farhan Qureshi', org: 'Indus Aid Network', t: '13:31', avbg: '#FFF0F4', avc: '#B81F55', text: 'Tanker from Hyderabad can be at Degree College by 17:30. Confirm someone will be there to receive it.', card: 'Water tanker 10,000 L', cardMeta: 'Indus Aid · ETA 17:30 · Degree College Johi' },
+      { ini: 'BR', who: 'Bilal Rehman', org: 'NDMA Dadu', t: '13:33', avbg: '#FDE4E4', avc: '#D42E2E', text: 'Noted. Ayesha, please claim the tanker so it shows on the board. I am assigning Wahi Pandhi rooftop cases to HANDS boats from 16:00.', card: '' },
+    ];
+    const resources = [
+      { kind: 'Offer', tc: '#2E9E5B', tbg: '#E3F6EA', org: 'HANDS', t: '13:18', what: '2 rescue boats + crew', meta: 'Mehar · 16:00–06:00 · 1 claimed by NDMA' },
+      { kind: 'Offer', tc: '#2E9E5B', tbg: '#E3F6EA', org: 'Indus Aid', t: '13:31', what: 'Water tanker 10,000 L', meta: 'ETA 17:30 · Degree College Johi · unclaimed' },
+      { kind: 'Request', tc: '#D42E2E', tbg: '#FDE4E4', org: 'Al-Khidmat', t: '13:24', what: 'Insulin — 40 vials', meta: 'GBHS Johi medical desk · by tonight' },
+      { kind: 'Request', tc: '#D42E2E', tbg: '#FDE4E4', org: 'Sindh Relief', t: '12:50', what: '4×4 vehicles ×2', meta: 'Bubak distribution · tomorrow 07:00' },
+      { kind: 'Offer', tc: '#2E9E5B', tbg: '#E3F6EA', org: 'Al-Khidmat', t: '11:40', what: '60 places, diabetic-friendly', meta: 'GBHS Johi · insulin fridge · doctor on site' },
+    ];
+    const reportTypes = [
+      { icon: 'ph-fill ph-hand-heart', name: 'Aid distribution', sub: 'Requests, fulfilment, beneficiaries' },
+      { icon: 'ph-fill ph-warning', name: 'Incident summary', sub: 'Verified, resolved, by category' },
+      { icon: 'ph-fill ph-users-three', name: 'Volunteer activity', sub: 'Tasks, observations, hours' },
+      { icon: 'ph-fill ph-coins', name: 'Campaign finance', sub: 'Raised, allocated, receipts' },
+    ];
+    const rp = (name, meta, type, period, gen, status) => ({ name, meta, type, period, gen, status, ...(status === 'Ready' ? { sc: '#2E9E5B', sbg: '#E3F6EA' } : status === 'Generating' ? { sc: '#3A5FCD', sbg: '#E7ECFB' } : { sc: '#1F7A8C', sbg: '#E1F1F4' }) });
+    const reports = [
+      rp('Aid distribution — Dadu, week 33', '24 pages · CSV appendix · shared with NDMA', 'Aid distribution', '11 – 17 Aug 2026', 'Today 08:02', 'Generating'),
+      rp('Aid distribution — Dadu, week 32', '22 pages · CSV appendix · shared with NDMA', 'Aid distribution', '4 – 10 Aug 2026', '11 Aug 08:01', 'Shared'),
+      rp('Campaign finance — Dadu Flood Relief, July', '9 pages · ledger + receipts', 'Campaign finance', '1 – 31 Jul 2026', '2 Aug 10:14', 'Shared'),
+      rp('Incident summary — Sindh regions, July', '18 pages', 'Incident summary', '1 – 31 Jul 2026', '1 Aug 09:30', 'Ready'),
+      rp('Volunteer activity — Q2 2026', '14 pages · 41 volunteers', 'Volunteer activity', 'Apr – Jun 2026', '3 Jul 11:05', 'Ready'),
+      rp('Aid distribution — Jamshoro, week 31', '16 pages · CSV appendix', 'Aid distribution', '28 Jul – 3 Aug 2026', '4 Aug 08:00', 'Ready'),
+      rp('Incident summary — Sindh regions, June', '12 pages', 'Incident summary', '1 – 30 Jun 2026', '1 Jul 09:32', 'Ready'),
+    ];
+    const settingsNav = [['Profile', 'ph-fill ph-buildings'], ['Regions', 'ph ph-map-trifold'], ['Team & roles', 'ph ph-users'], ['Notifications', 'ph ph-bell'], ['Integrations', 'ph ph-plugs'], ['Billing & donations', 'ph ph-credit-card'], ['Danger zone', 'ph ph-warning']].map(([label, icon]) => { const a = label === 'Profile'; return { label, icon, bg: a ? '#FFF0F4' : 'transparent', fg: a ? '#B81F55' : '#4A2E3C' }; });
+    const sessions = [
+      { icon: 'ph-fill ph-laptop', device: 'MacBook Pro · Chrome', meta: 'Hyderabad, Sindh · active now', current: true, other: false },
+      { icon: 'ph-fill ph-device-mobile', device: 'iPhone 15 · LittleLife app', meta: 'Dadu · 22 min ago', current: false, other: true },
+      { icon: 'ph-fill ph-desktop', device: 'Windows PC · Edge', meta: 'Karachi · 3 days ago', current: false, other: true },
+    ];
+    return { incidents, timeline, aidRows, arChat, mpCards, allocations, updates, observations, stars, feedback, channelsC, coordMsgs, resources, reportTypes, reports, settingsNav, sessions };
+  }
+}
+</script>
+</body>
+</html>

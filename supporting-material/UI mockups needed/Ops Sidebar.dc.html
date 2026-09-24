@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="width:{{ width }}px;flex:none;height:100%;display:flex;flex-direction:column;background:#FFFFFF;border-right:1px solid #F0DCD6;font-family:Inter,sans-serif;color:#221019;overflow:hidden">
+  <div style="height:64px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid #F0DCD6;flex:none">
+    <div style="width:32px;height:32px;border-radius:10px;background:#F2477D;display:flex;align-items:center;justify-content:center;flex:none"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div>
+    <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;line-height:1.1"><span style="font:700 16px Manrope,sans-serif;color:#221019">LittleLife</span><span style="font:600 10px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#7A5A68">{{ roleLabel }}</span></div>
+    </sc-if>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:1px;margin-top:{{ g.mt }};border-top:{{ g.bt }};padding-top:{{ g.pt }}">
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+          <div style="font:700 10px/12px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#B79AA6;padding:0 20px 4px">{{ g.label }}</div>
+        </sc-if>
+        <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;margin:0 8px;border-radius:8px;border-left:4px solid {{ it.bl }};background:{{ it.bg }};color:{{ it.fg }};font:500 13px Inter,sans-serif;white-space:nowrap" style-hover="background:#FDEFEA">
+            <i class="{{ it.icon }}" style="font-size:18px;flex:none;color:{{ it.fg }}"></i>
+            <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}"><span style="overflow:hidden;text-overflow:ellipsis">{{ it.label }}</span></sc-if>
+            <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font:600 11px Inter,sans-serif;background:#FDE4E4;color:#D42E2E;border-radius:999px;padding:2px 7px">{{ it.badge }}</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+  <div style="border-top:1px solid #F0DCD6;padding:12px 16px;display:flex;align-items:center;gap:10px;flex:none">
+    <div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;flex:none">{{ initials }}</div>
+    <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;min-width:0"><span style="font:600 13px Inter,sans-serif;color:#221019;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userName }}</span><span style="font:500 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:1px 8px;align-self:flex-start;margin-top:3px">{{ roleChip }}</span></div>
+      <i class="ph ph-caret-up-down" style="margin-left:auto;color:#7A5A68;font-size:16px"></i>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:240,&quot;height&quot;:900},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;ngo&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'ngo'&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;collapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const role = this.props.role ?? 'admin';
+    const active = this.props.active ?? 'Dashboard';
+    const collapsed = this.props.collapsed ?? false;
+    const admin = [
+      ['Overview', [['Dashboard', 'ph ph-squares-four']]],
+      ['Hazard Intelligence', [['Hazard Zones & Predictions', 'ph ph-radioactive']]],
+      ['Community', [['Incident Reports', 'ph ph-warning', 14], ['Alerts & Broadcasts', 'ph ph-megaphone']]],
+      ['Operations', [['Task Assignments', 'ph ph-kanban'], ['Relief Operations', 'ph ph-hand-heart']]],
+      ['Coordination', [['Escalations & Coordination', 'ph ph-arrow-bend-up-right', 3]]],
+      ['Insights', [['Analytics', 'ph ph-chart-line-up'], ['Reports', 'ph ph-file-text'], ['Audit Log', 'ph ph-scroll']]],
+      ['Administration', [['Users & Accounts', 'ph ph-users'], ['NGOs', 'ph ph-buildings', 7], ['Regions', 'ph ph-map-trifold'], ['Facilities', 'ph ph-house-line'], ['Offline Map Packages', 'ph ph-package']]],
+      ['Settings', [['My Account', 'ph ph-user-circle']]],
+    ];
+    const ngo = [
+      ['Overview', [['Dashboard', 'ph ph-squares-four']]],
+      ['Operations', [['Incidents', 'ph ph-warning', 9], ['Aid Requests', 'ph ph-hand-heart', 22], ['Missing Persons', 'ph ph-user-focus'], ['Tasks', 'ph ph-kanban'], ['Volunteers', 'ph ph-users-three'], ['Shelters', 'ph ph-house-line'], ['Campaigns', 'ph ph-coins']]],
+      ['Outreach', [['Alerts & Community Updates', 'ph ph-megaphone'], ['Field Observations', 'ph ph-binoculars'], ['Feedback', 'ph ph-chat-centered-text']]],
+      ['Coordination', [['Coordination', 'ph ph-arrows-left-right']]],
+      ['Insights', [['Reports', 'ph ph-file-text']]],
+      ['Settings', [['Organization Settings', 'ph ph-gear'], ['My Account', 'ph ph-user-circle']]],
+    ];
+    const src = role === 'ngo' ? ngo : admin;
+    const groups = src.map(([label, items]) => ({ label, mt: label === 'Settings' ? 'auto' : '0', bt: label === 'Settings' ? '1px solid #F0DCD6' : 'none', pt: label === 'Settings' ? '8px' : '0', items: items.map(([l, icon, badge]) => {
+      const a = l === active;
+      return { label: l, icon: a ? icon.replace('ph ph-', 'ph-fill ph-') : icon, badge: badge || false, bl: a ? '#F2477D' : 'transparent', bg: a ? '#FFF0F4' : 'transparent', fg: a ? '#B81F55' : '#4A2E3C' };
+    }) }));
+    return {
+      width: collapsed ? 72 : 240, expanded: !collapsed, groups,
+      roleLabel: role === 'ngo' ? 'NGO Console' : 'Admin Console',
+      userName: role === 'ngo' ? 'Ayesha Siddiqui' : 'Bilal Rehman',
+      initials: role === 'ngo' ? 'AS' : 'BR',
+      roleChip: role === 'ngo' ? 'ngo_admin' : 'super_admin',
+    };
+  }
+}
+</script>
+</body>
+</html>

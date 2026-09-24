@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"><link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css"><link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>body{margin:0;background:#EFE7E3;font-family:Inter,system-ui,sans-serif;color:#221019}a{color:#B81F55}a:hover{color:#DB2E68}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#221019;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 Inter,sans-serif;color:#221019}.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(34,16,25,.08);color:#221019;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 Inter,sans-serif;color:rgba(34,16,25,.6)}.dv-card{max-width:100%;background:#FFFBF9;border:1px solid rgba(34,16,25,.1);border-radius:12px;box-shadow:0 4px 12px rgba(34,16,25,.12);overflow:hidden}.dv-opt:target .dv-oid{background:#F2477D;color:#fff}.dv-next{margin:22px 0 0;font:12px/1.5 Inter,sans-serif;color:rgba(34,16,25,.55)}@keyframes llpulse{0%,100%{opacity:1}50%{opacity:.45}}</style></helmet>
+<div style="padding:14px 44px;font:500 12px Inter,sans-serif;color:#4A2E3C;background:#fff;border-bottom:1px solid rgba(0,0,0,.08);display:flex;gap:18px;flex-wrap:wrap"><a href="LittleLife Web Mockups - Index.dc.html">Index</a><a href="LittleLife Web Mockups - Batch 1.dc.html">Batch 1</a><a href="LittleLife Web Mockups.dc.html">Batch 2</a><span style="font-weight:700">Batch 3 Citizen</span><a href="LittleLife Web Mockups - Batch 4 NGO.dc.html">Batch 4 NGO</a><a href="LittleLife Web Mockups - Batch 5 Admin.dc.html">Batch 5 Admin</a></div>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Auth &amp; Citizen Web — Register, OTP, Resources hub, Safe Route Navigation, Safety Groups, Chat, Alert Preferences, Credibility, Request Help</span></div>
+<div class="dv-opts">
+
+<!-- 3a REGISTER -->
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Register — W-Auth, citizen only · /register</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="width:620px;flex:none;background:linear-gradient(135deg,#F2477D 0%,#FF9563 100%);padding:48px 56px;display:flex;flex-direction:column;color:#fff;position:relative;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="font-size:24px"></i></div><span style="font:800 22px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1"></div>
+    <div style="font:700 44px/52px Manrope,sans-serif;max-width:460px;text-wrap:pretty">Join 212,000 neighbours keeping each other safe.</div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:28px;font:500 15px Inter,sans-serif"><span style="display:flex;gap:10px;align-items:center"><i class="ph-fill ph-check-circle" style="font-size:20px"></i>Alerts for your exact location, in Urdu, Sindhi or English</span><span style="display:flex;gap:10px;align-items:center"><i class="ph-fill ph-check-circle" style="font-size:20px"></i>Report hazards and see verified community reports</span><span style="display:flex;gap:10px;align-items:center"><i class="ph-fill ph-check-circle" style="font-size:20px"></i>Family check-ins and safe routes to shelters</span></div>
+    <div style="position:absolute;right:-120px;bottom:-140px;width:420px;height:420px;border-radius:999px;background:rgba(255,255,255,.10)"></div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px">
+    <div style="width:460px;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 4px 12px rgba(34,16,25,.12);padding:36px">
+      <div style="font:700 24px/30px Manrope,sans-serif">Create your account</div>
+      <div style="font:400 14px/20px Inter,sans-serif;color:#7A5A68;margin-top:6px">Citizen accounts only. NGO staff are invited by their organisation.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px">
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">First name</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:48px;display:flex;align-items:center;font:400 15px Inter,sans-serif">Hina</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Last name</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:48px;display:flex;align-items:center;font:400 15px Inter,sans-serif">Khan</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Mobile number</label><div style="display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #F2477D;border-radius:8px;padding:0 12px;height:48px"><span style="font:500 15px Inter,sans-serif;color:#7A5A68;border-right:1px solid #F0DCD6;padding-right:10px">🇵🇰 +92</span><span style="font:400 15px Inter,sans-serif">300 2841</span><span style="width:2px;height:20px;background:#F2477D;animation:llpulse 1s steps(2) infinite"></span></div><span style="font:400 12px Inter,sans-serif;color:#7A5A68">We'll text a 6-digit code to verify.</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Email <span style="font-weight:400;color:#7A5A68">(optional)</span></label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:48px;display:flex;align-items:center;font:400 15px Inter,sans-serif;color:#B79AA6">hina@example.com</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Password</label><div style="display:flex;align-items:center;gap:10px;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:0 12px;height:48px"><span style="font:400 15px Inter,sans-serif;letter-spacing:3px;flex:1">••••••••••</span><i class="ph ph-eye" style="color:#7A5A68;font-size:18px"></i></div><div style="display:flex;gap:4px;margin-top:2px"><div style="flex:1;height:4px;border-radius:2px;background:#2E9E5B"></div><div style="flex:1;height:4px;border-radius:2px;background:#2E9E5B"></div><div style="flex:1;height:4px;border-radius:2px;background:#2E9E5B"></div><div style="flex:1;height:4px;border-radius:2px;background:#EDE3E7"></div></div><span style="font:400 12px Inter,sans-serif;color:#2E9E5B">Strong — 10+ characters with a number</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Preferred language</label><div style="display:grid;grid-template-columns:repeat(3,1fr);background:#FDEFEA;border-radius:999px;padding:4px;font:600 13px Inter,sans-serif;text-align:center"><span style="padding:8px 0;color:#fff;background:#F2477D;border-radius:999px">English</span><span style="padding:8px 0;color:#4A2E3C">اردو</span><span style="padding:8px 0;color:#4A2E3C">سنڌي</span></div></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:18px;font:400 13px/18px Inter,sans-serif;color:#4A2E3C"><div style="width:18px;height:18px;border-radius:4px;background:#F2477D;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px"><i class="ph-bold ph-check" style="color:#fff;font-size:11px"></i></div>I agree to the <span style="color:#B81F55;font-weight:600">Terms</span> and <span style="color:#B81F55;font-weight:600">Privacy Policy</span>, including location sharing during active alerts.</div>
+      <div style="height:52px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center;font:600 16px Inter,sans-serif;margin-top:20px">Continue</div>
+      <div style="font:400 13px Inter,sans-serif;color:#7A5A68;text-align:center;margin-top:18px">Already have an account? <span style="color:#B81F55;font-weight:600">Log in</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3b OTP -->
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>OTP Verification — 6 boxes, resend countdown · /verify</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="width:620px;flex:none;background:linear-gradient(135deg,#F2477D 0%,#FF9563 100%);padding:48px 56px;display:flex;flex-direction:column;color:#fff;position:relative;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="font-size:24px"></i></div><span style="font:800 22px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:10px;align-items:center;font:600 12px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;opacity:.9"><span style="width:28px;height:28px;border-radius:999px;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-check"></i></span>Details<span style="width:40px;height:2px;background:rgba(255,255,255,.5)"></span><span style="width:28px;height:28px;border-radius:999px;background:#fff;color:#F2477D;display:flex;align-items:center;justify-content:center">2</span>Verify<span style="width:40px;height:2px;background:rgba(255,255,255,.3)"></span><span style="width:28px;height:28px;border-radius:999px;border:2px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;box-sizing:border-box">3</span>Location</div>
+    <div style="font:700 44px/52px Manrope,sans-serif;max-width:460px;text-wrap:pretty;margin-top:24px">One quick check so alerts reach the right phone.</div>
+    <div style="position:absolute;right:-120px;bottom:-140px;width:420px;height:420px;border-radius:999px;background:rgba(255,255,255,.10)"></div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px">
+    <div style="width:440px;background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 4px 12px rgba(34,16,25,.12);padding:36px;display:flex;flex-direction:column;align-items:center;text-align:center">
+      <div style="width:64px;height:64px;border-radius:999px;background:#FFF0F4;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-device-mobile" style="font-size:30px;color:#F2477D"></i></div>
+      <div style="font:700 24px/30px Manrope,sans-serif;margin-top:18px">Enter the 6-digit code</div>
+      <div style="font:400 14px/20px Inter,sans-serif;color:#7A5A68;margin-top:6px">Sent by SMS to <span style="font-weight:600;color:#221019">+92 300 284 ••90</span> · <span style="color:#B81F55;font-weight:600">Change</span></div>
+      <div style="display:flex;gap:10px;margin-top:28px">
+        <div style="width:52px;height:60px;border-radius:12px;border:1px solid #F0DCD6;background:#FDEFEA;display:flex;align-items:center;justify-content:center;font:700 26px Manrope,sans-serif">4</div>
+        <div style="width:52px;height:60px;border-radius:12px;border:1px solid #F0DCD6;background:#FDEFEA;display:flex;align-items:center;justify-content:center;font:700 26px Manrope,sans-serif">8</div>
+        <div style="width:52px;height:60px;border-radius:12px;border:1px solid #F0DCD6;background:#FDEFEA;display:flex;align-items:center;justify-content:center;font:700 26px Manrope,sans-serif">2</div>
+        <div style="width:52px;height:60px;border-radius:12px;border:2px solid #F2477D;background:#fff;display:flex;align-items:center;justify-content:center"><span style="width:2px;height:26px;background:#F2477D;animation:llpulse 1s steps(2) infinite"></span></div>
+        <div style="width:52px;height:60px;border-radius:12px;border:1px solid #F0DCD6;background:#FDEFEA"></div>
+        <div style="width:52px;height:60px;border-radius:12px;border:1px solid #F0DCD6;background:#FDEFEA"></div>
+      </div>
+      <div style="font:400 13px Inter,sans-serif;color:#7A5A68;margin-top:20px">Resend code in <span style="font-weight:600;color:#221019;font-variant-numeric:tabular-nums">0:42</span></div>
+      <div style="width:100%;height:52px;border-radius:12px;background:#FFB8CD;color:#fff;display:flex;align-items:center;justify-content:center;font:600 16px Inter,sans-serif;margin-top:24px">Verify</div>
+      <div style="font:400 13px Inter,sans-serif;color:#B81F55;font-weight:600;margin-top:18px">Didn't get a code? Try a voice call</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3c RESOURCES HUB -->
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Resources Hub — Shelters / Emergency Contacts / Aid Requests / Missing Persons / Preparedness · /app/resources</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;background:#FFF0F4;color:#B81F55">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-chat-circle-dots" style="color:#fff;font-size:20px"></i></div><div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div></div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:28px 48px;display:flex;flex-direction:column;gap:22px;max-width:1240px;width:100%;box-sizing:border-box">
+    <div><div style="font:700 28px/34px Manrope,sans-serif">Resources</div><div style="font:400 14px Inter,sans-serif;color:#7A5A68;margin-top:4px">Everything you need near Johi, Dadu — updated live.</div></div>
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">
+      <sc-for list="{{ resTiles }}" as="r" hint-placeholder-count="5">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(34,16,25,.08)" style-hover="box-shadow:0 4px 12px rgba(34,16,25,.12)"><div style="width:44px;height:44px;border-radius:12px;background:{{ r.bg }};display:flex;align-items:center;justify-content:center"><i class="{{ r.icon }}" style="font-size:24px;color:{{ r.c }}"></i></div><div><div style="font:600 15px Inter,sans-serif">{{ r.title }}</div><div style="font:400 12px/16px Inter,sans-serif;color:#7A5A68;margin-top:2px">{{ r.sub }}</div></div></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;min-height:0">
+      <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #F0DCD6"><div style="font:600 15px Manrope,sans-serif">Nearby shelters</div><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">All shelters →</span></div>
+        <sc-for list="{{ shelters }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #EDE3E7" style-hover="background:#FDEFEA"><div style="width:36px;height:36px;border-radius:999px;background:#fff;border:2px solid {{ s.oc }};display:flex;align-items:center;justify-content:center;flex:none"><i class="ph-fill ph-house-line" style="color:{{ s.oc }};font-size:18px"></i></div><div style="flex:1;min-width:0"><div style="font:600 14px Inter,sans-serif">{{ s.name }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ s.meta }}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="font:600 11px Inter,sans-serif;color:{{ s.oc }};background:{{ s.obg }};border-radius:999px;padding:2px 8px">{{ s.occ }}</span><div style="width:90px;height:5px;border-radius:999px;background:#FDEFEA;overflow:hidden"><div style="height:100%;width:{{ s.pct }};background:{{ s.oc }}"></div></div></div><div style="height:36px;padding:0 12px;border-radius:10px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;font:600 12px Inter,sans-serif;margin-left:8px">Navigate</div></div>
+        </sc-for>
+        <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #F0DCD6;border-top:1px solid #F0DCD6;margin-top:auto"><div style="font:600 15px Manrope,sans-serif">Emergency contacts</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-right:1px solid #EDE3E7"><div style="width:36px;height:36px;border-radius:999px;background:#FDE4E4;color:#D42E2E;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-phone" style="font-size:16px"></i></div><div><div style="font:600 13px Inter,sans-serif">Rescue 1122</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">Provincial emergency</div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-right:1px solid #EDE3E7"><div style="width:36px;height:36px;border-radius:999px;background:#E1F1F4;color:#1F7A8C;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-phone" style="font-size:16px"></i></div><div><div style="font:600 13px Inter,sans-serif">NDMA 051-111-157-157</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">National helpline</div></div></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 18px"><div style="width:36px;height:36px;border-radius:999px;background:#E3F6EA;color:#2E9E5B;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-phone" style="font-size:16px"></i></div><div><div style="font:600 13px Inter,sans-serif">Edhi 115</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">Ambulance</div></div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden;flex:1">
+          <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #F0DCD6"><div style="font:600 15px Manrope,sans-serif">Missing persons near you</div><span style="margin-left:8px;font:600 11px Inter,sans-serif;background:#7C4DFF26;color:#7C4DFF;border-radius:999px;padding:2px 8px">4</span><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">View all →</span></div>
+          <sc-for list="{{ missing }}" as="m" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #EDE3E7"><div style="width:40px;height:40px;border-radius:999px;flex:none;background:repeating-linear-gradient(135deg,#F0DCD6 0 6px,#FDEFEA 6px 12px)"></div><div style="flex:1;min-width:0"><div style="font:600 13px Inter,sans-serif">{{ m.name }}</div><div style="font:400 11px Inter,sans-serif;color:#7A5A68">{{ m.meta }}</div></div><span style="font:600 11px Inter,sans-serif;color:{{ m.sc }};background:{{ m.sbg }};border-radius:999px;padding:2px 8px">{{ m.status }}</span></div>
+          </sc-for>
+        </div>
+        <div style="background:linear-gradient(135deg,#F2477D,#FF9563);border-radius:12px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:16px"><i class="ph-fill ph-book-open-text" style="font-size:36px"></i><div style="flex:1"><div style="font:700 16px Manrope,sans-serif">Flood preparedness guide</div><div style="font:400 12px Inter,sans-serif;opacity:.9">What to pack, when to leave, how to purify water — available offline.</div></div><div style="height:36px;padding:0 14px;border-radius:10px;background:#fff;color:#B81F55;display:flex;align-items:center;font:600 13px Inter,sans-serif">Read</div></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3d SAFE ROUTE NAVIGATION -->
+<div class="dv-opt" id="3d"><div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Safe Route Navigation — full-bleed map, route options with hazard avoidance · /app/map/navigate</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;background:#FFF0F4;color:#B81F55">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div></div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:420px;flex:none;background:#fff;border-right:1px solid #F0DCD6;display:flex;flex-direction:column;min-height:0">
+      <div style="padding:16px 20px;border-bottom:1px solid #F0DCD6;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="ph-bold ph-arrow-left" style="font-size:18px"></i><span style="font:700 17px Manrope,sans-serif">Safe route</span><div style="flex:1"></div><div style="display:flex;background:#FDEFEA;border-radius:999px;padding:3px;font:600 12px Inter,sans-serif"><span style="padding:5px 10px;background:#F2477D;color:#fff;border-radius:999px"><i class="ph-fill ph-car"></i></span><span style="padding:5px 10px;color:#4A2E3C"><i class="ph-fill ph-person-simple-walk"></i></span><span style="padding:5px 10px;color:#4A2E3C"><i class="ph-fill ph-motorcycle"></i></span></div></div>
+        <div style="display:flex;gap:10px;align-items:stretch"><div style="display:flex;flex-direction:column;align-items:center;padding:14px 0"><span style="width:10px;height:10px;border-radius:999px;background:#3A5FCD"></span><span style="flex:1;width:2px;background:#EDE3E7;margin:4px 0"></span><span style="width:10px;height:10px;background:#F2477D"></span></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div style="height:40px;border-radius:8px;background:#FDEFEA;border:1px solid #F0DCD6;display:flex;align-items:center;padding:0 12px;font:500 13px Inter,sans-serif">Current location · Johi Bypass</div><div style="height:40px;border-radius:8px;background:#fff;border:2px solid #F2477D;display:flex;align-items:center;padding:0 12px;font:500 13px Inter,sans-serif">GBHS Johi shelter</div></div></div>
+        <div style="display:flex;align-items:center;gap:8px;font:500 12px Inter,sans-serif;color:#4A2E3C"><div style="width:32px;height:18px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:999px;background:#fff"></div></div>Avoid all flood zones and closed roads</div>
+      </div>
+      <div style="padding:12px 20px 6px;font:700 11px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;color:#7A5A68">Routes</div>
+      <sc-for list="{{ routes }}" as="r" hint-placeholder-count="3">
+        <div style="margin:0 12px 10px;padding:14px;border-radius:12px;border:{{ r.border }};background:{{ r.bg }};display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font:600 11px Inter,sans-serif;color:{{ r.tc }};background:{{ r.tbg }};border-radius:999px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px"><i class="{{ r.ticon }}" style="font-size:11px"></i>{{ r.tag }}</span><div style="flex:1"></div><span style="font:700 18px Manrope,sans-serif">{{ r.time }}</span></div>
+          <div style="font:600 13px Inter,sans-serif">{{ r.via }}</div>
+          <div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ r.meta }}</div>
+        </div>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div style="padding:16px 20px;border-top:1px solid #F0DCD6"><div style="height:52px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font:600 16px Inter,sans-serif"><i class="ph-fill ph-navigation-arrow" style="font-size:20px"></i>Start navigation</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68;text-align:center;margin-top:8px">Route recalculates if a new hazard is declared</div></div>
+    </div>
+    <div style="flex:1;position:relative;background:repeating-linear-gradient(135deg,#F9F1EE 0 12px,#FDF7F4 12px 24px);overflow:hidden">
+      <div style="position:absolute;left:30%;top:20%;width:260px;height:180px;border-radius:52% 48% 60% 40%;background:rgba(212,46,46,.35);border:2px solid #D42E2E"></div>
+      <div style="position:absolute;left:50%;top:56%;width:180px;height:110px;border-radius:40% 60% 50% 50%;background:rgba(240,116,11,.35);border:2px solid #F0740B"></div>
+      <div style="position:absolute;left:18%;top:70%;width:22%;height:6px;background:#F2477D;border-radius:3px;transform:rotate(-30deg);transform-origin:left"></div>
+      <div style="position:absolute;left:37%;top:59%;width:26%;height:6px;background:#F2477D;border-radius:3px;transform:rotate(-58deg);transform-origin:left"></div>
+      <div style="position:absolute;left:51%;top:35%;width:20%;height:6px;background:#F2477D;border-radius:3px;transform:rotate(-8deg);transform-origin:left"></div>
+      <div style="position:absolute;left:18%;top:70%;width:22%;height:4px;background:#B79AA6;border-radius:3px;transform:rotate(-8deg);transform-origin:left;opacity:.6"></div>
+      <div style="position:absolute;left:40%;top:67%;width:34%;height:4px;background:#B79AA6;border-radius:3px;transform:rotate(-38deg);transform-origin:left;opacity:.6"></div>
+      <div style="position:absolute;left:18%;top:70%;width:18px;height:18px;border-radius:999px;background:#3A5FCD;border:3px solid #fff;box-shadow:0 0 0 8px rgba(58,95,205,.18);margin:-9px 0 0 -9px"></div>
+      <div style="position:absolute;left:71%;top:32%;width:30px;height:30px;border-radius:999px;background:#fff;border:3px solid #2E9E5B;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(34,16,25,.2);margin:-15px 0 0 -15px"><i class="ph-fill ph-house-line" style="color:#2E9E5B;font-size:15px"></i></div>
+      <div style="position:absolute;left:47%;top:66%;width:22px;height:22px;border-radius:6px;background:#D42E2E;border:2px solid #fff;display:flex;align-items:center;justify-content:center;margin:-11px 0 0 -11px"><i class="ph-bold ph-prohibit" style="color:#fff;font-size:12px"></i></div>
+      <div style="position:absolute;left:49%;top:70%;padding:3px 7px;background:#221019;color:#fff;border-radius:6px;font:600 10px Inter,sans-serif">Johi–Mehar road closed</div>
+      <div style="position:absolute;left:20px;top:20px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(34,16,25,.16);padding:14px 16px;display:flex;align-items:center;gap:14px"><div style="width:44px;height:44px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-arrow-bend-up-right" style="font-size:24px"></i></div><div><div style="font:700 18px Manrope,sans-serif">Turn right in 400 m</div><div style="font:400 13px Inter,sans-serif;color:#7A5A68">onto College Road · stay on higher ground</div></div></div>
+      <div style="position:absolute;right:20px;top:20px;display:flex;flex-direction:column;gap:8px"><div style="width:44px;height:44px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(34,16,25,.12);display:flex;align-items:center;justify-content:center"><i class="ph ph-crosshair" style="font-size:22px;color:#4A2E3C"></i></div><div style="width:44px;height:44px;border-radius:12px;background:#fff;box-shadow:0 4px 12px rgba(34,16,25,.12);display:flex;align-items:center;justify-content:center"><i class="ph ph-speaker-high" style="font-size:22px;color:#4A2E3C"></i></div></div>
+      <div style="position:absolute;left:20px;bottom:20px;right:20px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(34,16,25,.16);padding:14px 18px;display:flex;align-items:center;gap:20px"><div><div style="font:700 22px Manrope,sans-serif">14 min <span style="font:500 14px Inter,sans-serif;color:#7A5A68">· 4.2 km</span></div><div style="font:400 12px Inter,sans-serif;color:#2E9E5B;font-weight:600">Arrive 14:46 · avoids 2 hazards</div></div><div style="flex:1;display:flex;gap:2px;height:8px"><div style="flex:3;background:#2E9E5B;border-radius:4px 0 0 4px"></div><div style="flex:1;background:#E0A100"></div><div style="flex:4;background:#2E9E5B;border-radius:0 4px 4px 0"></div></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Caution segment: 600 m near Kirthar runoff</span><div style="height:40px;padding:0 14px;border-radius:10px;border:1.5px solid #D42E2E;color:#D42E2E;display:flex;align-items:center;font:600 13px Inter,sans-serif">End</div></div>
+      <div style="position:absolute;right:16px;bottom:96px;font:500 11px ui-monospace,Menlo,monospace;color:#7A5A68;background:rgba(255,255,255,.85);padding:4px 8px;border-radius:6px">mapbox directions · hazard-avoidance overlay</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3e SAFETY GROUPS -->
+<div class="dv-opt" id="3e"><div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>Safety Groups — group list + member status, Check-in request · /app/profile/safety-groups</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:#F2477D;color:#fff;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 0 0 4px #F2477D">HK</div></div>
+  </div>
+  <div style="flex:1;display:flex;gap:32px;padding:32px 48px;min-height:0;max-width:1300px;box-sizing:border-box;width:100%">
+    <div style="width:260px;flex:none;display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 20px"><div style="width:52px;height:52px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:700 17px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div><div><div style="font:700 16px Manrope,sans-serif">Hina Khan</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Johi, Dadu · Level 4</div></div></div>
+      <sc-for list="{{ profNavSG }}" as="n" hint-placeholder-count="9">
+        <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-radius:12px;background:{{ n.bg }};color:{{ n.fg }};font:500 14px Inter,sans-serif" style-hover="background:#FDEFEA"><i class="{{ n.icon }}" style="font-size:20px"></i><span style="flex:1">{{ n.label }}</span><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="font:600 11px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:2px 7px">{{ n.badge }}</span></sc-if></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;min-width:0;min-height:0">
+      <div style="display:flex;flex-direction:column;gap:12px;min-height:0">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font:700 20px Manrope,sans-serif">Safety groups</div><div style="width:36px;height:36px;border-radius:10px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-plus"></i></div></div>
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+          <div style="background:#fff;border:{{ g.border }};border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:10px;background:{{ g.bg }};display:flex;align-items:center;justify-content:center"><i class="{{ g.icon }}" style="font-size:20px;color:{{ g.c }}"></i></div><div style="flex:1"><div style="font:600 14px Inter,sans-serif">{{ g.name }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ g.meta }}</div></div></div><div style="display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden"><div style="flex:{{ g.safe }};background:#2E9E5B"></div><div style="flex:{{ g.wait }};background:#E0A100"></div><div style="flex:{{ g.help }};background:#D42E2E"></div></div></div>
+        </sc-for>
+      </div>
+      <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden;min-height:0">
+        <div style="padding:18px 20px;border-bottom:1px solid #F0DCD6;display:flex;align-items:center;gap:12px"><div><div style="font:700 18px Manrope,sans-serif">Rehman family</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">5 members · created by you · check-in requested 42 min ago</div></div><div style="flex:1"></div><div style="height:36px;padding:0 14px;border-radius:8px;border:1.5px solid #F2477D;color:#B81F55;display:flex;align-items:center;gap:6px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-user-plus"></i>Add member</div><div style="height:36px;padding:0 14px;border-radius:8px;background:#F2477D;color:#fff;display:flex;align-items:center;gap:6px;font:600 13px Inter,sans-serif"><i class="ph-bold ph-bell-ringing"></i>Request check-in</div></div>
+        <div style="display:flex;gap:16px;padding:14px 20px;border-bottom:1px solid #F0DCD6;background:#FFFBF9"><div style="flex:1;display:flex;align-items:center;gap:10px"><span style="width:12px;height:12px;border-radius:999px;background:#2E9E5B"></span><span style="font:700 20px Manrope,sans-serif">3</span><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Safe</span></div><div style="flex:1;display:flex;align-items:center;gap:10px"><span style="width:12px;height:12px;border-radius:999px;background:#E0A100"></span><span style="font:700 20px Manrope,sans-serif">2</span><span style="font:500 12px Inter,sans-serif;color:#7A5A68">No response</span></div><div style="flex:1;display:flex;align-items:center;gap:10px"><span style="width:12px;height:12px;border-radius:999px;background:#D42E2E"></span><span style="font:700 20px Manrope,sans-serif">0</span><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Need help</span></div></div>
+        <sc-for list="{{ members }}" as="m" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #EDE3E7"><div style="position:relative;flex:none"><div style="width:44px;height:44px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 14px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">{{ m.ini }}</div><span style="position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;border-radius:999px;background:{{ m.dot }};border:2px solid #fff"></span></div><div style="flex:1;min-width:0"><div style="font:600 14px Inter,sans-serif">{{ m.name }} <span style="font-weight:400;color:#7A5A68">· {{ m.rel }}</span></div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ m.meta }}</div></div><span style="font:600 11px Inter,sans-serif;color:{{ m.sc }};background:{{ m.sbg }};border-radius:999px;padding:3px 9px">{{ m.status }}</span><div style="display:flex;gap:6px"><div style="width:36px;height:36px;border-radius:999px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;justify-content:center"><i class="ph ph-phone" style="font-size:16px"></i></div><div style="width:36px;height:36px;border-radius:999px;border:1.5px solid #F0DCD6;color:#4A2E3C;display:flex;align-items:center;justify-content:center"><i class="ph ph-map-pin" style="font-size:16px"></i></div></div></div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3f CHAT / AI ASSISTANT -->
+<div class="dv-opt" id="3f"><div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Chat — conversation list + AI assistant thread with safety guidance · /app/chat</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 0 0 4px #F2477D"><i class="ph-fill ph-chat-circle-dots" style="color:#fff;font-size:20px"></i></div><div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div></div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:360px;flex:none;background:#fff;border-right:1px solid #F0DCD6;display:flex;flex-direction:column;min-height:0">
+      <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #F0DCD6"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 20px Manrope,sans-serif">Messages</span><div style="width:36px;height:36px;border-radius:10px;background:#FFF0F4;color:#B81F55;display:flex;align-items:center;justify-content:center"><i class="ph-bold ph-note-pencil"></i></div></div><div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;font:400 13px Inter,sans-serif;color:#7A5A68"><i class="ph ph-magnifying-glass" style="font-size:16px"></i>Search conversations…</div></div>
+      <sc-for list="{{ convos }}" as="c" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #EDE3E7;background:{{ c.bg }}" style-hover="background:#FDEFEA"><div style="width:44px;height:44px;border-radius:999px;background:{{ c.avbg }};color:{{ c.avc }};display:flex;align-items:center;justify-content:center;font:600 13px Manrope,sans-serif;flex:none"><sc-if value="{{ c.ai }}" hint-placeholder-val="{{ false }}"><i class="ph-fill ph-sparkle" style="font-size:20px"></i></sc-if>{{ c.ini }}</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><span style="font:600 14px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><sc-if value="{{ c.verified }}" hint-placeholder-val="{{ false }}"><i class="ph-fill ph-check-circle" style="color:#1F7A8C;font-size:14px"></i></sc-if></div><div style="font:400 12px Inter,sans-serif;color:#7A5A68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.last }}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="font:500 11px Inter,sans-serif;color:#B79AA6">{{ c.t }}</span><sc-if value="{{ c.unread }}" hint-placeholder-val="{{ false }}"><span style="font:600 10px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:1px 6px">{{ c.unread }}</span></sc-if></div></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+      <div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid #F0DCD6;background:#fff"><div style="width:40px;height:40px;border-radius:999px;background:linear-gradient(135deg,#F2477D,#FF9563);color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-sparkle" style="font-size:20px"></i></div><div><div style="font:700 15px Manrope,sans-serif">LittleLife Assistant</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Safety guidance · answers in your language · not an emergency line</div></div><div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:#8A6400;background:#FFF4D9;border-radius:999px;padding:3px 9px">Works offline for saved guides</span></div>
+      <div style="flex:1;overflow:hidden;padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ chat }}" as="m" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:{{ m.align }}">
+            <div style="max-width:70%;padding:12px 14px;border-radius:{{ m.radius }};background:{{ m.bg }};color:{{ m.fg }};font:400 14px/20px Inter,sans-serif;border:{{ m.border }};text-wrap:pretty">{{ m.text }}</div>
+            <sc-if value="{{ m.actions }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px;margin-top:4px"><span style="font:600 12px Inter,sans-serif;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:6px 12px">Show route to GBHS Johi</span><span style="font:600 12px Inter,sans-serif;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:6px 12px">Call Rescue 1122</span><span style="font:600 12px Inter,sans-serif;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:6px 12px">What to pack</span></div></sc-if>
+            <span style="font:500 10px Inter,sans-serif;color:#B79AA6">{{ m.t }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 24px 18px;border-top:1px solid #F0DCD6;background:#fff;display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:44px;border-radius:12px;border:1px solid #F0DCD6;display:flex;align-items:center;justify-content:center;color:#4A2E3C"><i class="ph ph-paperclip" style="font-size:20px"></i></div><div style="flex:1;height:44px;border-radius:12px;background:#FDEFEA;border:1px solid #F0DCD6;display:flex;align-items:center;padding:0 14px;font:400 14px Inter,sans-serif;color:#7A5A68">Ask about shelters, routes, or what to do…</div><div style="width:44px;height:44px;border-radius:12px;border:1px solid #F0DCD6;display:flex;align-items:center;justify-content:center;color:#4A2E3C"><i class="ph ph-microphone" style="font-size:20px"></i></div><div style="width:44px;height:44px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-paper-plane-right" style="font-size:20px"></i></div></div><div style="font:400 11px Inter,sans-serif;color:#B79AA6">In immediate danger? Call <span style="font-weight:600;color:#D42E2E">1122</span>. The assistant can be wrong — verify with official alerts.</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3g ALERT PREFERENCES -->
+<div class="dv-opt" id="3g"><div class="dv-olabel"><a class="dv-oid" href="#3g">3g</a>Alert Preferences — channels, severity threshold, quiet hours, saved locations · /app/profile/alerts</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:#F2477D;color:#fff;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 0 0 4px #F2477D">HK</div></div>
+  </div>
+  <div style="flex:1;display:flex;gap:32px;padding:32px 48px;min-height:0;max-width:1200px;box-sizing:border-box;width:100%">
+    <div style="width:260px;flex:none;display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 20px"><div style="width:52px;height:52px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:700 17px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div><div><div style="font:700 16px Manrope,sans-serif">Hina Khan</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Johi, Dadu · Level 4</div></div></div>
+      <sc-for list="{{ profNavAP }}" as="n" hint-placeholder-count="9">
+        <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-radius:12px;background:{{ n.bg }};color:{{ n.fg }};font:500 14px Inter,sans-serif" style-hover="background:#FDEFEA"><i class="{{ n.icon }}" style="font-size:20px"></i><span style="flex:1">{{ n.label }}</span><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="font:600 11px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:2px 7px">{{ n.badge }}</span></sc-if></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;min-height:0">
+      <div><div style="font:700 24px/30px Manrope,sans-serif">Alert preferences</div><div style="font:400 14px/20px Inter,sans-serif;color:#7A5A68;margin-top:4px">Critical alerts always break through — quiet hours and thresholds apply to everything else.</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 15px Manrope,sans-serif">Channels</div>
+          <sc-for list="{{ channels }}" as="c" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid #EDE3E7"><i class="{{ c.icon }}" style="font-size:22px;color:#4A2E3C"></i><div style="flex:1"><div style="font:600 14px Inter,sans-serif">{{ c.name }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ c.sub }}</div></div><div style="width:40px;height:22px;border-radius:999px;background:{{ c.tbg }};position:relative"><div style="position:absolute;top:2px;{{ c.knob }}:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div></div>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(34,16,25,.08)">
+          <div style="font:600 15px Manrope,sans-serif">Minimum severity to notify</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div style="border:1px solid #F0DCD6;border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="width:12px;height:12px;border-radius:999px;background:#2E9E5B"></span><span style="font:600 12px Inter,sans-serif">Safe</span><span style="font:400 10px Inter,sans-serif;color:#7A5A68">all-clears</span></div>
+            <div style="border:2px solid #F2477D;background:#FFF0F4;border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="width:12px;height:12px;border-radius:999px;background:#E0A100"></span><span style="font:600 12px Inter,sans-serif">Caution</span><span style="font:400 10px Inter,sans-serif;color:#7A5A68">and above</span></div>
+            <div style="border:1px solid #F0DCD6;border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center"><span style="width:12px;height:12px;border-radius:999px;background:#F0740B"></span><span style="font:600 12px Inter,sans-serif">High</span><span style="font:400 10px Inter,sans-serif;color:#7A5A68">and above</span></div>
+            <div style="border:1px solid #F0DCD6;border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;opacity:.6"><span style="width:12px;height:12px;border-radius:999px;background:#D42E2E"></span><span style="font:600 12px Inter,sans-serif">Critical</span><span style="font:400 10px Inter,sans-serif;color:#7A5A68">always on</span></div>
+          </div>
+          <div style="font:600 15px Manrope,sans-serif;margin-top:6px">Quiet hours</div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div><div style="display:flex;align-items:center;gap:8px;font:500 14px Inter,sans-serif"><span style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:8px 12px">23:00</span>to<span style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:8px 12px">06:00</span></div><span style="font:400 12px Inter,sans-serif;color:#7A5A68">Critical still sounds</span></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:4px"><div style="width:40px;height:22px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:999px;background:#fff"></div></div><span style="font:500 14px Inter,sans-serif">Override silent mode for High and Critical</span></div>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0">
+        <div style="display:flex;align-items:center;padding:14px 20px;border-bottom:1px solid #F0DCD6"><div style="font:600 15px Manrope,sans-serif">Alert locations</div><span style="margin-left:8px;font:400 12px Inter,sans-serif;color:#7A5A68">you'll get alerts for these places even when you're elsewhere</span><div style="flex:1"></div><span style="font:600 13px Inter,sans-serif;color:#B81F55;display:flex;align-items:center;gap:4px"><i class="ph-bold ph-plus"></i>Add location</span></div>
+        <sc-for list="{{ locs }}" as="l" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #EDE3E7"><div style="width:36px;height:36px;border-radius:10px;background:#FDEFEA;display:flex;align-items:center;justify-content:center"><i class="{{ l.icon }}" style="font-size:20px;color:#B81F55"></i></div><div style="flex:1"><div style="font:600 14px Inter,sans-serif">{{ l.name }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ l.addr }}</div></div><span style="font:500 12px Inter,sans-serif;color:#7A5A68">Radius {{ l.radius }}</span><span style="font:600 11px Inter,sans-serif;color:{{ l.sc }};background:{{ l.sbg }};border-radius:999px;padding:3px 9px">{{ l.status }}</span><i class="ph ph-dots-three-vertical" style="color:#7A5A68"></i></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><div style="height:44px;padding:0 18px;border-radius:12px;display:flex;align-items:center;font:600 14px Inter,sans-serif;color:#B81F55">Discard</div><div style="height:44px;padding:0 20px;border-radius:12px;background:#F2477D;color:#fff;display:flex;align-items:center;font:600 14px Inter,sans-serif">Save preferences</div></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3h CREDIBILITY -->
+<div class="dv-opt" id="3h"><div class="dv-olabel"><a class="dv-oid" href="#3h">3h</a>Credibility — score, level progress, how to improve, history · /app/profile/credibility</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:#F2477D;color:#fff;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 0 0 4px #F2477D">HK</div></div>
+  </div>
+  <div style="flex:1;display:flex;gap:32px;padding:32px 48px;min-height:0;max-width:1200px;box-sizing:border-box;width:100%">
+    <div style="width:260px;flex:none;display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 20px"><div style="width:52px;height:52px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:700 17px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div><div><div style="font:700 16px Manrope,sans-serif">Hina Khan</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">Johi, Dadu · Level 4</div></div></div>
+      <sc-for list="{{ profNavCR }}" as="n" hint-placeholder-count="9">
+        <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border-radius:12px;background:{{ n.bg }};color:{{ n.fg }};font:500 14px Inter,sans-serif" style-hover="background:#FDEFEA"><i class="{{ n.icon }}" style="font-size:20px"></i><span style="flex:1">{{ n.label }}</span><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="font:600 11px Inter,sans-serif;background:#F2477D;color:#fff;border-radius:999px;padding:2px 7px">{{ n.badge }}</span></sc-if></div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;min-height:0">
+      <div style="background:linear-gradient(135deg,#F2477D,#FF9563);border-radius:20px;padding:28px 32px;color:#fff;display:flex;align-items:center;gap:28px">
+        <div style="width:132px;height:132px;border-radius:999px;background:conic-gradient(#fff 0 88%,rgba(255,255,255,.25) 88% 100%);display:flex;align-items:center;justify-content:center;flex:none"><div style="width:104px;height:104px;border-radius:999px;background:#F65E86;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font:800 36px/1 Manrope,sans-serif">88</span><span style="font:600 11px Inter,sans-serif;opacity:.9;margin-top:4px">credibility</span></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px"><span style="font:600 11px Inter,sans-serif;letter-spacing:.8px;text-transform:uppercase;opacity:.9">Level 4 · Trusted reporter</span><span style="font:700 26px/32px Manrope,sans-serif">Your reports are verified 2× faster and weighted higher in alert fusion.</span><div style="display:flex;align-items:center;gap:10px;margin-top:4px"><div style="flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.3);overflow:hidden"><div style="height:100%;width:80%;background:#fff;border-radius:999px"></div></div><span style="font:600 12px Inter,sans-serif">88 / 95 to Level 5</span></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="font:500 12px Inter,sans-serif;color:#7A5A68">Reports submitted</div><div style="font:700 26px Manrope,sans-serif;margin-top:4px">34</div></div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="font:500 12px Inter,sans-serif;color:#7A5A68">Verified</div><div style="font:700 26px Manrope,sans-serif;margin-top:4px;color:#2E9E5B">29 <span style="font:600 13px Inter,sans-serif">85%</span></div></div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="font:500 12px Inter,sans-serif;color:#7A5A68">Rejected</div><div style="font:700 26px Manrope,sans-serif;margin-top:4px">1</div></div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(34,16,25,.08)"><div style="font:500 12px Inter,sans-serif;color:#7A5A68">Upvotes received</div><div style="font:700 26px Manrope,sans-serif;margin-top:4px">1,208</div></div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;min-height:0">
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #F0DCD6;font:600 15px Manrope,sans-serif">How to raise your score</div>
+          <sc-for list="{{ tips }}" as="t" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #EDE3E7"><div style="width:36px;height:36px;border-radius:10px;background:#FDEFEA;display:flex;align-items:center;justify-content:center"><i class="{{ t.icon }}" style="font-size:20px;color:#B81F55"></i></div><div style="flex:1"><div style="font:600 13px Inter,sans-serif">{{ t.title }}</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">{{ t.sub }}</div></div><span style="font:600 12px Inter,sans-serif;color:#2E9E5B;background:#E3F6EA;border-radius:999px;padding:3px 9px">{{ t.pts }}</span></div>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #F0DCD6;border-radius:12px;box-shadow:0 1px 3px rgba(34,16,25,.08);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:14px 20px;border-bottom:1px solid #F0DCD6;font:600 15px Manrope,sans-serif">Recent changes</div>
+          <sc-for list="{{ credHist }}" as="c" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #EDE3E7;font:400 13px Inter,sans-serif"><i class="{{ c.icon }}" style="font-size:16px;color:{{ c.c }}"></i><span style="flex:1">{{ c.what }}</span><span style="color:#B79AA6;font-size:12px">{{ c.t }}</span><span style="font:600 11px Inter,sans-serif;color:{{ c.c }};background:{{ c.bg }};border-radius:999px;padding:2px 7px;min-width:36px;text-align:center">{{ c.d }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- 3i REQUEST HELP -->
+<div class="dv-opt" id="3i"><div class="dv-olabel"><a class="dv-oid" href="#3i">3i</a>Request Help — W-Drawer-Form over Home: type, people, urgency, location · /app/aid/new</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#FFFBF9;font-family:Inter,sans-serif;color:#221019;position:relative">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:32px;padding:0 48px;background:#fff;border-bottom:1px solid #F0DCD6">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#F2477D,#FF9563);display:flex;align-items:center;justify-content:center"><i class="ph-fill ph-lifebuoy" style="color:#fff;font-size:20px"></i></div><span style="font:800 18px Manrope,sans-serif">LittleLife</span></div>
+    <div style="flex:1;display:flex;justify-content:center;gap:8px;font:600 14px Inter,sans-serif"><span style="padding:8px 14px;border-radius:999px;background:#FFF0F4;color:#B81F55">Home</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Map</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Community</span><span style="padding:8px 14px;border-radius:999px;color:#4A2E3C">Resources</span></div>
+    <div style="display:flex;align-items:center;gap:14px"><i class="ph ph-bell" style="font-size:22px;color:#4A2E3C"></i><div style="width:36px;height:36px;border-radius:999px;background:#FFDCE6;color:#B81F55;font:600 13px Manrope,sans-serif;display:flex;align-items:center;justify-content:center">HK</div></div>
+  </div>
+  <div style="flex:1;padding:24px 48px;display:flex;flex-direction:column;gap:20px;opacity:.9">
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px"><div style="background:linear-gradient(135deg,#F2477D 0%,#FF9563 100%);border-radius:20px;padding:28px 32px;color:#fff;height:120px;box-sizing:border-box"><span style="font:700 32px/40px Manrope,sans-serif">Hello, Hina</span></div><div style="background:#FDE4E4;border:1px solid #F5B5B5;border-radius:20px;height:120px"></div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px"><div style="height:80px;background:#fff;border:1px solid #F0DCD6;border-radius:12px"></div><div style="height:80px;background:#FFF0F4;border:2px solid #F2477D;border-radius:12px"></div><div style="height:80px;background:#fff;border:1px solid #F0DCD6;border-radius:12px"></div><div style="height:80px;background:#fff;border:1px solid #F0DCD6;border-radius:12px"></div></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(34,16,25,.35)"></div>
+  <div style="position:absolute;top:0;right:0;bottom:0;width:520px;background:#fff;box-shadow:0 8px 24px rgba(34,16,25,.16);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid #F0DCD6"><i class="ph ph-x" style="font-size:22px;color:#4A2E3C"></i><div style="font:700 20px Manrope,sans-serif">Request help</div><div style="flex:1"></div><span style="font:600 11px Inter,sans-serif;color:#1F7A8C;background:#E1F1F4;border-radius:999px;padding:3px 9px">Goes to NGOs in Dadu</span></div>
+    <div style="flex:1;overflow:hidden;padding:20px 24px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:10px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">What do you need?</label>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <sc-for list="{{ aidTypes }}" as="a" hint-placeholder-count="8">
+            <div style="border:{{ a.border }};background:{{ a.bg }};border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;font:600 11px Inter,sans-serif;text-align:center"><i class="{{ a.icon }}" style="font-size:22px;color:{{ a.color }}"></i>{{ a.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">People affected</label><div style="display:flex;align-items:center;border:1px solid #F0DCD6;border-radius:8px;background:#FDEFEA;overflow:hidden;height:44px"><div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#B81F55"><i class="ph-bold ph-minus"></i></div><div style="flex:1;text-align:center;font:700 16px Manrope,sans-serif">6</div><div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#B81F55"><i class="ph-bold ph-plus"></i></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Includes</label><div style="display:flex;gap:6px;flex-wrap:wrap"><span style="font:600 11px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 10px">Children</span><span style="font:600 11px Inter,sans-serif;background:#FFF0F4;color:#B81F55;border:1.5px solid #F2477D;border-radius:999px;padding:5px 10px">Elderly</span><span style="font:600 11px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 10px">Injured</span><span style="font:600 11px Inter,sans-serif;background:#fff;color:#4A2E3C;border:1px solid #F0DCD6;border-radius:999px;padding:5px 10px">Disabled</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Urgency</label><div style="display:grid;grid-template-columns:repeat(3,1fr);background:#FDEFEA;border-radius:999px;padding:4px;font:600 12px Inter,sans-serif;text-align:center"><span style="padding:9px 0;color:#4A2E3C">Can wait a day</span><span style="padding:9px 0;color:#4A2E3C">Within hours</span><span style="padding:9px 0;color:#fff;background:#D42E2E;border-radius:999px">Life-threatening</span></div><div style="font:400 12px Inter,sans-serif;color:#D42E2E;display:flex;align-items:center;gap:6px;margin-top:2px"><i class="ph-fill ph-warning-circle"></i>Life-threatening requests also page Rescue 1122 with your location.</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font:600 13px Inter,sans-serif;color:#4A2E3C">Details</label><div style="background:#FDEFEA;border:1px solid #F0DCD6;border-radius:8px;padding:12px;min-height:70px;font:400 14px/20px Inter,sans-serif">Roof of two-storey house, water at first floor. Grandmother is diabetic, insulin ran out this morning.</div></div>
+      <div style="display:flex;align-items:center;gap:12px;background:#FFFBF9;border:1px solid #F0DCD6;border-radius:12px;padding:12px 14px"><i class="ph-fill ph-map-pin" style="font-size:22px;color:#F2477D"></i><div style="flex:1"><div style="font:600 13px Inter,sans-serif">Wahi Pandhi, house 14, near the mosque</div><div style="font:400 12px Inter,sans-serif;color:#7A5A68">GPS ±9 m · shared live with responders until fulfilled</div></div><span style="font:600 13px Inter,sans-serif;color:#B81F55">Change</span></div>
+      <div style="display:flex;align-items:center;gap:12px;font:400 13px Inter,sans-serif;color:#4A2E3C"><div style="width:36px;height:20px;border-radius:999px;background:#F2477D;position:relative"><div style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#fff"></div></div>Let responders call me on +92 300 284 ••90</div>
+    </div>
+    <div style="padding:16px 24px 20px;border-top:1px solid #F0DCD6;display:flex;gap:10px;background:#fff"><div style="height:52px;padding:0 20px;border-radius:12px;display:flex;align-items:center;font:600 14px Inter,sans-serif;color:#B81F55">Cancel</div><div style="flex:1;height:52px;border-radius:12px;background:#D42E2E;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font:600 16px Inter,sans-serif"><i class="ph-fill ph-hand-palm" style="font-size:20px"></i>Send help request</div></div>
+  </div>
+</div></div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const S = { safe: ['#2E9E5B', '#E3F6EA'], caution: ['#8A6400', '#FFF4D9'], high: ['#F0740B', '#FFE9D6'], critical: ['#D42E2E', '#FDE4E4'], trust: ['#1F7A8C', '#E1F1F4'], info: ['#3A5FCD', '#E7ECFB'] };
+    const nav = (active) => [['Overview', 'ph ph-user-circle'], ['Edit Profile', 'ph ph-pencil-simple'], ['Alert Preferences', 'ph ph-bell-ringing'], ['Account Settings', 'ph ph-gear'], ['Credibility', 'ph ph-seal-check'], ['Activity', 'ph ph-clock-counter-clockwise'], ['Safety Groups', 'ph ph-users-three'], ['My NGO', 'ph ph-buildings'], ['Invitations', 'ph ph-envelope-open', 2]].map(([label, icon, badge]) => { const a = label === active; return { label, icon: a ? icon.replace('ph ph-', 'ph-fill ph-') : icon, badge: badge || false, bg: a ? '#FFF0F4' : 'transparent', fg: a ? '#B81F55' : '#4A2E3C' }; });
+    const resTiles = [
+      { icon: 'ph-fill ph-house-line', c: '#2E9E5B', bg: '#E3F6EA', title: 'Shelters', sub: '5 nearby · 3 open' },
+      { icon: 'ph-fill ph-phone', c: '#D42E2E', bg: '#FDE4E4', title: 'Emergency contacts', sub: '1122 · NDMA · Edhi' },
+      { icon: 'ph-fill ph-hand-heart', c: '#B81F55', bg: '#FFF0F4', title: 'Aid requests', sub: '22 open near you' },
+      { icon: 'ph-fill ph-user-focus', c: '#7C4DFF', bg: '#7C4DFF26', title: 'Missing persons', sub: '4 active cases' },
+      { icon: 'ph-fill ph-book-open-text', c: '#1F7A8C', bg: '#E1F1F4', title: 'Preparedness', sub: 'Guides · offline' },
+    ];
+    const shelters = [
+      { name: 'GBHS Johi (Govt. Boys High School)', meta: '4.2 km · Certified · open', occ: '210 / 400', oc: '#2E9E5B', obg: '#E3F6EA', pct: '52%' },
+      { name: 'Govt. Degree College Johi', meta: '5.1 km · Certified · open', occ: '380 / 450', oc: '#F0740B', obg: '#FFE9D6', pct: '84%' },
+      { name: 'Mehar Sports Complex', meta: '11 km · Pending cert. · near full', occ: '590 / 600', oc: '#D42E2E', obg: '#FDE4E4', pct: '98%' },
+    ];
+    const missing = [
+      { name: 'Ahmed Bux, 9', meta: 'Mehar bus stand · 5h ago · 2 sightings', status: 'Missing', sc: '#D42E2E', sbg: '#FDE4E4' },
+      { name: 'Ghulam Rasool, 71', meta: 'Johi camp · yesterday', status: 'Missing', sc: '#D42E2E', sbg: '#FDE4E4' },
+      { name: 'Sakina Bibi, 34', meta: 'KNS · 2d ago · reunited', status: 'Found', sc: '#2E9E5B', sbg: '#E3F6EA' },
+    ];
+    const routes = [
+      { tag: 'Safest', ticon: 'ph-fill ph-shield-check', tc: '#2E9E5B', tbg: '#E3F6EA', time: '14 min', via: 'via College Road → Station Road', meta: '4.2 km · avoids all hazards · 1 caution segment', border: '2px solid #F2477D', bg: '#FFF0F4' },
+      { tag: 'Fastest', ticon: 'ph-fill ph-lightning', tc: '#8A6400', tbg: '#FFF4D9', time: '9 min', via: 'via Johi–Mehar road', meta: '3.1 km · crosses 1 closed road — not recommended', border: '1px solid #F0DCD6', bg: '#fff' },
+      { tag: 'Alternative', ticon: 'ph-fill ph-signpost', tc: '#4A2E3C', tbg: '#FDEFEA', time: '19 min', via: 'via canal embankment', meta: '5.8 km · avoids all hazards · unpaved', border: '1px solid #F0DCD6', bg: '#fff' },
+    ];
+    const groups = [
+      { name: 'Rehman family', meta: '5 members · 3 safe · 2 waiting', icon: 'ph-fill ph-house', c: '#B81F55', bg: '#FFF0F4', safe: 3, wait: 2, help: 0, border: '2px solid #F2477D' },
+      { name: 'Street 4 neighbours', meta: '12 members · 9 safe · 2 waiting · 1 needs help', icon: 'ph-fill ph-users-three', c: '#1F7A8C', bg: '#E1F1F4', safe: 9, wait: 2, help: 1, border: '1px solid #F0DCD6' },
+      { name: 'Johi Girls School staff', meta: '8 members · all safe', icon: 'ph-fill ph-chalkboard-teacher', c: '#2E9E5B', bg: '#E3F6EA', safe: 8, wait: 0, help: 0, border: '1px solid #F0DCD6' },
+    ];
+    const mem = (ini, name, rel, meta, st) => ({ ini, name, rel, meta, status: st, ...(st === 'Safe' ? { dot: '#2E9E5B', sc: '#2E9E5B', sbg: '#E3F6EA' } : st === 'Needs help' ? { dot: '#D42E2E', sc: '#D42E2E', sbg: '#FDE4E4' } : { dot: '#E0A100', sc: '#8A6400', sbg: '#FFF4D9' }) });
+    const members = [
+      mem('HK', 'Hina Khan', 'you', 'Checked in safe · Johi · now', 'Safe'),
+      mem('AR', 'Ahmed Rehman', 'husband', 'Checked in safe · Johi · 6 min ago', 'Safe'),
+      mem('SR', 'Sara Rehman', 'daughter', 'Safe · sharing live location · GBHS Johi', 'Safe'),
+      mem('MR', 'Maryam Rehman', 'sister', 'No response · last seen Mehar 42 min ago · 2 reminders sent', 'No response'),
+      mem('NR', 'Nadia Rehman', 'mother', 'No response · phone offline since 13:10', 'No response'),
+    ];
+    const convos = [
+      { ini: '', ai: true, name: 'LittleLife Assistant', last: 'The nearest open shelter is GBHS Johi, 4.2 km…', t: 'now', unread: false, verified: false, avbg: 'linear-gradient(135deg,#F2477D,#FF9563)', avc: '#fff', bg: '#FFF0F4' },
+      { ini: 'SK', ai: false, name: 'Sana K. · Al-Khidmat', last: 'We are sending a volunteer to the bus stand now.', t: '13:05', unread: 2, verified: true, avbg: '#E1F1F4', avc: '#1F7A8C', bg: 'transparent' },
+      { ini: 'RF', ai: false, name: 'Rehman family', last: 'Ahmed: Reached the school, all fine here.', t: '12:40', unread: false, verified: false, avbg: '#FFDCE6', avc: '#B81F55', bg: 'transparent' },
+      { ini: 'S4', ai: false, name: 'Street 4 neighbours', last: 'Bashir: Water is at the second step now', t: '12:12', unread: 5, verified: false, avbg: '#FFDCE6', avc: '#B81F55', bg: 'transparent' },
+      { ini: 'ND', ai: false, name: 'NDMA Dadu', last: 'Alert A-2291: Evacuate Johi & Mehar low-lying…', t: '13:04', unread: false, verified: true, avbg: '#FDE4E4', avc: '#D42E2E', bg: 'transparent' },
+    ];
+    const msg = (mine, text, t, actions) => ({ text, t, actions: !!actions, align: mine ? 'flex-end' : 'flex-start', bg: mine ? '#F2477D' : '#fff', fg: mine ? '#fff' : '#221019', border: mine ? '1px solid transparent' : '1px solid #F0DCD6', radius: mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px' });
+    const chat = [
+      msg(false, 'Salam Hina. A critical evacuation alert is active for Johi. How can I help — shelters, a safe route, or what to bring?', '13:06'),
+      msg(true, 'Which shelter is closest and does it have space? My mother is diabetic.', '13:07'),
+      msg(false, 'GBHS Johi is nearest (4.2 km, 14 min by car) with 190 free places, and Al-Khidmat has a medical desk there with insulin storage. Govt. Degree College is 5.1 km but 84% full. I recommend GBHS Johi.', '13:07', true),
+      msg(true, 'Is the Johi–Mehar road safe?', '13:09'),
+      msg(false, 'No — it was reported closed 22 minutes ago (1 m of water at the culvert, verified by 3 reporters). The safe route goes via College Road and adds about 5 minutes.', '13:09'),
+    ];
+    const channels = [
+      { icon: 'ph-fill ph-bell-ringing', name: 'Push notifications', sub: 'Instant, with sound for High and Critical', tbg: '#F2477D', knob: 'right' },
+      { icon: 'ph-fill ph-chat-text', name: 'SMS', sub: 'Works without data · +92 300 284 ••90', tbg: '#F2477D', knob: 'right' },
+      { icon: 'ph-fill ph-whatsapp-logo', name: 'WhatsApp', sub: 'Same number · includes map link', tbg: '#F2477D', knob: 'right' },
+      { icon: 'ph-fill ph-phone-call', name: 'Voice call', sub: 'Critical only · automated in your language', tbg: '#EDE3E7', knob: 'left' },
+    ];
+    const locs = [
+      { icon: 'ph-fill ph-house', name: 'Home', addr: 'Street 4, Johi, Dadu', radius: '3 km', status: 'In critical zone', sc: '#D42E2E', sbg: '#FDE4E4' },
+      { icon: 'ph-fill ph-briefcase', name: 'Work · Johi Girls School', addr: 'School Road, Johi', radius: '2 km', status: 'In critical zone', sc: '#D42E2E', sbg: '#FDE4E4' },
+      { icon: 'ph-fill ph-heart', name: "Ammi's house", addr: 'Mohalla Qazi, Mehar', radius: '3 km', status: 'High', sc: '#F0740B', sbg: '#FFE9D6' },
+    ];
+    const tips = [
+      { icon: 'ph-fill ph-camera', title: 'Add a photo or video to reports', sub: 'Media reports are verified 3× as often', pts: '+2 each' },
+      { icon: 'ph-fill ph-map-pin', title: 'Report from the location itself', sub: 'GPS within 50 m of the incident', pts: '+1 each' },
+      { icon: 'ph-fill ph-arrow-fat-up', title: 'Vote carefully on others\' reports', sub: 'Votes that match the verified outcome', pts: '+0.5' },
+      { icon: 'ph-fill ph-seal-check', title: 'Confirm your essential location', sub: 'Home or workplace verified by an NGO', pts: '+3' },
+    ];
+    const credHist = [
+      { icon: 'ph-bold ph-arrow-up', c: '#2E9E5B', bg: '#E3F6EA', what: 'Report verified — Indus embankment seeping (#IR-10482)', t: '10m', d: '+4' },
+      { icon: 'ph-bold ph-arrow-up', c: '#2E9E5B', bg: '#E3F6EA', what: 'Photo attached to a verified report', t: '10m', d: '+2' },
+      { icon: 'ph-bold ph-arrow-up', c: '#2E9E5B', bg: '#E3F6EA', what: 'Sighting reported — Ahmed Bux case', t: '1h', d: '+1' },
+      { icon: 'ph-bold ph-arrow-up', c: '#2E9E5B', bg: '#E3F6EA', what: '50 upvotes milestone on a single report', t: '2d', d: '+2' },
+      { icon: 'ph-bold ph-arrow-down', c: '#D42E2E', bg: '#FDE4E4', what: 'Report rejected — duplicate of #IR-9902', t: '3w', d: '−3' },
+      { icon: 'ph-bold ph-arrow-up', c: '#2E9E5B', bg: '#E3F6EA', what: 'Reached Level 4 · Trusted reporter', t: '1mo', d: 'Level' },
+    ];
+    const aidTypes = ['Rescue', 'Water', 'Food', 'Medical', 'Shelter', 'Transport', 'Clothing', 'Other'].map((label, i) => ({ label, icon: ['ph-fill ph-lifebuoy', 'ph-fill ph-drop', 'ph-fill ph-bowl-food', 'ph-fill ph-first-aid-kit', 'ph-fill ph-tent', 'ph-fill ph-truck', 'ph-fill ph-t-shirt', 'ph-fill ph-dots-three-circle'][i], color: i === 0 || i === 3 ? '#DB2E68' : '#7A5A68', border: i === 0 || i === 3 ? '2px solid #F2477D' : '1px solid #F0DCD6', bg: i === 0 || i === 3 ? '#FFF0F4' : '#fff' }));
+    return { resTiles, shelters, missing, routes, groups, members, convos, chat, channels, locs, tips, credHist, aidTypes, profNavSG: nav('Safety Groups'), profNavAP: nav('Alert Preferences'), profNavCR: nav('Credibility') };
+  }
+}
+</script>
+</body>
+</html>
