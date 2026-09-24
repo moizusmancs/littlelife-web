@@ -13,6 +13,7 @@ import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
+import { OrganizationSettingsPage } from '@/pages/ngo/OrganizationSettingsPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -99,7 +100,11 @@ export function AppRouter() {
             <Route path="/ngo/coordination" element={<PlaceholderPage title="Coordination" phase="Phase 7 (mocked)" />} />
             <Route path="/ngo/reports" element={<PlaceholderPage title="Reports" phase="Phase 7 (mocked)" />} />
             <Route path="/ngo/reports/:id" element={<PlaceholderPage title="Report Detail" phase="Phase 7 (mocked)" />} />
-            <Route path="/ngo/settings/organization" element={<PlaceholderPage title="Organization Settings" phase="Phase 1" />} />
+            {/* ngo_admin only — a volunteer is bounced to their own landing route by this nested
+                guard (the sidebar hides the link for them too, but hiding isn't enforcement). */}
+            <Route element={<RequireRole allowed={['ngo_admin']} />}>
+              <Route path="/ngo/settings/organization" element={<OrganizationSettingsPage />} />
+            </Route>
             <Route path="/ngo/settings/account" element={<PlaceholderPage title="My Account" phase="Phase 1" />} />
           </Route>
         </Route>

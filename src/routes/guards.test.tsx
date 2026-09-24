@@ -23,6 +23,10 @@ function renderAt(initialPath: string) {
         </Route>
         <Route element={<RequireRole allowed={['ngo_admin', 'ngo_volunteer']} />}>
           <Route path="/ngo/dashboard" element={<div>ngo dashboard</div>} />
+          {/* Mirrors router.tsx: an ngo_admin-only screen nested inside the wider NGO group. */}
+          <Route element={<RequireRole allowed={['ngo_admin']} />}>
+            <Route path="/ngo/settings/organization" element={<div>organization settings</div>} />
+          </Route>
         </Route>
         <Route element={<RequireRole allowed={['admin', 'super_admin']} />}>
           <Route path="/admin/dashboard" element={<div>admin dashboard</div>} />
@@ -85,6 +89,37 @@ describe('route guards — role isolation', () => {
 
     expect(screen.queryByText('admin dashboard')).not.toBeInTheDocument()
     expect(screen.getByText('ngo dashboard')).toBeInTheDocument()
+  })
+
+  it('lets an NGO admin reach ngo_admin-only Organization Settings', () => {
+    setAuthedUser({ id: '4', email: 'ngoadmin@example.com', role: 'ngo_admin' })
+
+    renderAt('/ngo/settings/organization')
+
+    expect(screen.getByText('organization settings')).toBeInTheDocument()
+  })
+
+  it('does NOT let an NGO volunteer reach Organization Settings — bounced to their own landing route', () => {
+    setAuthedUser({ id: '2', email: 'volunteer@example.com', role: 'ngo_volunteer' })
+
+    renderAt('/ngo/settings/organization')
+
+    expect(screen.queryByText('organization settings')).not.toBeInTheDocument()
+    expect(screen.getByText('ngo dashboard')).toBeInTheDocument()
+  })
+
+  it('does NOT let a citizen or a platform admin reach Organization Settings', () => {
+    setAuthedUser()
+    const { unmount } = renderAt('/ngo/settings/organization')
+    expect(screen.queryByText('organization settings')).not.toBeInTheDocument()
+    expect(screen.getByText('citizen home')).toBeInTheDocument()
+    unmount()
+
+    useAuthStore.getState().clearAuth()
+    setAuthedUser({ id: '3', email: 'admin@example.com', role: 'admin' })
+    renderAt('/ngo/settings/organization')
+    expect(screen.queryByText('organization settings')).not.toBeInTheDocument()
+    expect(screen.getByText('admin dashboard')).toBeInTheDocument()
   })
 
   it('lets an admin reach the admin dashboard', () => {

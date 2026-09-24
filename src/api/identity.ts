@@ -297,3 +297,54 @@ export async function declineVolunteerInvitation(id: string): Promise<{ message:
   const res = await apiClient.patch<{ message: string }>(`/volunteer-invitations/${id}/decline`)
   return res.data
 }
+
+/** Shared TanStack Query key for `GET /ngo/me` — the calling NGO staff member's own organisation. */
+export const NGO_ME_QUERY_KEY = ['ngo', 'me'] as const
+
+/**
+ * GET /ngo/me — the caller's own organisation, resolved from `accounts.ngo_id` (no path param).
+ * Open to any NGO staff (`ngo_admin` and `ngo_volunteer`); a plain citizen or platform admin gets
+ * `403 "account is not affiliated with an ngo"`. Same body shape as `GET /ngos/mine`, and
+ * `contact_*` are omitted entirely when unset.
+ */
+export async function getMyNgo(): Promise<NgoRegistration> {
+  const res = await apiClient.get<NgoRegistration>('/ngo/me')
+  return res.data
+}
+
+/** Fields `PATCH /ngo/me` accepts. A real partial patch: a key that is left out is left
+ *  untouched server-side, while `contactEmail`/`contactPhone` set to `""` *clear* the value. */
+export interface UpdateMyNgoInput {
+  name?: string
+  contactEmail?: string
+  contactPhone?: string
+}
+
+/**
+ * PATCH /ngo/me — `ngo_admin` only (`403 "insufficient permissions"` for a volunteer). Only the
+ * keys actually present in `patch` are sent: the doc is explicit that re-sending an untouched
+ * `contact_email: ""` would actively clear it, so callers pass just what changed. Every field
+ * omitted → `400 "at least one field must be provided to update"`; blank `name` → `400 "ngo name
+ * is required"`; a non-empty malformed `contact_email` → `400 "invalid email"`. The backend has no
+ * status guard on this route today, so a deactivated organisation can still be edited. The
+ * response is the updated organisation (email is normalised server-side, e.g. lower-cased).
+ */
+export async function updateMyNgo(patch: UpdateMyNgoInput): Promise<NgoRegistration> {
+  const body: Record<string, string> = {}
+  if (patch.name !== undefined) body.name = patch.name
+  if (patch.contactEmail !== undefined) body.contact_email = patch.contactEmail
+  if (patch.contactPhone !== undefined) body.contact_phone = patch.contactPhone
+  const res = await apiClient.patch<NgoRegistration>('/ngo/me', body)
+  return res.data
+}
+
+/**
+ * POST /ngo/me/deactivate — `ngo_admin` only, no body. Flips the organisation to `deactivated`
+ * with **no effect on any staff account** (everyone keeps their role and stays signed in), and
+ * there is **no reactivation route** — a one-way transition through this API today.
+ * `409 "ngo is not active"` if it already isn't.
+ */
+export async function deactivateMyNgo(): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>('/ngo/me/deactivate')
+  return res.data
+}

@@ -104,3 +104,50 @@ export function readAccountRole(email: string): { role: string; ngoId: string } 
   ).split(',')
   return { role, ngoId }
 }
+
+/** Turns a registered `e2e-` account into the `ngo_admin` of a brand-new active `E2E …` NGO —
+ *  the state a real admin approval would leave it in (NGO `active`, `approved_by` set, account
+ *  role + `ngo_id` set) — and marks it verified + onboarded, so a fresh login is a genuine NGO
+ *  admin session that lands on `/ngo/dashboard`. Returns the NGO's id. */
+export function promoteToNgoAdmin(
+  email: string,
+  ngoName: string,
+  contact: { email?: string; phone?: string } = {},
+): string {
+  assertE2eEmail(email)
+  if (!ngoName.startsWith('E2E ')) throw new Error(`seed helper refuses a non-test NGO name: ${ngoName}`)
+
+  const ngoId = psql(`
+    INSERT INTO ngos (name, status, contact_email, contact_phone, created_by, approved_by, approved_at)
+    SELECT ${lit(ngoName)}, 'active', NULLIF(${lit(contact.email ?? '')}, ''), NULLIF(${lit(contact.phone ?? '')}, ''), id, id, now()
+    FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!ngoId) throw new Error(`no account found to make an NGO admin: ${email}`)
+
+  psql(`
+    UPDATE accounts SET role = 'ngo_admin', ngo_id = ${lit(ngoId)}, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL`)
+  verifyAndOnboardAccount(email, 'E2E NGO Admin')
+  return ngoId
+}
+
+/** Makes a registered `e2e-` account an `ngo_volunteer` of an existing `E2E …` NGO (as accepting
+ *  an invitation would), verified + onboarded, ready for a genuine login. */
+export function promoteToNgoVolunteer(email: string, ngoId: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET role = 'ngo_volunteer', ngo_id = ${lit(ngoId)}, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+      AND ${lit(ngoId)}::uuid IN (SELECT id FROM ngos WHERE name LIKE 'E2E %')
+    RETURNING id`)
+  if (!updated) throw new Error(`could not make ${email} a volunteer of ${ngoId} (not an E2E NGO?)`)
+  verifyAndOnboardAccount(email, 'E2E Volunteer')
+}
+
+/** Read-only: an NGO's stored state, to assert a save/deactivate really reached the database. */
+export function readNgo(ngoId: string): { name: string; status: string; contactEmail: string; contactPhone: string } {
+  const [name, status, contactEmail, contactPhone] = psql(
+    `SELECT name || '|' || status || '|' || COALESCE(contact_email, '') || '|' || COALESCE(contact_phone, '') FROM ngos WHERE id = ${lit(ngoId)}`,
+  ).split('|')
+  return { name, status, contactEmail, contactPhone }
+}

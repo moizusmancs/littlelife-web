@@ -11,10 +11,10 @@ change when that happens — that's the entire point of the service-layer split 
 **Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
 onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), Account
-Settings (deactivate/delete), My NGO (register + live status), and Invitations — this closes out the full
-auth-screen set plus every citizen `/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's
-build order; Invitations added since). Not yet built: Organization Settings, NGO/Admin My Account,
-Volunteers, Users & Accounts, NGOs.
+Settings (deactivate/delete), My NGO (register + live status), Invitations, and — the first NGO
+screen — Organization Settings. That closes out the full auth-screen set plus every citizen
+`/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's build order) and starts step 6.
+Not yet built: NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -120,6 +120,36 @@ short version.
   accept/decline failure (`404`, `409 "invitation is not pending"`, `409 "ngo is not active"`) shows
   the server's own message and refetches, since the likeliest cause is the invitation changing
   after the page loaded. `RequireAuth` only (not `RequireVerified`), unlike My NGO.
+
+- **Organization Settings builds the profile card and the deactivate control; the rest of the
+  mockup has nothing behind it.** Pixel reference: Batch 4 NGO §4l, plus `WEB_DESIGN_PLAN.md` §6.3's
+  button table. Built from the real `GET`/`PATCH /ngo/me` and `POST /ngo/me/deactivate`: an initials
+  tile, the name with its status badge and a real "Registered <month year>", and three editable
+  fields — name, contact email, contact phone. Left out because no field or route exists: the logo
+  upload (the camera badge), "Registration no.", the public description, the "Notifications &
+  defaults" toggles, and the 7-item settings sub-nav (Team & roles / Integrations / Billing… have no
+  screen — only Profile and Danger zone are real sections, so a one-page layout replaces it). The
+  mockup's "Emergency phone" label became "Contact phone": the API just calls it `contact_phone`.
+  **Operational regions are deferred, not dropped:** `GET/POST/DELETE /ngo/me/regions` exist, but
+  adding one needs the region picker that Phase 2 builds (the plan already schedules the chips as a
+  Phase 2 retrofit), and a remove-only chip list would be a half-feature. Two placement choices:
+  Save/Discard sit at the foot of the card (§6.3: "Save (contact info section)") instead of the
+  mockup's page-header bar, so they stay beside the fields on a phone; and the deactivate control
+  borrows the critical-tinted row from §4m's "Leave organisation" since §4l has none. **Save sends
+  only the fields that changed** — the API is a real partial patch and its doc warns that echoing an
+  untouched `contact_email: ""` would clear it — and if trimming leaves nothing different it makes
+  no request instead of tripping the API's "at least one field" `400`; the server's normalised
+  response (e.g. the lower-cased email) is written back into the form. **Deactivation is one-way**
+  (`POST /ngo/me/deactivate` has no reactivation route), so the confirm dialog leads with that, says
+  staff aren't signed out or touched (the backend doesn't cascade), and names the one consequence
+  it does enforce (no more volunteer invitations). Read from the backend: there's **no status guard
+  on edits**, so a deactivated organisation is still editable — mirrored honestly rather than
+  invented away; the deactivate button is simply replaced by a plain statement once it can only fail
+  (`409 "ngo is not active"`). **`ngo_admin` only, enforced, not just hidden:** the sidebar already
+  hid the link from volunteers (`adminOnly`), but the route now also sits behind a nested
+  `RequireRole allowed={['ngo_admin']}` — a volunteer typing the URL is bounced to their landing
+  route (`GET /ngo/me` itself is open to volunteers, so the frontend guard is the real gate for the
+  screen; `PATCH`/deactivate would `403` server-side regardless).
 
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
@@ -271,6 +301,17 @@ without its generated code.
   It keys off the auth store, so every path is covered — logout, deactivate/delete, a failed silent
   refresh in the axios interceptor — without each caller remembering; a plain token refresh for the
   same account (same `user.id`) and the first login (null → user) deliberately keep the cache.
+- **The NGO/Admin shell was unusable on a phone: the sidebar never collapsed, leaving the content
+  ~150px.** Found while visually verifying Organization Settings at 390px — the page measured
+  `main` at 150px because `OpsLayout`'s 240px rail sat beside it at every width. Not specific to
+  this screen: every NGO/Admin screen still to come would have been squeezed the same way, and the
+  brief is mobile + web for all of them. Fixed once in the shell: from `md` (768px) up nothing
+  changes (in-flow rail, full width ↔ icons-only), below `md` the sidebar is an off-canvas drawer —
+  closed by default and `invisible` when closed so it's out of the tab order, opened from a header
+  menu button, closed by the backdrop, Escape, or choosing a link. Labels are hidden only with
+  `md:hidden` (never by JS state), so a rail collapsed on desktop can't leave the drawer icon-only.
+  Content padding is `p-4` on phones. Measured after: `main` is the full 390px, no horizontal
+  overflow; unit-tested (closed by default, open/backdrop/Escape/link-click, desktop toggle intact).
 
 ---
 
@@ -552,7 +593,7 @@ screens sit behind auth.
 | Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ✅ Built |
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ✅ Built |
 | Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ✅ Built |
-| Organization Settings | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ⬜ Not built |
+| Organization Settings (profile + deactivate; region chips wait for Phase 2's picker) | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ✅ Built |
 | My Account | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ⬜ Not built |
 | Volunteers | `/ngo/volunteers` | NGO | W-List | ⬜ Not built |
 | Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ⬜ Not built |
@@ -572,7 +613,7 @@ screens sit behind auth.
 | `POST /ngos/register` | My NGO → Register form | ✅ Wired |
 | `GET /ngos/mine` **(added to the backend after My NGO's first build — see Progress log)** | My NGO → status card (pending / rejected / active), survives a reload | ✅ Wired |
 | `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
-| `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ⬜ Not wired |
+| `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ✅ Wired |
 | `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) | ⬜ Not wired |
 | `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side); the count also feeds the Profile sidebar badge | ✅ Wired |
 | `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
@@ -596,7 +637,9 @@ screens sit behind auth.
    ✅ Invitations (pending list, accept → sign out and re-login as a volunteer, decline, and the
    sidebar's real count badge) — the last `/app/profile/*` screen, so the citizen half of Phase 1
    is complete.
-6. ⬜ Organization Settings, My Account, Volunteers (NGO).
+6. ✅ Organization Settings (profile edit + deactivate; the region chips are a Phase 2 retrofit),
+   plus the `ngo_admin`-only nested route guard and the responsive NGO/Admin shell it needed — see
+   Progress log. ⬜ My Account, Volunteers (NGO).
 7. ⬜ Users & Accounts, NGOs (Admin).
 
 ### Testing
@@ -618,8 +661,14 @@ screens sit behind auth.
   decline refetches and stays signed in; accept signs out through a real logout with the NGO named
   in the `/login` message; `409`s surface the server's message and refetch; per-card in-flight
   state), the Profile sidebar's real invitation-count badge (shown for n>0, absent for 0/unknown/a
-  failed fetch), and the query cache being dropped on logout / account switch but kept on a plain
-  token refresh (`queryClient.test.ts`).
+  failed fetch), the query cache being dropped on logout / account switch but kept on a plain
+  token refresh (`queryClient.test.ts`), Organization Settings (pre-fill incl. server-omitted
+  contact fields; Save sends *only* changed fields, an emptied field as `""`, and makes no request
+  when trimming changes nothing; Discard; client validation before the network; server errors;
+  deactivate → refetch shows the server's status; cancel does nothing; `409` in the dialog), the
+  `ngo_admin`-only route guard (admin in; volunteer, citizen and platform admin each bounced to
+  their own landing route), and the responsive NGO/Admin shell (drawer closed by default and out of
+  the tab order, open/backdrop/Escape/link-click, desktop rail toggle intact).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -657,7 +706,15 @@ screens sit behind auth.
   that leaves the account a citizen, a real accept whose promotion is confirmed by reading the
   account's role back from the database (`ngo_volunteer`, `ngo_id` set) and whose re-login really
   lands on `/ngo/dashboard`, and a real `409 "invitation is not pending"` provoked by changing the
-  row under an open page.
+  row under an open page. **Organization Settings is the second such spec**
+  (`e2e/ngo-organization-settings.spec.ts`): a registered account is made the `ngo_admin` of a
+  seeded active `E2E` NGO — the state a real admin approval leaves — and logs in through the real
+  UI. It loads the real values, saves and survives a hard reload with the row read back from the
+  database, proves the partial patch on the real backend (clearing the email leaves the name and
+  phone untouched), shows the server's lower-casing of the email, confirms validation never calls
+  the network, and deactivates for real (cancel does nothing; confirm flips the row to
+  `deactivated` and signs nobody out). A seeded `ngo_volunteer` of the same NGO sees no sidebar link
+  and is bounced to `/ngo/dashboard` when visiting the URL directly.
   - ⬜ Still not possible: a full "register → really verify via the real OTP → land in the app" E2E
     path and "request reset → really reset → log in with the new password" — both need a real
     OTP/reset token, only server-logged (Redis holds a hash). The DB-seeding helper is the
@@ -670,13 +727,19 @@ screens sit behind auth.
     covered for the *citizen* half; the NGO-admin half (sending the invitation from
     `POST /ngo/volunteers/invitations`) is blocked on the Volunteers screen (steps 6–7 above).
 - ⬜ Manual: 401-refresh-retry against a real expired token.
+- ⚠ Known environmental flake, not a code fault: with the default 4 Playwright workers on a busy
+  machine (macOS background jobs pegging the CPU), a fresh page's first `page.goto` can exceed the
+  30s test timeout and fail as `net::ERR_ABORTED` — a *different* test each run, while `curl` to the
+  dev server stays instant. The same suite passes fully with `npx playwright test --workers=2`.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
 met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
 Profile, Account Settings, My NGO, and Invitations are real and tested — every citizen
-`/app/profile/*` screen this phase owns; the NGO/admin account-lifecycle screens (including the
-admin-approval half of NGO registration and the NGO side of volunteer invitations) remain.
+`/app/profile/*` screen this phase owns — plus the first NGO screen, Organization Settings; the
+remaining NGO/admin account-lifecycle screens (My Account, Volunteers, Users & Accounts, NGOs —
+including the admin-approval half of NGO registration and the NGO side of volunteer invitations)
+remain.
 
 ---
 
