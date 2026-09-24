@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusIcon, XIcon } from '@phosphor-icons/react'
+import { PlusIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { Notice } from '@/components/ui/notice'
 import { InviteVolunteerDialog } from '@/features/volunteers/InviteVolunteerDialog'
 import { RemoveVolunteerDialog } from '@/features/volunteers/RemoveVolunteerDialog'
 import { VolunteerRoster } from '@/features/volunteers/VolunteerRoster'
@@ -127,31 +128,13 @@ export function VolunteersPage() {
       </div>
 
       {!canInvite && (
-        <div
-          role="status"
-          className="rounded-sm border border-status-caution bg-status-caution-tint px-3.5 py-2.5 font-body text-body-sm text-ink-900"
-        >
+        <Notice tone="caution">
           Your organisation isn't active, so it can't invite new volunteers. Existing volunteers can still be
           removed.
-        </div>
+        </Notice>
       )}
 
-      {notice && (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-sm border border-status-safe bg-status-safe-tint px-3.5 py-2.5 font-body text-body-sm text-ink-900"
-        >
-          <span className="min-w-0 flex-1">{notice}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="flex size-5 flex-none items-center justify-center rounded-full text-ink-500 hover:bg-surface-sunken"
-            aria-label="Dismiss"
-          >
-            <XIcon size={12} aria-hidden="true" />
-          </button>
-        </div>
-      )}
+      {notice && <Notice onDismiss={() => setNotice(null)}>{notice}</Notice>}
 
       {rosterQuery.isPending ? (
         <VolunteersLoadState error={null} onRetry={() => void rosterQuery.refetch()} />

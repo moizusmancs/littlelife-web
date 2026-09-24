@@ -15,6 +15,8 @@ import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
 import { OrganizationSettingsPage } from '@/pages/ngo/OrganizationSettingsPage'
 import { VolunteersPage } from '@/pages/ngo/VolunteersPage'
+import { UsersPage } from '@/pages/admin/UsersPage'
+import { UserDetailPage } from '@/pages/admin/UserDetailPage'
 import { MyAccountPage } from '@/pages/account/MyAccountPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
@@ -127,8 +129,8 @@ export function AppRouter() {
             <Route path="/admin/reports" element={<PlaceholderPage title="Reports" phase="Phase 7 (mocked)" />} />
             <Route path="/admin/reports/:id" element={<PlaceholderPage title="Report Detail" phase="Phase 7 (mocked)" />} />
             <Route path="/admin/audit-log" element={<PlaceholderPage title="Audit Log" phase="Phase 7 (mocked)" />} />
-            <Route path="/admin/users" element={<PlaceholderPage title="Users & Accounts" phase="Phase 1" />} />
-            <Route path="/admin/users/:id" element={<PlaceholderPage title="Account Detail" phase="Phase 1 / 4" />} />
+            <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/users/:id" element={<UserDetailPage />} />
             <Route path="/admin/ngos" element={<PlaceholderPage title="NGOs" phase="Phase 1" />} />
             <Route path="/admin/ngos/:id" element={<PlaceholderPage title="NGO Detail" phase="Phase 1" />} />
             <Route path="/admin/regions" element={<PlaceholderPage title="Regions" phase="Phase 2" />} />

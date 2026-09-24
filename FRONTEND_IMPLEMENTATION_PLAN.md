@@ -12,10 +12,11 @@ change when that happens — that's the entire point of the service-layer split 
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
 onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), Account
 Settings (deactivate/delete), My NGO (register + live status), Invitations, and — the first NGO
-screen — Organization Settings, My Account for both NGO staff and platform admins, and Volunteers
-(the roster, invite, and remove). That closes out the full auth-screen set plus every citizen
-`/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's build order) and all of the NGO
-half of step 6. Not yet built: Users & Accounts, NGOs (the Admin half, step 7).
+screen — Organization Settings, My Account for both NGO staff and platform admins, Volunteers
+(the roster, invite, and remove), and — the first Admin screens — Users & Accounts with its account
+detail. That closes out the full auth-screen set plus every citizen `/app/profile/*` screen this
+phase owns (steps 1–3 of Phase 1's build order), all of the NGO half of step 6, and half of step 7.
+Not yet built: NGOs (list, detail, approve/reject — the last Phase 1 screen).
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -227,6 +228,55 @@ short version.
   `403 "not a volunteer under your ngo"` because the roster changed after it loaded (E2E provokes
   exactly that by demoting the account in Postgres behind the open page).
 
+- **Users & Accounts (list + detail) builds the real fields, searches and filters on its own, and
+  adds the guards the backend lacks.** Pixel reference for the list: Batch 5 §5d (search, role
+  pills, a status dropdown, a table with uppercase 11px column labels, a rows-per-page footer). The
+  detail has no mockup, so it follows `WEB_DESIGN_PLAN.md` §6.4's text: profile summary, credibility,
+  moderation history, Suspend/Reactivate, + Log Moderation Action. **An account summary carries only
+  `id`, `email`, `role`, `status`, `email_verified` and two timestamps**, so the mockup's
+  name/handle/phone, Organisation, Region, Reports and Credibility columns, its "Credibility < 50%"
+  filter, and "Invite admin" (no route) are not built, and the detail has no name (profile names have
+  no admin-side route). **Search and the role filter are done client-side, because the API can't:**
+  `GET /admin/accounts` takes only `limit`/`offset` — the spec's "Search / role filter → `GET
+  /admin/accounts?...`" isn't real. Rather than pretend a page of 20 is the platform,
+  `getAllAccounts()` loads every account (pages of 100, in parallel after the first, de-duplicated
+  by id in case signups shift the offsets, capped at 5,000 with a visible notice if it ever
+  truncates) and the screen searches (email or a pasted id), filters (role, status) and pages that.
+  Fine for a few thousand accounts, wrong past that; the real fix is server-side `q`/`role`/`status`
+  parameters, and `getAllAccounts` is then the one function to swap. (When this was built the dev
+  database held ~1,050 accounts, mostly E2E residue, so it ran for real at 11 requests a load; after
+  the clean-up described in the debug-hook entry it holds ~100 and a load is one request.) **Status has a fourth
+  value the doc omits, `pending_verification`** — 446 of ~980 accounts were in it when this was
+  built; it's typed, badged and filterable (the Volunteers roster got the same shared badge).
+  **Guards the backend doesn't have, added in the UI.** Verified against the real backend:
+  `PATCH /admin/accounts/{id}/status` has no self- or role-guard — an admin suspending *themselves*
+  gets `200` and is locked out on the spot (`403 "account is not active"`), and nothing stops
+  suspending another admin or the last super admin. Your own account therefore gets no status or log
+  controls (a moderation entry against yourself is a `400` server-side anyway) and says why;
+  suspending another platform admin is allowed, and its dialog says it removes their console access.
+  `reactivate` flips *any* non-active status to `active`, so on a `pending_verification` account it
+  would activate it without the email ever being verified (verified: it comes back `active` with
+  `email_verified: false`); Reactivate is offered only for suspended and deactivated accounts, and
+  its dialog warns when the email is still unverified. Note the consequence: an unverified account
+  that is suspended can only come back as `active`-but-unverified, never to `pending_verification`.
+  **One confirmation, both effects.** The moderation log is a separate append-only record that does
+  *not* follow status changes (its own doc says a UI should almost always do both), so Suspend/
+  Reactivate asks for a required reason and, once the status change succeeds, saves it as a
+  `suspend`/`unblock` log entry. The outcomes are kept apart on purpose: a `409` (already in that
+  state — someone else got there first) is not an error, so it says so and refreshes; and if the
+  status changed but the log entry didn't, the notice says the account **was** changed and where to
+  record it, rather than an error that invites a second, failing attempt. The separate "Log
+  moderation action" dialog (warn/suspend/block/unblock + reason) says plainly that it doesn't
+  change the status. **Credibility is the score only.** `GET /accounts/{id}/trust-score` reports an
+  implicit `0` with no `updated_at` for an account with no stored row — "never scored", not "scored
+  zero" — so that shows as "Not scored yet"; the itemised history (`credibility_events`) is a later
+  backend phase and the card says so. The bar assumes 0–100, which every stored score fits (the API
+  states no scale). **Recorded-by names:** moderation entries carry only the recording admin's
+  account id, so the few distinct ids are resolved to emails through `GET /admin/accounts/{id}`
+  (cached) — "You" for yourself, a short id if a lookup fails. **The view lives in the URL** (search,
+  role, status, page, rows per page), so a reload or Back from an account lands on the same view;
+  see the real bug below for why that's mirrored from state rather than driven by it.
+
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
   mandatory second gate, chained after verification. `RequireRole` (`src/routes/guards.tsx`) now
@@ -271,7 +321,14 @@ short version.
   admin was originally inserted with **no password hash**, which the backend couldn't load (a `500`
   on any query touching it, including the default page of `GET /admin/accounts`; 40 such
   `e2e-founder-*` rows had piled up before it was noticed). Founders now copy the invited account's
-  hash, so new runs no longer create unloadable accounts; the old rows remain until cleaned up. This makes My NGO's stubbed states
+  hash, so new runs no longer create unloadable accounts. **Cleaned up once, by hand:** after a
+  dry run in a rolled-back transaction, all 1,086 `e2e-…@example.com` accounts and 310 `E2E ` NGOs
+  (with their profiles, alert preferences, trust scores, moderation entries, invitations and refresh
+  tokens) were deleted in one guarded transaction — the dev database went from 1,189 to 103 accounts
+  and 326 to 16 NGOs, every real row untouched, and before deleting anything it was checked that no
+  foreign key crossed the test/real boundary in either direction. **Nothing deletes them
+  automatically**: a full E2E run adds a hundred or so accounts, so they accumulate again (and the
+  Users & Accounts list grows with them, since it loads every account). This makes My NGO's stubbed states
   (pending/rejected/active) replaceable with real ones — a follow-up, not yet done.)
 - **`ProfileLayout` — a new shared shell for every `/app/profile/*` screen**, nested inside
   `CitizenLayout`'s own `<Outlet>` (so it only owns the sidebar/content split, not the top nav).
@@ -401,6 +458,23 @@ without its generated code.
   width is `calc(100% - 2rem)` (still capped at the 440px max) and `DialogTitle` reserves padding at
   its end. Wrapping of emails inside the roster rows also moved from `break-all` (which chopped them
   mid-word) to `overflow-wrap: anywhere` (which breaks at the hyphens first).
+- **The accounts list's filters silently undid each other when changed in the same tick.** React
+  Router's `setSearchParams` updater is handed the params of the *last render*, so clicking a role
+  pill and then typing in search before React re-rendered made the second update rebuild from stale
+  params and drop the first. It surfaced in E2E ("Citizen" stayed pressed after clicking "All",
+  because Playwright acts faster than a person), but a quick user can hit it. Fixed by making React
+  state the source of truth — read from the URL once, mirrored back to it by an effect — with a unit
+  test that fires two changes inside one `act` (which reproduces it in jsdom).
+- **The accounts table's columns drifted from row to row.** Each row is its own grid and its last
+  column was `auto`, so it sized to that row's buttons: a Reactivate row is wider than a Suspend
+  row, and the caller's own row has none, which pushed Role/Status/Created out of line with the
+  header and with each other. Caught in screenshots; the actions column is now fixed-width, with a
+  fixed slot for the status button so "View" lines up too.
+- **`Button`'s `asChild` prop has never worked.** It renders two children (the optional spinner and
+  the label wrapper) into Radix's `Slot`, which needs exactly one. Nothing used it until the list
+  wanted a link that looks like a button; that link uses `buttonVariants` instead (moved to
+  `button-variants.ts` so `button.tsx` still only exports a component). The prop itself is left as
+  found.
 
 ---
 
@@ -685,7 +759,7 @@ screens sit behind auth.
 | Organization Settings (profile + deactivate; region chips wait for Phase 2's picker) | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ✅ Built |
 | My Account (profile name, password, deactivate/delete — one page for all four staff roles) | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ✅ Built |
 | Volunteers (roster, invite, remove — `ngo_admin` only) | `/ngo/volunteers` | NGO | W-List | ✅ Built |
-| Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ⬜ Not built |
+| Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ✅ Built |
 | NGOs (+ detail) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail | ⬜ Not built |
 
 ### Backend routes (all ✅ built — `api/00-identity.md`)
@@ -705,7 +779,7 @@ screens sit behind auth.
 | `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ✅ Wired |
 | `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) — the last one is labelled "Remove" in the UI since it doesn't deactivate the account | ✅ Wired |
 | `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side); the count also feeds the Profile sidebar badge | ✅ Wired |
-| `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
+| `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts — the list pages through everything with `limit=100` and searches/filters client-side (the API can't); status is Suspend/Reactivate only (`block`/`unblock` are synonyms) | ✅ Wired |
 
 ### Build steps
 1. ✅ **Complete.** Login/Register/OTP/Forgot/Reset Password all wired for real immediately (no
@@ -730,7 +804,7 @@ screens sit behind auth.
    plus the `ngo_admin`-only nested route guard and the responsive NGO/Admin shell it needed — see
    Progress log. ✅ My Account (both roles' routes; see Progress log). ✅ Volunteers (NGO) — the roster,
    invite and remove, `ngo_admin` only; see Progress log for the three backend gaps it surfaced.
-7. ⬜ Users & Accounts, NGOs (Admin).
+7. ✅ Users & Accounts (list + detail, with the moderation history and credibility card it embeds — see Progress log). ⬜ NGOs (Admin).
 
 ### Testing
 - ✅ Component: form validation (Zod schemas matching each route's documented required fields),
@@ -772,7 +846,19 @@ screens sit behind auth.
   stays; an organisation-lookup failure still leaves Invite available; remove confirms first, sends
   the right account id, refetches, and on a stale-roster `403` shows the server's message and
   refreshes; cancel does nothing), plus the sidebar hiding Volunteers and Organization Settings from
-  an `ngo_volunteer` and showing both to an `ngo_admin`.
+  an `ngo_volunteer` and showing both to an `ngo_admin`, and Users & Accounts (the filter, count and
+  which-status-action logic as pure functions — search matches email or id case-insensitively,
+  Reactivate is never offered for a pending-verification account, nothing at all for your own; the
+  toolbar, table with the own row marked and given no action, pagination ranges, the load/no-match
+  states; the status dialog's copy per action and per role with the reason required and trimmed; the
+  log dialog; the detail's parts — a real score vs "Not scored yet" vs a stored zero, history states,
+  not-found vs load error; `getAllAccounts` for one page, none, many, offset-drift de-duplication
+  and the safety cap; the list page — every page loaded, search across all of them, role/status
+  filters, clear, URL state read and clamped, two changes in one tick, paging and filter-resets-page,
+  suspend/reactivate including a failed log entry, a 409, a refused change and a clean reopen; and
+  the detail page — real fields, recording admins named, 404/400 vs a real error, per-card failures
+  that leave the rest alone, suspend/reactivate, your own account, and a log entry leaving status
+  untouched).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -842,7 +928,21 @@ screens sit behind auth.
   open page gets the real `403`, and a deactivated organisation shows no Invite button but keeps its
   roster and removal. A seeded `ngo_volunteer` has no sidebar link, is bounced from the URL, and a
   direct `GET /ngo/volunteers` with their real token returns the real `403` — so the gate is proven
-  on both sides.
+  on both sides. **Users & Accounts is the fifth** (`e2e/admin-users.spec.ts`), a seeded platform
+  admin against the real ~1,000-account list: a fresh registration is found by email with its real
+  `Pending verification` status; role and status filters and the no-match state work; paging reaches
+  21–40 and the breadcrumb from an account returns to the same page; Suspend and Reactivate from a row
+  need a reason, with the status and the moderation log read back from Postgres; a stored credibility
+  score shows, and an unscored account says "Not scored yet"; an unknown and a malformed id both give
+  "not found"; suspending from the detail page really locks the citizen out (their login is refused
+  with "account is not active" in a second browser session) until reactivated, and the history lists
+  both entries, newest first, as "You"; logging a moderation action leaves the status alone; another
+  admin's entry (recorded through the API) is shown under their real email; an account that changed
+  behind the open page gets the real `409`, reported as "already suspended" with nothing logged; your
+  own account has no controls; and an NGO admin is bounced from the URL and gets a real `403` from
+  the API. Registrations there use the standalone `request` fixture, never `page.request`: a register
+  call sets the new account's session cookie, which in the shared jar silently replaced the signed-in
+  admin's.
   - ⬜ Still not possible: a full "register → really verify via the real OTP → land in the app" E2E
     path and "request reset → really reset → log in with the new password" — both need a real
     OTP/reset token, only server-logged (Redis holds a hash). The DB-seeding helper is the
@@ -869,16 +969,25 @@ screens sit behind auth.
   fix** — one run, but consistent with the memory-pressure explanation, and it shows the suite is
   green on the new backend code. It was never the backend: the Go process hadn't been restarted
   during the failing runs, and the failures are browser-side aborts before any API call. Use
-  `--workers=1` on this machine when a clean result matters.
+  `--workers=1` on this machine when a clean result matters. **A later full run sharpened the
+  mechanism, and showed `--workers=1` reduces this but doesn't eliminate it:** with Users & Accounts'
+  14 new tests (79 in all, 6.2 min, one worker) 77 passed and 2 failed — verify-email's resend and
+  Volunteers' stale-roster test — each as `Test timeout of 30000ms exceeded` *while `page.goto` was
+  still waiting for `load`*. So the `ERR_ABORTED` is what Playwright reports when the 30 s test
+  timeout tears down a navigation that had not finished, i.e. the fresh page's load (hundreds of
+  unbundled modules from Vite) stalled for the whole budget; it isn't a spontaneous abort. Both tests
+  pass when re-run alone (9.5 s), and the machine still showed ~6 GB of swap in use and a load average
+  near 4 with none of this running. Read a lone `goto` timeout in a long run as this, not a
+  regression; re-run those tests before suspecting the code.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
 met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
 Profile, Account Settings, My NGO, and Invitations are real and tested — every citizen
 `/app/profile/*` screen this phase owns — plus Organization Settings and My Account for the NGO
-and admin consoles, and Volunteers (so the NGO side of volunteer invitations is real too); the
-remaining account-lifecycle screens (Users & Accounts, NGOs — including the admin-approval half of
-NGO registration) remain.
+and admin consoles, Volunteers (so the NGO side of volunteer invitations is real too), and Users &
+Accounts (the first Admin screens, with moderation); the one remaining account-lifecycle screen is
+NGOs — including the admin-approval half of NGO registration.
 
 ---
 
@@ -1006,8 +1115,8 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 | `POST /safety-connections`, `GET /safety-connections`, `PATCH .../accept`, `PATCH .../decline`, `DELETE /safety-connections/{id}` | `06-trust.md` | Safety Groups |
 | `WS /ws/safety-connections/location` | `06-trust.md` | Safety Group Detail's live-location toggle — first real-time feature, see build note below |
 | `GET /trust-score` | `06-trust.md` | Credibility |
-| `GET /accounts/{id}/trust-score` | `06-trust.md` | NGO/Admin embedded credibility badge |
-| `POST /admin/accounts/{id}/moderation-actions`, `GET /admin/accounts/{id}/moderation-actions` | `06-trust.md` | Admin Account Detail (ships Phase 1, retrofit this panel in) |
+| `GET /accounts/{id}/trust-score` | `06-trust.md` | NGO/Admin embedded credibility badge — Admin Account Detail's credibility card is **built (Phase 1)**; the reusable `<CredibilityBadge>` for NGO Incidents is still to do |
+| `POST /admin/accounts/{id}/moderation-actions`, `GET /admin/accounts/{id}/moderation-actions` | `06-trust.md` | Admin Account Detail — **built in Phase 1** with Users & Accounts (history list, Log dialog, and the reason saved by Suspend/Reactivate) |
 | `GET /profile`, `PATCH /profile` | `05-profiling.md` | Edit Profile — **the service-layer functions (`getProfile`/`updateProfile`) and the `name` field already exist**, pulled forward into Phase 1 for the onboarding gate; this phase is just the standalone Edit Profile screen reusing them, no new backend work |
 | `GET /profile/alert-preferences`, `PATCH /profile/alert-preferences` | `05-profiling.md` | Alert Preferences (auto-saves on change, no Save button, per spec) |
 | `GET /profile/activity-timeline` | roadmap "No Single Owner" — hosted in `internal/profiling`, reads across contexts | Activity Timeline |

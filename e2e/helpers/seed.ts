@@ -231,3 +231,36 @@ export function readInvitationStatuses(invitedEmail: string): string[] {
   )
   return out === '' ? [] : out.split('\n')
 }
+
+/** Read-only: an `e2e-` account's id, for building `/admin/users/:id` URLs. */
+export function readAccountId(email: string): string {
+  assertE2eEmail(email)
+  const id = psql(`SELECT id FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL`)
+  if (!id) throw new Error(`no account found for ${email}`)
+  return id
+}
+
+/** Gives an `e2e-` account a stored credibility score (the row `GET /accounts/{id}/trust-score`
+ *  reads; without one the backend reports an implicit, never-scored `0`). */
+export function seedTrustScore(email: string, score: number) {
+  assertE2eEmail(email)
+  const id = psql(`
+    INSERT INTO trust_scores (account_id, score)
+    SELECT id, ${Math.trunc(score)} FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!id) throw new Error(`no account found to score: ${email}`)
+}
+
+/** Read-only: the moderation log entries recorded against an `e2e-` account, oldest first, to
+ *  assert a log action really reached the database. */
+export function readModerationActions(email: string): Array<{ type: string; reason: string }> {
+  assertE2eEmail(email)
+  const out = psql(`
+    SELECT m.action_type || '|' || m.reason FROM moderation_actions m
+    JOIN accounts a ON a.id = m.target_account_id
+    WHERE lower(a.email) = lower(${lit(email)}) ORDER BY m.created_at`)
+  return out === '' ? [] : out.split('\n').map((line) => {
+    const [type, ...reason] = line.split('|')
+    return { type, reason: reason.join('|') }
+  })
+}

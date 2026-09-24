@@ -1,14 +1,8 @@
 import { format, parseISO } from 'date-fns'
 import { UserMinusIcon } from '@phosphor-icons/react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { AccountStatus, Volunteer } from '@/api/identity'
-
-const STATUS: Record<AccountStatus, { label: string; tone: 'safe' | 'caution' | 'critical' }> = {
-  active: { label: 'Active', tone: 'safe' },
-  suspended: { label: 'Suspended', tone: 'critical' },
-  deactivated: { label: 'Deactivated', tone: 'caution' },
-}
+import { AccountStatusBadge } from '@/features/account/AccountStatusBadge'
+import type { Volunteer } from '@/api/identity'
 
 /** One shared column template so the header and every row line up from `md` up. */
 const COLUMNS = 'md:grid-cols-[minmax(0,1fr)_7rem_9.5rem_auto]'
@@ -44,50 +38,47 @@ export function VolunteerRoster({ volunteers, onRemove }: VolunteerRosterProps) 
       </div>
 
       <ul>
-        {volunteers.map((volunteer) => {
-          const status = STATUS[volunteer.status]
-          return (
-            <li
-              key={volunteer.id}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-surface-border px-4 py-3.5 last:border-b-0 md:gap-x-4 md:px-5 ${COLUMNS}`}
-            >
-              <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3">
-                <div
-                  className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700"
-                  aria-hidden="true"
-                >
-                  {volunteer.email.slice(0, 2).toUpperCase()}
-                </div>
-                <span className="min-w-0 font-body text-body-md font-medium text-ink-900 [overflow-wrap:anywhere]">
-                  {volunteer.email}
-                </span>
+        {volunteers.map((volunteer) => (
+          <li
+            key={volunteer.id}
+            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-surface-border px-4 py-3.5 last:border-b-0 md:gap-x-4 md:px-5 ${COLUMNS}`}
+          >
+            <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3">
+              <div
+                className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-label font-semibold text-primary-700"
+                aria-hidden="true"
+              >
+                {volunteer.email.slice(0, 2).toUpperCase()}
               </div>
+              <span className="min-w-0 font-body text-body-md font-medium text-ink-900 [overflow-wrap:anywhere]">
+                {volunteer.email}
+              </span>
+            </div>
 
-              <div className="col-span-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 ps-12 md:contents">
-                <div className="flex items-center md:col-start-2 md:row-start-1">
-                  <Badge tone={status.tone}>{status.label}</Badge>
-                </div>
-                <span className="font-body text-body-sm text-ink-500 md:col-start-3 md:row-start-1">
-                  <span className="md:hidden">Account created </span>
-                  {format(parseISO(volunteer.created_at), 'd MMM yyyy')}
-                </span>
+            <div className="col-span-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 ps-12 md:contents">
+              <div className="flex items-center md:col-start-2 md:row-start-1">
+                <AccountStatusBadge status={volunteer.status} />
               </div>
+              <span className="font-body text-body-sm text-ink-500 md:col-start-3 md:row-start-1">
+                <span className="md:hidden">Account created </span>
+                {format(parseISO(volunteer.created_at), 'd MMM yyyy')}
+              </span>
+            </div>
 
-              <div className="col-start-2 row-start-1 flex justify-end md:col-start-4">
-                <Button
-                  type="button"
-                  variant="dangerOutline"
-                  size="sm"
-                  onClick={() => onRemove(volunteer)}
-                  aria-label={`Remove ${volunteer.email} from your organisation`}
-                >
-                  <UserMinusIcon size={16} aria-hidden="true" />
-                  Remove
-                </Button>
-              </div>
-            </li>
-          )
-        })}
+            <div className="col-start-2 row-start-1 flex justify-end md:col-start-4">
+              <Button
+                type="button"
+                variant="dangerOutline"
+                size="sm"
+                onClick={() => onRemove(volunteer)}
+                aria-label={`Remove ${volunteer.email} from your organisation`}
+              >
+                <UserMinusIcon size={16} aria-hidden="true" />
+                Remove
+              </Button>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   )

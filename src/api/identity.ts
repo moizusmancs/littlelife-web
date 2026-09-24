@@ -367,9 +367,11 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return res.data
 }
 
-/** The account's lifecycle status — what `GET /ngo/volunteers` reports per row. There is no
- *  separate "volunteer status": a suspended or deactivated account is still on the roster. */
-export type AccountStatus = 'active' | 'suspended' | 'deactivated'
+/** An account's lifecycle status. The doc lists only the first three, but real accounts also sit in
+ *  `pending_verification` (registered, email not yet verified — most accounts in a dev database).
+ *  `GET /ngo/volunteers` reports it per row too: there is no separate "volunteer status", so a
+ *  suspended or deactivated account is still on the roster. */
+export type AccountStatus = 'active' | 'pending_verification' | 'suspended' | 'deactivated'
 
 export interface Volunteer {
   id: string
@@ -425,5 +427,104 @@ export async function inviteVolunteer(email: string): Promise<SentVolunteerInvit
  */
 export async function removeVolunteer(accountId: string): Promise<{ message: string }> {
   const res = await apiClient.patch<{ message: string }>(`/ngo/volunteers/${accountId}/deactivate`)
+  return res.data
+}
+
+/** One account as the admin routes return it (`GET /admin/accounts`, `GET /admin/accounts/{id}`,
+ *  and the body of a status change). No name, organisation or region: those live in other
+ *  contexts and have no admin-side route. */
+export interface AccountSummary {
+  id: string
+  email: string
+  role: Role
+  status: AccountStatus
+  email_verified: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface AccountsPage {
+  accounts: AccountSummary[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export const ADMIN_ACCOUNTS_QUERY_KEY = ['admin', 'accounts'] as const
+export const adminAccountQueryKey = (id: string) => ['admin', 'account', id] as const
+
+const ACCOUNTS_PAGE_SIZE = 100
+/** Safety cap on how many accounts the list screen will pull in one go (50 pages of 100). */
+const MAX_ACCOUNTS_LOADED = 5000
+
+/**
+ * GET /admin/accounts?limit=&offset= — `admin`/`super_admin` only. Plain offset pagination, newest
+ * first, over every non-deleted account. `limit` is capped at 100 (anything outside `1..100` is
+ * silently replaced by 20) and `total` counts *all* accounts, not just this page. There is **no**
+ * search, role or status parameter — anything else in the query string is ignored.
+ */
+export async function getAccountsPage(limit: number, offset: number): Promise<AccountsPage> {
+  const res = await apiClient.get<AccountsPage>('/admin/accounts', { params: { limit, offset } })
+  return res.data
+}
+
+export interface AllAccounts {
+  accounts: AccountSummary[]
+  /** The server's count of every account. Larger than `accounts.length` only when the safety cap
+   *  cut the load short. */
+  total: number
+}
+
+/**
+ * Every account, newest first, assembled from pages of 100 — because the API can't search or
+ * filter, the list screen does that itself, over this. Fine for a few thousand accounts; past
+ * `MAX_ACCOUNTS_LOADED` it stops and `total` says how many it left out. The right long-term fix
+ * is server-side `q`/`role`/`status` parameters, at which point this is the one function to swap.
+ * Pages are fetched in parallel after the first (which supplies `total`), and rows are de-duplicated
+ * by id in case accounts were added between requests and shifted the offsets.
+ */
+export async function getAllAccounts(): Promise<AllAccounts> {
+  const first = await getAccountsPage(ACCOUNTS_PAGE_SIZE, 0)
+  const wanted = Math.min(first.total, MAX_ACCOUNTS_LOADED)
+  const offsets: number[] = []
+  for (let offset = ACCOUNTS_PAGE_SIZE; offset < wanted; offset += ACCOUNTS_PAGE_SIZE) offsets.push(offset)
+  const rest = await Promise.all(offsets.map((offset) => getAccountsPage(ACCOUNTS_PAGE_SIZE, offset)))
+
+  const seen = new Set<string>()
+  const accounts: AccountSummary[] = []
+  for (const page of [first, ...rest]) {
+    for (const account of page.accounts) {
+      if (!seen.has(account.id)) {
+        seen.add(account.id)
+        accounts.push(account)
+      }
+    }
+  }
+  return { accounts, total: first.total }
+}
+
+/**
+ * GET /admin/accounts/{id} — `400 "invalid account id"` for a malformed id, `404 "account not
+ * found"` for an unknown or soft-deleted one.
+ */
+export async function getAccount(id: string): Promise<AccountSummary> {
+  const res = await apiClient.get<AccountSummary>(`/admin/accounts/${id}`)
+  return res.data
+}
+
+/** What the admin UI offers. The API also accepts `block`/`unblock`, true synonyms for these two. */
+export type AccountStatusAction = 'suspend' | 'reactivate'
+
+/**
+ * PATCH /admin/accounts/{id}/status — returns the updated account. Suspending revokes every one of
+ * the account's refresh tokens immediately. **No guard of any kind:** an admin can suspend their
+ * own account (verified: `200`, then locked out with `403 "account is not active"`), another admin,
+ * or the last super admin, and `reactivate` flips *any* non-active status to `active` — including a
+ * suspended account that was still `pending_verification`, which comes back `active` with
+ * `email_verified: false`. `409 "account already suspended"` / `"account already active"` mean the
+ * account is already in the requested state, so callers refresh rather than report a failure.
+ */
+export async function updateAccountStatus(id: string, action: AccountStatusAction): Promise<AccountSummary> {
+  const res = await apiClient.patch<AccountSummary>(`/admin/accounts/${id}/status`, { action })
   return res.data
 }
