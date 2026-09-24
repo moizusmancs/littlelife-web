@@ -378,3 +378,220 @@ export function seedHomeRegion(email: string, regionId: string) {
     RETURNING id`)
   if (!updated) throw new Error(`could not set a home region for ${email} (not an E2E region?)`)
 }
+
+function assertE2eName(kind: string, name: string) {
+  if (!name.startsWith('E2E ')) throw new Error(`seed helper refuses a non-test ${kind} name: ${name}`)
+}
+
+const point = (lng: number, lat: number) => `ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)`
+
+/** Every place the map draws is seeded *inside an `E2E …` region* (the facility routes answer per region), and
+ *  the row itself is an `E2E …` name — so cleanup by name reaches exactly these and nothing real. */
+function assertE2eRegionId(regionId: string) {
+  const found = psql(`SELECT id FROM regions WHERE id = ${lit(regionId)}::uuid AND name LIKE 'E2E %'`)
+  if (!found) throw new Error(`seed helper refuses a region that is not an E2E region: ${regionId}`)
+}
+
+export interface SeedShelter {
+  name: string
+  lng: number
+  lat: number
+  capacityTotal: number
+  capacityCurrent: number
+  status?: 'open' | 'closed'
+  type?: 'shelter' | 'relief_center'
+  certification?: 'certified' | 'pending' | 'uncertified'
+}
+
+/** Seeds an `E2E …` shelter in an `E2E …` region; returns its id. */
+export function seedShelter(regionId: string, shelter: SeedShelter): string {
+  assertE2eName('shelter', shelter.name)
+  assertE2eRegionId(regionId)
+  return psql(`
+    INSERT INTO shelters (name, type, location, region_id, capacity_total, capacity_current, certification_status, status)
+    VALUES (${lit(shelter.name)}, ${lit(shelter.type ?? 'shelter')}, ${point(shelter.lng, shelter.lat)}, ${lit(regionId)}::uuid,
+            ${Number(shelter.capacityTotal)}, ${Number(shelter.capacityCurrent)}, ${lit(shelter.certification ?? 'certified')}, ${lit(shelter.status ?? 'open')})
+    RETURNING id`)
+}
+
+export interface SeedInfrastructure {
+  name: string
+  lng: number
+  lat: number
+  type?: 'hospital' | 'bridge' | 'utility'
+  status?: 'safe' | 'at_risk' | 'damaged'
+}
+
+/** Seeds an `E2E …` infrastructure row (hospital, bridge, utility) in an `E2E …` region; returns its id. */
+export function seedInfrastructure(regionId: string, item: SeedInfrastructure): string {
+  assertE2eName('infrastructure', item.name)
+  assertE2eRegionId(regionId)
+  return psql(`
+    INSERT INTO infrastructure (name, type, location, region_id, status)
+    VALUES (${lit(item.name)}, ${lit(item.type ?? 'hospital')}, ${point(item.lng, item.lat)}, ${lit(regionId)}::uuid, ${lit(item.status ?? 'safe')})
+    RETURNING id`)
+}
+
+export interface SeedEssentialLocation {
+  name: string
+  lng: number
+  lat: number
+  type?: 'atm' | 'grocery_store' | 'pharmacy'
+  /** When set, a status report is filed by this `e2e-` account so the place shows Open / Closed instead of "Status unknown". */
+  report?: { by: string; status: 'open' | 'closed' }
+}
+
+/** Seeds an `E2E …` essential location (ATM, grocery, pharmacy) in an `E2E …` region, optionally with one
+ *  status report from an `e2e-` account; returns its id. */
+export function seedEssentialLocation(regionId: string, place: SeedEssentialLocation): string {
+  assertE2eName('essential location', place.name)
+  assertE2eRegionId(regionId)
+  const id = psql(`
+    INSERT INTO essential_locations (name, type, location, region_id)
+    VALUES (${lit(place.name)}, ${lit(place.type ?? 'pharmacy')}, ${point(place.lng, place.lat)}, ${lit(regionId)}::uuid)
+    RETURNING id`)
+  if (place.report) {
+    assertE2eEmail(place.report.by)
+    const filed = psql(`
+      INSERT INTO essential_location_status_reports (essential_location_id, reported_by_account_id, status)
+      SELECT ${lit(id)}::uuid, a.id, ${lit(place.report.status)}
+      FROM accounts a WHERE lower(a.email) = lower(${lit(place.report.by)}) AND a.deleted_at IS NULL
+      RETURNING id`)
+    if (!filed) throw new Error(`no account ${place.report.by} to file the status report`)
+  }
+  return id
+}
+
+export type FloodRisk = 'low' | 'medium' | 'high'
+
+/**
+ * Seeds an *active* hazard zone in an `E2E …` region; returns its id. With `confidence` it is a model forecast
+ * (`ai_prediction`, backed by a `flood_predictions` row, as the flood pipeline writes them); without, it is a
+ * zone a person declared (`manual_admin`) and has no confidence — the two shapes the map has to tell apart.
+ */
+export function seedHazardZone(regionId: string, options: { ring: Array<[number, number]>; risk: FloodRisk; confidence?: number; status?: 'active' | 'resolved'; modelVersion?: string }): string {
+  assertE2eRegionId(regionId)
+  const wkt = `ST_GeomFromText(${lit(polygonWkt(options.ring))}, 4326)`
+  const status = options.status ?? 'active'
+  const modelVersion = options.modelVersion ?? 'e2e-model-1'
+  if (!modelVersion.startsWith('e2e-')) throw new Error(`seed helper refuses a model version that cleanup would not recognise: ${modelVersion}`)
+  const resolvedAt = status === 'resolved' ? 'now()' : 'NULL'
+  if (options.confidence === undefined) {
+    return psql(`
+      INSERT INTO hazard_zones (source, risk_level, boundary, region_id, status, resolved_at)
+      VALUES ('manual_admin', ${lit(options.risk)}, ${wkt}, ${lit(regionId)}::uuid, ${lit(status)}, ${resolvedAt})
+      RETURNING id`)
+  }
+  return psql(`
+    WITH prediction AS (
+      INSERT INTO flood_predictions (region_id, risk_level, confidence_score, model_version, valid_from, valid_until)
+      VALUES (${lit(regionId)}::uuid, ${lit(options.risk)}, ${Number(options.confidence)}, ${lit(modelVersion)}, now() - interval '1 hour', now() + interval '23 hours')
+      RETURNING id
+    )
+    INSERT INTO hazard_zones (source, risk_level, boundary, region_id, status, resolved_at, flood_prediction_id)
+    SELECT 'ai_prediction', ${lit(options.risk)}, ${wkt}, ${lit(regionId)}::uuid, ${lit(status)}, ${resolvedAt}, id FROM prediction
+    RETURNING id`)
+}
+
+export interface StoredShelter {
+  name: string
+  type: string
+  status: string
+  certification: string
+  capacityTotal: number
+  capacityCurrent: number
+  lng: number
+  lat: number
+}
+
+/** The stored row for an `E2E …` shelter — to prove a page shows what the database holds, not what the test assumed. */
+export function readShelter(id: string): StoredShelter {
+  const row = psql(`
+    SELECT json_build_object('name', name, 'type', type, 'status', status, 'certification', certification_status,
+      'capacityTotal', capacity_total, 'capacityCurrent', capacity_current, 'lng', ST_X(location), 'lat', ST_Y(location))
+    FROM shelters WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'`)
+  if (!row) throw new Error(`no E2E shelter ${id}`)
+  return JSON.parse(row) as StoredShelter
+}
+
+export interface StoredEssentialLocation {
+  name: string
+  type: string
+  lng: number
+  lat: number
+}
+
+/** The stored row for an `E2E …` essential location. */
+export function readEssentialLocation(id: string): StoredEssentialLocation {
+  const row = psql(`
+    SELECT json_build_object('name', name, 'type', type, 'lng', ST_X(location), 'lat', ST_Y(location))
+    FROM essential_locations WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'`)
+  if (!row) throw new Error(`no E2E essential location ${id}`)
+  return JSON.parse(row) as StoredEssentialLocation
+}
+
+/** Every status report filed against an `E2E …` essential location, oldest first, with the email of the account that filed it —
+ *  the API never returns who reported, so this is the only way to prove the report is really attributed to the person who pressed the button. */
+export function readEssentialReports(id: string): Array<{ status: string; by: string }> {
+  const rows = psql(`
+    SELECT COALESCE(json_agg(json_build_object('status', r.status, 'by', a.email) ORDER BY r.created_at), '[]'::json)
+    FROM essential_location_status_reports r
+    JOIN accounts a ON a.id = r.reported_by_account_id
+    JOIN essential_locations l ON l.id = r.essential_location_id
+    WHERE r.essential_location_id = ${lit(id)}::uuid AND l.name LIKE 'E2E %'`)
+  return JSON.parse(rows) as Array<{ status: string; by: string }>
+}
+
+/** Removes an `E2E …` essential location (and its reports) — to make a report land on a place that has just disappeared. */
+export function deleteEssentialLocation(id: string) {
+  psql(`
+    WITH target AS (SELECT id FROM essential_locations WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'),
+    gone AS (DELETE FROM essential_location_status_reports WHERE essential_location_id IN (SELECT id FROM target))
+    DELETE FROM essential_locations WHERE id IN (SELECT id FROM target)`)
+}
+
+
+export interface StoredHazardZone {
+  source: string
+  risk: string
+  status: string
+  resolvedAt: string | null
+  createdBy: string | null
+  confidence: number | null
+  modelVersion: string | null
+  vertices: number
+}
+
+/** The stored row for a hazard zone that belongs to an `E2E …` region or was declared by an `e2e-` account — with the declaring account's
+ *  email and the paired prediction's confidence, which the API's own responses don't all carry. */
+export function readHazardZone(id: string): StoredHazardZone {
+  const row = psql(`
+    SELECT json_build_object('source', z.source, 'risk', z.risk_level, 'status', z.status, 'resolvedAt', z.resolved_at,
+      'createdBy', a.email, 'confidence', p.confidence_score, 'modelVersion', p.model_version, 'vertices', ST_NPoints(z.boundary))
+    FROM hazard_zones z
+    LEFT JOIN accounts a ON a.id = z.created_by
+    LEFT JOIN flood_predictions p ON p.id = z.flood_prediction_id
+    WHERE z.id = ${lit(id)}::uuid
+      AND (z.region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %') OR a.email LIKE 'e2e-%')`)
+  if (!row) throw new Error(`no E2E hazard zone ${id}`)
+  return JSON.parse(row) as StoredHazardZone
+}
+
+/** The ids of the active zones an `e2e-` account has declared, newest first. */
+export function readZonesDeclaredBy(email: string): string[] {
+  assertE2eEmail(email)
+  const out = psql(`
+    SELECT COALESCE(json_agg(z.id ORDER BY z.detected_at DESC), '[]'::json)
+    FROM hazard_zones z JOIN accounts a ON a.id = z.created_by
+    WHERE lower(a.email) = lower(${lit(email)})`)
+  return JSON.parse(out) as string[]
+}
+
+/** Resolves an `E2E …` zone straight in the database — to make the page's Resolve land on a zone someone else has already resolved. */
+export function resolveZoneInDb(id: string) {
+  const updated = psql(`
+    UPDATE hazard_zones SET status = 'resolved', resolved_at = now()
+    WHERE id = ${lit(id)}::uuid AND region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
+    RETURNING id`)
+  if (!updated) throw new Error(`no E2E zone to resolve: ${id}`)
+}

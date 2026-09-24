@@ -193,9 +193,10 @@ export function polygonFromGeometry(geometry: GeoJsonGeometry): PolygonGeometry 
  * that says what to do: invalid JSON, anything but a `Polygon` (a `MultiPolygon` would be a `500`
  * — the column holds a single polygon), a ring that isn't closed or has fewer than four points, a
  * point outside ±180° / ±90°, and a ring that crosses or touches itself. A third value per point
- * (altitude) is dropped, since the column is 2-D. All problems are reported together.
+ * (altitude) is dropped, since the column is 2-D. All problems are reported together. `subject` names what the boundary belongs to
+ * in the two messages that say so (a region, by default; a hazard zone).
  */
-export function parseBoundary(text: string): ParsedBoundary {
+export function parseBoundary(text: string, subject = 'region'): ParsedBoundary {
   if (text.trim() === '') return { ok: false, errors: ['Paste a GeoJSON Polygon, or upload a .geojson file.'] }
 
   let value: unknown
@@ -214,7 +215,7 @@ export function parseBoundary(text: string): ParsedBoundary {
       if (features.length !== 1) {
         return {
           ok: false,
-          errors: [`This FeatureCollection has ${features.length} features. A region has exactly one boundary, so give it a single polygon.`],
+          errors: [`This FeatureCollection has ${features.length} features. A ${subject} has exactly one boundary, so give it a single polygon.`],
         }
       }
       wrappedIn = 'FeatureCollection'
@@ -232,7 +233,7 @@ export function parseBoundary(text: string): ParsedBoundary {
   if (type === 'MultiPolygon') {
     return {
       ok: false,
-      errors: ["A MultiPolygon can't be saved: a region's boundary is stored as a single Polygon. Use one polygon (for example, the largest part)."],
+      errors: [`A MultiPolygon can't be saved: a ${subject}'s boundary is stored as a single Polygon. Use one polygon (for example, the largest part).`],
     }
   }
   if (type !== 'Polygon') {

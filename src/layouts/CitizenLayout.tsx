@@ -25,15 +25,16 @@ const NAV_LINKS = [
 
 /** Citizen Web's shell mirrors mobile's flatter IA as a top nav, not a sidebar — it should feel
  *  like the mobile app's tab bar translated up into a header (WEB_DESIGN_PLAN.md §4.1). Below
- *  768px (Tailwind's default `md`) the center links collapse into a hamburger menu. */
-export function CitizenLayout() {
+ *  768px (Tailwind's default `md`) the center links collapse into a hamburger menu. `fullBleed` is for screens that
+ *  own the whole area under the header (the map): no page padding or width cap, and the page itself never scrolls. */
+export function CitizenLayout({ fullBleed = false }: { fullBleed?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
   const { logout, isLoggingOut } = useLogout()
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '??'
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-base">
+    <div className={cn('flex flex-col bg-surface-base', fullBleed ? 'h-dvh overflow-hidden' : 'min-h-screen')}>
       <header className="sticky top-0 z-20 border-b border-surface-border bg-surface-raised">
         <div className="mx-auto flex h-16 max-w-360 items-center gap-4 px-4 md:px-6">
           <NavLink to="/app/home" className="flex flex-none items-center gap-2">
@@ -125,7 +126,7 @@ export function CitizenLayout() {
         )}
       </header>
 
-      <main className="mx-auto w-full max-w-360 flex-1 px-4 py-6 md:px-6">
+      <main className={fullBleed ? 'min-h-0 w-full flex-1' : 'mx-auto w-full max-w-360 flex-1 px-4 py-6 md:px-6'}>
         <Outlet />
       </main>
     </div>

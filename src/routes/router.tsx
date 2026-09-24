@@ -21,6 +21,11 @@ import { UserDetailPage } from '@/pages/admin/UserDetailPage'
 import { NgosPage } from '@/pages/admin/NgosPage'
 import { NgoDetailPage } from '@/pages/admin/NgoDetailPage'
 import { RegionsPage } from '@/pages/admin/RegionsPage'
+import { HazardZoneDetailPage } from '@/pages/admin/HazardZoneDetailPage'
+import { HazardZonesPage } from '@/pages/admin/HazardZonesPage'
+import { MapPage } from '@/pages/citizen/MapPage'
+import { ResourcesPage } from '@/pages/citizen/ResourcesPage'
+import { ShelterDetailPage } from '@/pages/citizen/ShelterDetailPage'
 import { MyAccountPage } from '@/pages/account/MyAccountPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
@@ -56,13 +61,16 @@ export function AppRouter() {
           {/* Optional last onboarding step (choose a home region, or skip) — full viewport, no nav
               chrome, and never forced: nothing in the backend requires a home region. */}
           <Route path="/app/onboarding/region" element={<OnboardingRegionPage />} />
+          {/* The map owns the whole area under the header: no page padding or scrolling. */}
+          <Route element={<CitizenLayout fullBleed />}>
+            <Route path="/app/map" element={<MapPage />} />
+          </Route>
           <Route element={<CitizenLayout />}>
             <Route path="/app/home" element={<PlaceholderPage title="Home" phase="Phase 8" />} />
-            <Route path="/app/map" element={<PlaceholderPage title="Map" phase="Phase 3" />} />
-            <Route path="/app/map/shelters/:id" element={<PlaceholderPage title="Shelter Detail" phase="Phase 3" />} />
+            <Route path="/app/map/shelters/:id" element={<ShelterDetailPage />} />
             <Route path="/app/community" element={<PlaceholderPage title="Community Feed" phase="Phase 5" />} />
             <Route path="/app/community/:incidentId" element={<PlaceholderPage title="Incident Detail" phase="Phase 5" />} />
-            <Route path="/app/resources" element={<PlaceholderPage title="Resources Hub" phase="Phase 6" />} />
+            <Route path="/app/resources" element={<ResourcesPage />} />
             <Route path="/app/resources/aid/:id" element={<PlaceholderPage title="Aid Request Detail" phase="Phase 6" />} />
             <Route path="/app/resources/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />
             <Route path="/app/resources/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
@@ -123,8 +131,8 @@ export function AppRouter() {
         <Route element={<RequireRole allowed={['admin', 'super_admin']} />}>
           <Route element={<OpsLayout role="admin" />}>
             <Route path="/admin/dashboard" element={<PlaceholderPage title="Admin Dashboard" phase="Phase 8" />} />
-            <Route path="/admin/hazard-zones" element={<PlaceholderPage title="Hazard Zones & Predictions" phase="Phase 3" />} />
-            <Route path="/admin/hazard-zones/:id" element={<PlaceholderPage title="Hazard Zone Detail" phase="Phase 3" />} />
+            <Route path="/admin/hazard-zones" element={<HazardZonesPage />} />
+            <Route path="/admin/hazard-zones/:id" element={<HazardZoneDetailPage />} />
             <Route path="/admin/incident-reports" element={<PlaceholderPage title="Incident Reports" phase="Phase 5" />} />
             <Route path="/admin/incident-reports/:id" element={<PlaceholderPage title="Incident Report Detail" phase="Phase 5" />} />
             <Route path="/admin/alerts" element={<PlaceholderPage title="Alerts & Broadcasts" phase="Phase 7 (mocked)" />} />
