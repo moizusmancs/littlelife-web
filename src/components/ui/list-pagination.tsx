@@ -1,9 +1,9 @@
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { PAGE_SIZES } from './accountFilters'
+import { PAGE_SIZES } from '@/lib/pagination'
 
-export interface AccountsPaginationProps {
+export interface ListPaginationProps {
   page: number
   pageSize: number
   /** Rows after filtering — what is being paged through. */
@@ -12,8 +12,9 @@ export interface AccountsPaginationProps {
   onPageSizeChange: (size: number) => void
 }
 
-/** Rows-per-page, "21–40 of 983" and previous/next — pixel reference Batch 5 §5d's footer. */
-export function AccountsPagination({ page, pageSize, total, onPageChange, onPageSizeChange }: AccountsPaginationProps) {
+/** Rows-per-page, "21–40 of 983" and previous/next — pixel reference Batch 5 §5d's footer. Shared by
+ *  every admin list; `total` is the row count after any filtering. */
+export function ListPagination({ page, pageSize, total, onPageChange, onPageSizeChange }: ListPaginationProps) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, total)
   const lastPage = Math.max(1, Math.ceil(total / pageSize))

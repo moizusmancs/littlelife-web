@@ -3,7 +3,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
+import { Notice, type PageNotice } from '@/components/ui/notice'
+import { AddRegionDialog } from '@/features/ngo/AddRegionDialog'
 import { DeactivateOrganizationDialog } from '@/features/ngo/DeactivateOrganizationDialog'
+import { OperationalRegionsCard } from '@/features/ngo/OperationalRegionsCard'
+import { RemoveRegionDialog } from '@/features/ngo/RemoveRegionDialog'
+import { useOperationalRegions } from '@/features/ngo/useOperationalRegions'
 import { OrganizationDangerZone } from '@/features/ngo/OrganizationDangerZone'
 import { OrganizationLoadState } from '@/features/ngo/OrganizationLoadState'
 import { OrganizationProfileCard } from '@/features/ngo/OrganizationProfileCard'
@@ -58,6 +63,10 @@ function buildPatch(values: OrganizationSettingsFormValues, ngo: NgoRegistration
  * changed fields (see `buildPatch`); if trimming leaves nothing actually different, it skips the
  * network entirely rather than tripping the API's "at least one field" 400.
  *
+ * The operational-regions card, its add picker and its remove confirmation are `useOperationalRegions`'s
+ * (the organisation's coverage is a separate `GET /ngo/me/regions`, so it loads and fails on its own
+ * without taking the settings form with it).
+ *
  * Deactivate refetches on success (and on failure, since the likeliest failure is a `409` because
  * it's already inactive) so the status badge and the danger zone always show the server's truth.
  * The backend has no status guard on edits, so a deactivated organisation stays editable here too.
@@ -67,6 +76,8 @@ export function OrganizationSettingsPage() {
   const [serverError, setServerError] = useState<string | null>(null)
   const [deactivateOpen, setDeactivateOpen] = useState(false)
   const [deactivateError, setDeactivateError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<PageNotice | null>(null)
+  const regions = useOperationalRegions({ onNotice: setNotice })
 
   const query = useQuery({ queryKey: NGO_ME_QUERY_KEY, queryFn: getMyNgo })
 
@@ -124,6 +135,12 @@ export function OrganizationSettingsPage() {
         </p>
       </div>
 
+      {notice && (
+        <Notice tone={notice.tone} onDismiss={() => setNotice(null)}>
+          {notice.text}
+        </Notice>
+      )}
+
       <OrganizationProfileCard
         organization={organization}
         register={register}
@@ -139,6 +156,8 @@ export function OrganizationSettingsPage() {
         showSaved={updateMutation.isSuccess && !isDirty}
       />
 
+      <OperationalRegionsCard {...regions.card} />
+
       <OrganizationDangerZone
         status={organization.status}
         onDeactivateClick={() => {
@@ -146,6 +165,9 @@ export function OrganizationSettingsPage() {
           setDeactivateOpen(true)
         }}
       />
+
+      <AddRegionDialog {...regions.addDialog} />
+      <RemoveRegionDialog {...regions.removeDialog} />
 
       <DeactivateOrganizationDialog
         open={deactivateOpen}

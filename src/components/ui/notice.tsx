@@ -6,6 +6,12 @@ const TONES = {
   caution: 'border-status-caution bg-status-caution-tint',
 } as const
 
+/** A notice to show: what happened, and whether it went as hoped. */
+export interface PageNotice {
+  tone: keyof typeof TONES
+  text: string
+}
+
 export interface NoticeProps {
   tone?: keyof typeof TONES
   children: React.ReactNode

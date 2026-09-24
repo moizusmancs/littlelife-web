@@ -1,9 +1,6 @@
 import type { AccountStatus, AccountStatusAction, AccountSummary } from '@/api/identity'
 import type { Role } from '@/store/auth'
 
-/** Rows-per-page choices for the list; the first is the default. */
-export const PAGE_SIZES = [20, 50, 100] as const
-
 export const ROLE_FILTERS: Role[] = ['user', 'ngo_volunteer', 'ngo_admin', 'admin', 'super_admin']
 export const STATUS_FILTERS: AccountStatus[] = ['active', 'pending_verification', 'suspended', 'deactivated']
 

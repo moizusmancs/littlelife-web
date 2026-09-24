@@ -8,17 +8,23 @@ change when that happens — that's the entire point of the service-layer split 
 
 **Phase 0 — Foundation & Architecture: ✅ Done.**
 
-**Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
+**Phase 1 — Identity & Account Shell: ✅ Done.** Built, tested (unit + E2E against the
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
 onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), Account
 Settings (deactivate/delete), My NGO (register + live status), Invitations, and — the first NGO
 screen — Organization Settings, My Account for both NGO staff and platform admins, Volunteers
-(the roster, invite, and remove), and — the first Admin screens — Users & Accounts with its account
-detail. That closes out the full auth-screen set plus every citizen `/app/profile/*` screen this
-phase owns (steps 1–3 of Phase 1's build order), all of the NGO half of step 6, and half of step 7.
-Not yet built: NGOs (list, detail, approve/reject — the last Phase 1 screen).
+(the roster, invite, and remove), the first Admin screens — Users & Accounts with its account
+detail — and NGOs (the applications inbox, every organisation, and approve/reject). That closes out the full auth-screen set plus every citizen `/app/profile/*` screen this
+phase owns (steps 1–3 of Phase 1's build order), all of the NGO half of step 6, and step 7 —
+Users & Accounts and, last, NGOs (list, detail, approve/reject), which closes **Phase 1**.
 
-**Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
+**Phase 2 — Geo Primitives: ✅ Done, except one screen the backend can't support yet.** Admin Regions (the
+hierarchy tree, a region's boundary, add and edit), the shared drill-down **region picker**, and its first
+use — Organization Settings' operational-region chips (add, remove) — are built, tested and verified.
+`/app/onboarding/region` stays a placeholder because there is nowhere in the backend to save a home region;
+see the Phase 2 section for what it needs.
+
+**Phases 3–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
 short version.
 
@@ -132,9 +138,9 @@ short version.
   defaults" toggles, and the 7-item settings sub-nav (Team & roles / Integrations / Billing… have no
   screen — only Profile and Danger zone are real sections, so a one-page layout replaces it). The
   mockup's "Emergency phone" label became "Contact phone": the API just calls it `contact_phone`.
-  **Operational regions are deferred, not dropped:** `GET/POST/DELETE /ngo/me/regions` exist, but
-  adding one needs the region picker that Phase 2 builds (the plan already schedules the chips as a
-  Phase 2 retrofit), and a remove-only chip list would be a half-feature. Two placement choices:
+  **Operational regions were deferred, then built in Phase 2** (see the *Region picker* bullet below):
+  `GET/POST/DELETE /ngo/me/regions` needed the shared region picker first, and a remove-only chip list
+  would have been a half-feature. Two placement choices:
   Save/Discard sit at the foot of the card (§6.3: "Save (contact info section)") instead of the
   mockup's page-header bar, so they stay beside the fields on a phone; and the deactivate control
   borrows the critical-tinted row from §4m's "Leave organisation" since §4l has none. **Save sends
@@ -277,6 +283,109 @@ short version.
   role, status, page, rows per page), so a reload or Back from an account lands on the same view;
   see the real bug below for why that's mirrored from state rather than driven by it.
 
+- **NGOs (list + detail + approve/reject) had no backend to build on — you added three routes — and
+  builds the real fields only.** The first look found that the Identity admin group registered just
+  `POST approve` and `POST reject`: with no way to list or open an NGO, an admin could never find a
+  pending application, so approve/reject were unreachable from any screen (the plan's own route table
+  had only ever listed those two). Per the standing rule, nothing was built against a guess: the
+  contract was specified and you added **`GET /admin/ngos`** (paged like accounts, plus a `?status=`
+  filter), **`GET /admin/ngos/{id}`** and **`GET /admin/ngos/{id}/volunteers`** (a `404` for an
+  unknown NGO, so `[]` really means none). Items carry `created_by_email` (the applicant — what an
+  admin needs to judge an application), `approved_by_email`/`approved_at`, and `volunteer_count`.
+  **Verified against the real server, including what the doc doesn't say:** `approved_by_email`/
+  `approved_at` are the admin's *decision*, whichever way — a rejected NGO carries them too, so the
+  detail says "Rejected by …" or "Approved by …" from the status; and **approving an
+  already-approved NGO returns `409 "this account is already affiliated with an ngo"`, not "ngo is
+  not pending approval"** (that one is what rejecting an active NGO, or approving a rejected one,
+  returns) — and the same message is also what a genuinely pending NGO gets if its applicant has since
+  joined another organisation. So a `409` is never called "already decided": the notice says "Couldn't
+  approve X: <the server's words>. The view has been refreshed." and the refreshed list tells the
+  truth. **Approving really is two things:** the NGO turns `active`, and the applicant becomes
+  `ngo_admin` with their sessions revoked (checked in Postgres: role and `ngo_id` set, zero live
+  refresh tokens) — so the dialog says they must log in again, and the E2E confirms a reload of their
+  old session bounces to login. **Rejecting touches nothing else** (the applicant stays a citizen and
+  can apply again, which the E2E also confirms through My NGO); and because the route takes no body
+  and the schema has no column for it, **there is no reason field** — the spec's "reason dialog"
+  became a confirm dialog that says plainly no reason is recorded or shown (a field would promise
+  something the system can't keep). **Choices worth knowing:** the list opens on **Pending approval**
+  (the actionable tab; the mockup opens on Approved); tabs are the five real `ngo_status` values plus
+  All (the mockup's "Approved" is `active`, and **Suspended will normally be empty — nothing in the
+  API can set it**); and, like the accounts list, every organisation is loaded once (one request until
+  there are 100) so the tabs, their counts and a search the API doesn't offer (name, contact email,
+  applicant email, or a pasted id) are done client-side — the backend's `?status=` filter is unused.
+  The view (tab, search, page, rows per page) lives in the URL, mirrored from state, and Back from an
+  organisation returns to the same view. **Not built:** the mockup's regions, tasks-done,
+  response-time and feedback columns, its region and capability filters and "Export" (no data or
+  routes), and the detail's **operational-regions map** (regions live in Geo with no admin read
+  route, and the map is Phase 3's component). Extras beyond the mockup: the applicant links to their
+  account page and each volunteer links to theirs. **This finally makes the whole registration loop
+  testable for real**, which nothing before could: a citizen submits through the real My NGO screen, an
+  admin approves here, and the citizen logs back in as its NGO admin. The E2E only ever touches its own
+  `E2E …` NGOs, found by a unique search — your two real pending applications are never clicked.
+
+- **Admin Regions (Phase 2) — the API checks almost nothing, so the form does.** One route serves
+  `/admin/regions` and `/admin/regions/:id` (an optional `:id`, so the filter and what's expanded survive
+  moving between regions). Master–detail as in mockup §5f: a searchable, level-filterable province ›
+  district › tehsil tree on the left (carets, sub-region counts; a search or level filter turns it into a
+  flat list of matches with each one's parents underneath, since a match inside a collapsed branch would be
+  invisible) and the selected region on the right — its path, level, sub-regions (with "Add district/tehsil"
+  preset to that parent), the boundary, and id/created/updated. The URL is the selection and the filter
+  rides along on every link; on a phone one pane shows at a time (the tree, or the region with an "All
+  regions" way back). Add and Edit share one form in a new side-sheet `Drawer` primitive. **`GET /regions`
+  is loaded once and everything is derived from it** — there is no per-region request — because the API has
+  no pagination, no name search and **returns every region's full boundary in the list**; harmless for
+  seven regions, not for a real import of hundreds of districts and tehsils (the fix belongs backend-side,
+  e.g. an `include_boundary=false` option, and `getRegions` is the one function to adapt).
+  **What the backend lets through, verified against the real API, and what the UI therefore enforces:**
+  an open ring, a self-crossing bow-tie and longitude 200 all return `201`; a `MultiPolygon` or `Point` is a
+  bare `500` (the column is `geometry(Polygon, 4326)`); a district can be created under a tehsil or with no
+  parent, a province can be given one, and `PATCH` will save a **parent cycle** (only "its own parent" is
+  refused). So the boundary field reads what is pasted or uploaded as it changes and lists *every* problem
+  before saving — not JSON, not a Polygon (a `Feature`, or a one-feature `FeatureCollection`, is unwrapped;
+  a `MultiPolygon` is refused with the reason), a ring that isn't closed or has under four points, a point
+  outside ±180°/±90° (with a hint that longitude and latitude may be swapped), and a ring that crosses or
+  touches itself (altitude values are dropped, since the column is 2-D) — and draws a valid one so a wrong
+  shape is visible before it is saved. Parents are limited to exactly one level up and never the region
+  itself or anything below it; a region that has sub-regions can't change level; a district or tehsil must
+  have a parent (except one that already has none — the real data has one, so it stays editable). Edit
+  sends **only the fields that changed** — an unchanged `parent_region_id: ""` would detach the region, and
+  an empty patch is a `400` — and a save with nothing changed is caught before the request. A bare `500`
+  on a save that sent a boundary is explained as the database refusing the shape rather than shown as
+  "internal server error". **The map isn't here:** it is Phase 3's shared component, so the boundary is drawn
+  as a flat SVG outline (longitude squeezed by cos(latitude), holes cut out, very dense rings thinned) with
+  its ring/point count and extent, and can be downloaded as a `.geojson` `Feature` that the form's upload reads
+  straight back. **Not built, because nothing backs it:** population/area/code, the assigned-NGOs list (no
+  admin route lists a region's NGOs; only an NGO can read its own), "Import boundaries" (no bulk route),
+  "View analytics", and **any delete** (there is no `DELETE /admin/regions` — and other tables reference
+  `regions` by foreign key, so one wouldn't be casual). Extras: download, and adding a sub-region straight
+  from its parent's page. **Large boundaries are handled on purpose:** the self-crossing check is quadratic if
+  written the obvious way and froze the form on a pasted district-sized outline, so above ~400 segments it
+  uses a grid sized to the average segment (200,000 points in ~0.2 s, versus ~5.7 s with a grid sized to the
+  bounding box), tested for exact agreement with the pairwise version on random and tangled rings.
+
+- **Region picker (Phase 2) — drill-down as the plan specified, plus search; and Organization Settings' regions.**
+  `RegionPicker` (`src/features/regions/`, presentational, with `useRegionPicker` holding the drill-down trail,
+  search text and the one chosen region) lists one level at a time — top level, or what's inside the region you
+  opened — with a breadcrumb back up. **Every row is selectable at its own level** (an NGO can cover a whole
+  province or a single tehsil), and a row with sub-regions has a *separate* arrow to open them, so choosing and
+  browsing don't compete; rows are native radio buttons, so arrow keys and screen readers just work. Typing
+  switches to a flat list across all levels with each result's parents (a drill-down alone is slow on hundreds
+  of tehsils). A region can be marked unavailable with a reason — listed, disabled, never hidden — and what's
+  inside it stays reachable. Regions with no parent (the API allows them, and the real data has one) sit at the
+  top level rather than vanishing. The full region list carries every boundary, so **the picker only fetches
+  it when it's opened** and shares the Admin Regions cache entry. **Organization Settings** gained an
+  *Operational regions* card: removable chips (name + level), *Add region* (the picker in a dialog), and a
+  confirm-first remove that says nothing is deleted and it can be re-added. Add and remove write straight into
+  the cached list and refetch for the server's version; an add that finds the region already assigned (`409`,
+  e.g. a teammate got there first — reproduced for real in the E2E by adding it through the API behind the
+  page's back) or a remove that finds it already gone (`404`) shows the server's own words and refreshes. A
+  region already covered is disabled in the picker so the normal path never sends a request the API would
+  refuse. The card loads and fails on its own — a regions outage doesn't take the profile form down.
+  **Where it deviates from the mockup:** §4l says regions are "assigned by NDMA — request changes below", but the
+  API lets an NGO's own admin add and remove coverage, so that is what's built; whether that's the intended
+  policy is a product question worth raising. **Not built:** anything showing *which NGOs cover a region* (no
+  route), and a region's coverage on the NGO detail page (`/admin/ngos/:id` — still no admin read route).
+
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
   mandatory second gate, chained after verification. `RequireRole` (`src/routes/guards.tsx`) now
@@ -371,7 +480,10 @@ visible box rather than a wrapper div — see the Safari fix below), `PasswordIn
 toggle, optional leading lock icon), `OtpInput` (6 boxes, auto-advance/backspace/paste,
 fully responsive down to 320px), `Checkbox` (real native input, `group-has-checked:` for visual
 styling), `Dialog` (wraps `@radix-ui/react-dialog` — overlay, centered content, title/description,
-close button), `Badge`, `Label`. **Not built via shadcn's CLI** — every component is hand-built
+close button), `Drawer` (the same Radix dialog as a full-height side sheet, full width on a phone, for forms
+too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `Notice`
+(a page-level `role="status"` banner), and `ListPagination` (rows-per-page and previous/next, shared by
+the admin lists); `button-variants.ts` exports `buttonVariants` for links styled as buttons. **Not built via shadcn's CLI** — every component is hand-built
 directly against the verified design tokens (§2.4); shadcn's generated components assume a
 different, Material-adjacent visual language that would need a full rewrite to match this design
 system anyway, so §2.2's original "shadcn/ui" line undersold what actually happened — Radix
@@ -475,6 +587,25 @@ without its generated code.
   wanted a link that looks like a button; that link uses `buttonVariants` instead (moved to
   `button-variants.ts` so `button.tsx` still only exports a component). The prop itself is left as
   found.
+- **The NGO table's View button rendered as a 4px dot.** It was written as
+  `buttonVariants({ ..., className: 'w-9 px-0' })`, but `cva` only *concatenates* `className`, so the
+  variant's own `px-4` stayed in the string and won on stylesheet order, leaving the 16px eye icon 4px
+  of room. Passing an extra class into `buttonVariants` is not a safe way to override it; it has to go
+  through `cn` (which is `twMerge`). Caught only by looking at the screenshot — every test passed.
+- **A screen reader heard a bare "2" for a volunteer count.** From `md` up the row's column headers are
+  `aria-hidden` (the rows are grids of divs), and the words that made a cell self-describing — "2
+  volunteers", "Applicant …", "Submitted …" — were `md:hidden`, i.e. `display: none`, so not announced
+  either. They're `md:sr-only` now: visually gone on desktop, still read. (The accounts table's "Created"
+  prefix has the same shape and is a known, smaller instance.)
+- **Checking a pasted boundary for self-intersection froze the form.** The natural check compares every
+  pair of segments; that's fine for a square and unusable for a real district outline with tens of
+  thousands of points. Found by benchmarking before shipping rather than by a user: a grid keyed to the
+  bounding box was still superlinear (a boundary only occupies a thin band of it, so cells crowd — 200,000
+  points took 5.7 s), and sizing cells to the *average segment length* fixed it (216 ms), with the few
+  segments far longer than average compared against everything directly. The two implementations are
+  tested against each other on random rings so the fast one can't quietly disagree.
+- **The region tree's level chips wrapped onto a second line** at the tree's 320px width — one pixel-level
+  measurement (all four chips share a top offset) after tightening their padding.
 
 ---
 
@@ -736,7 +867,7 @@ finishing all of Citizen before starting NGO. This means:
 
 ---
 
-## Phase 1 — Identity & Account Shell 🚧 In progress
+## Phase 1 — Identity & Account Shell ✅ Done
 
 Covers every screen backed by `internal/identity` across all three roles. This is first because
 role-based routing (Phase 0) needs real login to actually exercise it, and every later phase's
@@ -756,11 +887,11 @@ screens sit behind auth.
 | Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ✅ Built |
 | My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ✅ Built |
 | Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ✅ Built |
-| Organization Settings (profile + deactivate; region chips wait for Phase 2's picker) | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ✅ Built |
+| Organization Settings (profile, operational regions, deactivate) | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ✅ Built |
 | My Account (profile name, password, deactivate/delete — one page for all four staff roles) | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ✅ Built |
 | Volunteers (roster, invite, remove — `ngo_admin` only) | `/ngo/volunteers` | NGO | W-List | ✅ Built |
 | Users & Accounts (+ detail) | `/admin/users`, `/admin/users/:id` | Admin | W-List / W-Detail | ✅ Built |
-| NGOs (+ detail) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail | ⬜ Not built |
+| NGOs (+ detail, approve/reject) | `/admin/ngos`, `/admin/ngos/:id` | Admin | W-List / W-Detail | ✅ Built |
 
 ### Backend routes (all ✅ built — `api/00-identity.md`)
 
@@ -775,7 +906,8 @@ screens sit behind auth.
 | `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ✅ Wired |
 | `POST /ngos/register` | My NGO → Register form | ✅ Wired |
 | `GET /ngos/mine` **(added to the backend after My NGO's first build — see Progress log)** | My NGO → status card (pending / rejected / active), survives a reload | ✅ Wired |
-| `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
+| `GET /admin/ngos?status=&limit=&offset=`, `GET /admin/ngos/{ngoID}`, `GET /admin/ngos/{ngoID}/volunteers` **(added to the backend for this screen — see Progress log)** | Admin NGOs: the list loads every organisation once (the `status` filter is unused), the detail and its read-only volunteer roster | ✅ Wired |
+| `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list and detail — both take **no body**, so there is no rejection reason; approving also promotes the applicant and revokes their sessions | ✅ Wired |
 | `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ✅ Wired |
 | `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) — the last one is labelled "Remove" in the UI since it doesn't deactivate the account | ✅ Wired |
 | `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side); the count also feeds the Profile sidebar badge | ✅ Wired |
@@ -800,11 +932,11 @@ screens sit behind auth.
    ✅ Invitations (pending list, accept → sign out and re-login as a volunteer, decline, and the
    sidebar's real count badge) — the last `/app/profile/*` screen, so the citizen half of Phase 1
    is complete.
-6. ✅ Organization Settings (profile edit + deactivate; the region chips are a Phase 2 retrofit),
+6. ✅ Organization Settings (profile edit + deactivate; the operational-region chips were retrofitted in Phase 2),
    plus the `ngo_admin`-only nested route guard and the responsive NGO/Admin shell it needed — see
    Progress log. ✅ My Account (both roles' routes; see Progress log). ✅ Volunteers (NGO) — the roster,
    invite and remove, `ngo_admin` only; see Progress log for the three backend gaps it surfaced.
-7. ✅ Users & Accounts (list + detail, with the moderation history and credibility card it embeds — see Progress log). ⬜ NGOs (Admin).
+7. ✅ Users & Accounts (list + detail, with the moderation history and credibility card it embeds — see Progress log). ✅ NGOs (Admin) — the applications inbox, every organisation, the detail with its roster, and approve/reject; built once the three read routes it needed existed (see Progress log).
 
 ### Testing
 - ✅ Component: form validation (Zod schemas matching each route's documented required fields),
@@ -858,7 +990,16 @@ screens sit behind auth.
   suspend/reactivate including a failed log entry, a 409, a refused change and a clean reopen; and
   the detail page — real fields, recording admins named, 404/400 vs a real error, per-card failures
   that leave the rest alone, suspend/reactivate, your own account, and a log entry leaving status
-  untouched).
+  untouched), and NGOs (the filter logic — tabs, counts, and a search over name, contact email,
+  applicant email and id; which organisations can be decided; the toolbar's tabs and counts, the
+  table with Approve/Reject only on pending rows, the decision dialog's copy for each decision — no
+  reason field on reject — the detail's header, profile card with its Approved/Rejected wording,
+  volunteer roster and load states; `getAllNgos` for one page, none and many; the list page — every
+  page loaded, opening on Pending, tabs, cross-tab search, URL state read and clamped, two changes
+  in one tick, approve and reject with their notices, a cancelled confirmation, both flavours of
+  `409`, another failure kept in the dialog, a clean reopen; and the detail page — real fields,
+  404/400 vs a real error, a failed roster isolated to its card, approve and reject from the page,
+  and a 409).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -942,7 +1083,21 @@ screens sit behind auth.
   own account has no controls; and an NGO admin is bounced from the URL and gets a real `403` from
   the API. Registrations there use the standalone `request` fixture, never `page.request`: a register
   call sets the new account's session cookie, which in the shared jar silently replaced the signed-in
-  admin's.
+  admin's. **NGOs is the sixth** (`e2e/admin-ngos.spec.ts`) and runs the whole registration loop for
+  real: a verified citizen submits through the real My NGO screen, the admin finds the application in
+  the Pending tab with its applicant and contact details and approves it, the database shows the NGO
+  `active` and the applicant `ngo_admin` with their `ngo_id`, the applicant's old session is dead (a
+  reload bounces to login), and logging in again lands in `/ngo/dashboard` with the organisation in
+  Organization Settings. A rejection leaves the NGO `rejected` and the applicant a citizen, whose
+  session lives on and whose My NGO shows "Not approved" *and* the form again. An application decided
+  behind the open page gets the real `409`, reported as "Couldn't approve …" with the view refreshed
+  and nobody promoted. The tabs each show only their status (pending, active, rejected, deactivated),
+  All shows all four, and search reaches the contact email and the applicant's; a real volunteer count
+  shows and Back from an organisation returns to the same filtered view; the detail shows the real
+  fields, links the applicant and each volunteer to their account, records the decision, and an
+  unknown or malformed id says "not found"; an NGO admin is bounced from the URL and gets a real `403`
+  from the API. Applications are made through the real `POST /ngos/register` (accounts verified in
+  Postgres first, since it needs a verified token).
   - ⬜ Still not possible: a full "register → really verify via the real OTP → land in the app" E2E
     path and "request reset → really reset → log in with the new password" — both need a real
     OTP/reset token, only server-logged (Redis holds a hash). The DB-seeding helper is the
@@ -950,10 +1105,10 @@ screens sit behind auth.
     Follow-ups now unblocked: replace My NGO's stubbed pending/rejected/active states with real
     ones the same way, and the *user's own* real verified account (with a real pending NGO) is a
     manual check — reopen `/app/profile/ngo` and it should show the pending card, not the form.
-  - ⬜ NGO registration → admin approval → promoted account login — the approval half is blocked on
-    the Admin NGOs screen not being built yet. Volunteer invitation → accept → promoted is now
-    covered for both halves now: the admin sends it from the Volunteers screen, the citizen accepts
-    it from Invitations, and the roster shows the result (`ngo-volunteers.spec.ts`).
+  - ✅ NGO registration → admin approval → promoted account login — now covered end to end
+    (`admin-ngos.spec.ts`), as is volunteer invitation → accept → promoted (`ngo-volunteers.spec.ts`).
+    **Follow-up now trivial:** My NGO's still-stubbed pending/rejected/active E2E states can be made
+    real the same way (submit through the API, decide as an admin) — not yet done.
 - ⬜ Manual: 401-refresh-retry against a real expired token.
 - ⚠ Known environmental flake, not a code fault: with the default 4 Playwright workers on a busy
   machine (macOS background jobs pegging the CPU), a fresh page's first `page.goto` can exceed the
@@ -978,51 +1133,99 @@ screens sit behind auth.
   unbundled modules from Vite) stalled for the whole budget; it isn't a spontaneous abort. Both tests
   pass when re-run alone (9.5 s), and the machine still showed ~6 GB of swap in use and a load average
   near 4 with none of this running. Read a lone `goto` timeout in a long run as this, not a
-  regression; re-run those tests before suspecting the code.
+  regression; re-run those tests before suspecting the code. **The last full run (NGOs' 10 tests
+  added: 89 in all, 9.5 min, one worker) lost 8 to it** — seven as `Test timeout of 30000ms` on
+  `page.goto`, plus an old Account Settings test whose page was fully reloaded mid-test, wiping its
+  client-side auth override so it landed on `/verify-email` — spread across five specs, old and new,
+  with swap at ~6.3 GB; all eight passed re-run together in 46 s. So: 89/89 green, but not in a single
+  uninterrupted run on this machine. A longer test/navigation timeout in `playwright.config.ts` is the
+  obvious mitigation and has deliberately been left alone.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
-approval and volunteer promotion flows work end-to-end against the real backend. **Partially
-met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
-Profile, Account Settings, My NGO, and Invitations are real and tested — every citizen
-`/app/profile/*` screen this phase owns — plus Organization Settings and My Account for the NGO
-and admin consoles, Volunteers (so the NGO side of volunteer invitations is real too), and Users &
-Accounts (the first Admin screens, with moderation); the one remaining account-lifecycle screen is
-NGOs — including the admin-approval half of NGO registration.
+approval and volunteer promotion flows work end-to-end against the real backend. **Met** — the
+full auth-screen set (register/login/logout/verify/onboard/forgot/reset), every citizen
+`/app/profile/*` screen, Organization Settings and My Account for the NGO and admin consoles,
+Volunteers, Users & Accounts (with moderation) and NGOs (with approve/reject) are real and tested
+against the real backend, and both promotion flows — NGO registration → admin approval → NGO admin,
+and volunteer invitation → accept → volunteer — run end to end. What remains open in this phase is
+listed under Testing (the OTP-dependent flows, real states for My NGO's stubbed cards).
 
 ---
 
-## Phase 2 — Geo Primitives
+## Phase 2 — Geo Primitives ✅ Done (except the onboarding step, blocked on the backend)
 
 Small phase, but everything downstream that picks a region depends on it.
 
 ### Screens
 
-| Screen | Route | Role |
-|---|---|---|
-| Onboarding — Region Picker | `/app/onboarding/region` | Citizen |
-| Regions (+ detail) | `/admin/regions`, `/admin/regions/:id` | Admin |
+| Screen | Route | Role | Status |
+|---|---|---|---|
+| Onboarding — Region Picker | `/app/onboarding/region` | Citizen | ⬜ Stays a placeholder — **the backend has nowhere to store a home region** (Profile has only `name`; no `home_region_id` anywhere). A picker that couldn't save its answer would be decoration. Needs a backend field (e.g. `home_region_id` on the profile and in `PATCH /profile`) before it can be built |
+| Regions (+ detail) | `/admin/regions`, `/admin/regions/:id` | Admin | ✅ Built — tree, detail, add, edit (no delete: the API has none). See the Admin Regions bullet under *Real deviations* |
 
-Also: build the **region picker as a shared component** here (province → district → tehsil
-drill-down) — it's reused by NGO operational-region assignment (Phase 1's Organization Settings,
-retrofit once this exists) and any future region-scoped filter.
+The **region picker is a shared component** built here (province › district › tehsil drill-down, with search) —
+its first consumer is Organization Settings' operational regions (the retrofit into Phase 1's screen, done), and
+it's ready for the onboarding step and any region-scoped filter.
+
+| Also built | Where | Status |
+|---|---|---|
+| Region picker (shared component) | `src/features/regions/RegionPicker.tsx` + `useRegionPicker.ts` | ✅ Built |
+| Organization Settings — operational-region chips (add / remove) | `/ngo/settings/organization` | ✅ Built |
 
 ### Backend routes (✅ built — `api/01-geo.md`)
 
 | Route | Used by |
 |---|---|
-| `GET /regions?level=&parent_region_id=`, `GET /regions/{id}` | Region picker (public, no auth) |
+| `GET /regions?level=&parent_region_id=`, `GET /regions/{id}` | Region picker and Admin Regions (public, no auth) — the screens read the one list and derive everything from it |
 | `POST /admin/regions`, `PATCH /admin/regions/{id}` | Admin Regions |
-| `GET /ngo/me/regions`, `POST /ngo/me/regions`, `DELETE /ngo/me/regions/{regionID}` | Organization Settings' region chips (retrofit into Phase 1's screen) |
+| `GET /ngo/me/regions`, `POST /ngo/me/regions`, `DELETE /ngo/me/regions/{regionID}` | Organization Settings' region chips |
+
+### Backend gaps found while building (none block the frontend; each is a change for you to make if you want it)
+
+| Gap | Effect today | Suggested change |
+|---|---|---|
+| **No field for a citizen's home region** (Profile has only `name`) | The onboarding region picker can't save its answer, so `/app/onboarding/region` stays a placeholder | `home_region_id` on the profile, accepted by `PATCH /profile` and returned by `GET /profile` |
+| `regions.boundary` is `geometry(Polygon, 4326)` and nothing validates it | An open ring, a bow-tie and longitude 200 all save (`201`); a `MultiPolygon` or `Point` is a bare `500` | Validate in the domain (`ST_IsValid`, single Polygon, in range) and return a `400` with a message; consider `MultiPolygon` (real district boundaries are often multi-part) |
+| No hierarchy validation | A district can be created under a tehsil or with no parent; `PATCH` accepts a parent **cycle** (only "own parent" is refused) | Enforce province › district › tehsil, and reject a parent that is a descendant |
+| `GET /regions` returns every region's full boundary, unpaginated | Fine for seven regions, heavy for a real import; every picker/tree loads all of it | An `include_boundary=false` option (or a separate light list) |
+| No `DELETE /admin/regions/{id}` | A wrongly created region can be renamed but not removed (and many tables reference `regions` by foreign key) | A delete that refuses while anything references the region |
+| No route listing the NGOs that cover a region | Admin Regions' "assigned NGOs" and the NGO detail's regions can't be shown | `GET /admin/regions/{id}/ngos` and `GET /admin/ngos/{id}/regions` |
 
 ### Testing
-- Component: drill-down list behavior, "Continue" disabled until a selection is made.
-- E2E: onboarding picks a region → home region persists on next login; admin edits a region
-  boundary; NGO adds/removes an operational region.
+- **Unit (Vitest + RTL + MSW):** GeoJSON validation (every rejection, `Feature`/`FeatureCollection`
+  unwrapping, altitude, and the grid-accelerated self-intersection check against the pairwise one on
+  random rings), tree building (orphans, dangling parents, parent cycles), the drill-down browse logic,
+  form rules and the changed-fields-only patch, and every component and both containers: the Regions
+  page (browse, expand, deep links, filter kept across navigation, add, edit, phone panes, errors) and
+  Organization Settings' region flows (drill-down add, "already added", `409`, remove, `404`, and a
+  regions failure not breaking the form). One test-only footgun worth knowing: MSW's `*/regions` glob
+  also matches `/ngo/me/regions`, so a handler for the former can silently shadow the latter.
+- **E2E (Playwright, real backend, real Postgres reads):** 16 tests for Admin Regions — the real
+  hierarchy and counts, search/filter/deep links/reload, a boundary downloaded and uploaded back, building
+  a province › district › tehsil with each row's parent and PostGIS boundary read back, every boundary the
+  API would accept being refused with nothing written, edits touching only their own column, moving a
+  district, the level lock, the nothing-changed guard, a citizen being turned away (and the API's own `403`),
+  and a phone run with no overflow — plus 6 for Organization Settings' regions (drill-down add, search,
+  already covered, the real `409`, remove-with-confirm leaving the region itself in place, and a phone run).
+  Every region is named `E2E …`. **No real region or organisation is touched.** The whole suite is now
+  **111 tests, all green** (549 unit tests alongside), though again not in one uninterrupted run: the full
+  run passed 102, and the other nine were `page.goto: net::ERR_ABORTED` timeouts — the load stall described
+  under Phase 1 — spread across six specs, old and new; all nine passed re-run alone in 45 s. The
+  region-specific tests hit it three more times while being developed, and passed alone each time. Test data
+  is cleaned by name afterwards (accounts `e2e-…@example.com`, NGOs and regions `E2E …`, regions leaves-first,
+  with a guard that aborts rather than remove coverage belonging to a real organisation).
+- **Visual:** screenshots at 1440×900 and 390×844 of the list, tree, detail, both drawers, the picker (drilled
+  and searched) and the remove dialog; zero horizontal overflow in all of them (which also caught the level
+  chips wrapping).
 
 **Exit criteria:** region selection works everywhere it's needed as a reusable component, backed
 by real data (note: real Pakistan boundaries depend on the HDX import script the backend roadmap
 flags as not-yet-done — if that hasn't happened yet, regions will still work functionally but with
 placeholder/hand-drawn boundaries; not a frontend blocker, just don't be surprised by odd shapes).
+**Met, with one exception:** the picker is a reusable component, backed by real data, and used by
+Organization Settings; an admin can browse, add and edit regions with their boundaries. The exception is
+the citizen onboarding step, which needs `home_region_id` in the backend before it's worth building (see
+*Backend gaps*). The real regions here are tiny placeholder squares, as anticipated.
 
 ---
 

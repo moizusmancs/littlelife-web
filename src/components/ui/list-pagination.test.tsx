@@ -1,15 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { AccountsPagination } from './AccountsPagination'
+import { ListPagination } from './list-pagination'
 
-function renderPagination(overrides: Partial<React.ComponentProps<typeof AccountsPagination>> = {}) {
+function renderPagination(overrides: Partial<React.ComponentProps<typeof ListPagination>> = {}) {
   const props = { page: 1, pageSize: 20, total: 983, onPageChange: vi.fn(), onPageSizeChange: vi.fn(), ...overrides }
-  render(<AccountsPagination {...props} />)
+  render(<ListPagination {...props} />)
   return props
 }
 
-describe('AccountsPagination', () => {
+describe('ListPagination', () => {
   it('shows the range and total, and disables Previous on the first page', async () => {
     const { onPageChange } = renderPagination()
 

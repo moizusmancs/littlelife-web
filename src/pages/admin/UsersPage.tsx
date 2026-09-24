@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Notice } from '@/components/ui/notice'
+import { Notice, type PageNotice } from '@/components/ui/notice'
 import { AccountStatusDialog } from '@/features/users/AccountStatusDialog'
 import { AccountsNoMatches } from '@/features/users/AccountsNoMatches'
-import { AccountsPagination } from '@/features/users/AccountsPagination'
+import { ListPagination } from '@/components/ui/list-pagination'
 import { AccountsTable } from '@/features/users/AccountsTable'
 import { AccountsToolbar } from '@/features/users/AccountsToolbar'
 import { UsersLoadState } from '@/features/users/UsersLoadState'
 import {
-  PAGE_SIZES,
   ROLE_FILTERS,
   STATUS_FILTERS,
   countByGroup,
   filterAccounts,
   type AccountFilters,
 } from '@/features/users/accountFilters'
-import { useAccountStatusChange, type PageNotice } from '@/features/users/useAccountStatusChange'
+import { useAccountStatusChange } from '@/features/users/useAccountStatusChange'
 import { ADMIN_ACCOUNTS_QUERY_KEY, getAllAccounts } from '@/api/identity'
+import { PAGE_SIZES } from '@/lib/pagination'
 import { extractErrorMessage } from '@/api/errors'
 import { useAuthStore } from '@/store/auth'
 
@@ -145,7 +145,7 @@ export function UsersPage() {
             onStatusAction={statusChange.open}
             detailState={{ listSearch: listSearch ? `?${listSearch}` : '' }}
           />
-          <AccountsPagination
+          <ListPagination
             page={page}
             pageSize={pageSize}
             total={filtered.length}

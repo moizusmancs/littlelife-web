@@ -453,9 +453,9 @@ interface AccountsPage {
 export const ADMIN_ACCOUNTS_QUERY_KEY = ['admin', 'accounts'] as const
 export const adminAccountQueryKey = (id: string) => ['admin', 'account', id] as const
 
-const ACCOUNTS_PAGE_SIZE = 100
-/** Safety cap on how many accounts the list screen will pull in one go (50 pages of 100). */
-const MAX_ACCOUNTS_LOADED = 5000
+const ADMIN_PAGE_SIZE = 100
+/** Safety cap on how many rows a "load everything" admin list will pull (50 pages of 100). */
+const MAX_ROWS_LOADED = 5000
 
 /**
  * GET /admin/accounts?limit=&offset= — `admin`/`super_admin` only. Plain offset pagination, newest
@@ -468,6 +468,34 @@ export async function getAccountsPage(limit: number, offset: number): Promise<Ac
   return res.data
 }
 
+/**
+ * Pulls every row of an offset-paged admin list: the first page supplies `total`, the rest are
+ * fetched in parallel, and rows are de-duplicated by id in case new ones shifted the offsets
+ * between requests. Stops at `MAX_ROWS_LOADED` and reports the real `total`, so a screen can say
+ * some were left out.
+ */
+async function fetchAllPages<T extends { id: string }>(
+  fetchPage: (limit: number, offset: number) => Promise<{ items: T[]; total: number }>,
+): Promise<{ items: T[]; total: number }> {
+  const first = await fetchPage(ADMIN_PAGE_SIZE, 0)
+  const wanted = Math.min(first.total, MAX_ROWS_LOADED)
+  const offsets: number[] = []
+  for (let offset = ADMIN_PAGE_SIZE; offset < wanted; offset += ADMIN_PAGE_SIZE) offsets.push(offset)
+  const rest = await Promise.all(offsets.map((offset) => fetchPage(ADMIN_PAGE_SIZE, offset)))
+
+  const seen = new Set<string>()
+  const items: T[] = []
+  for (const page of [first, ...rest]) {
+    for (const item of page.items) {
+      if (!seen.has(item.id)) {
+        seen.add(item.id)
+        items.push(item)
+      }
+    }
+  }
+  return { items, total: first.total }
+}
+
 export interface AllAccounts {
   accounts: AccountSummary[]
   /** The server's count of every account. Larger than `accounts.length` only when the safety cap
@@ -477,30 +505,16 @@ export interface AllAccounts {
 
 /**
  * Every account, newest first, assembled from pages of 100 — because the API can't search or
- * filter, the list screen does that itself, over this. Fine for a few thousand accounts; past
- * `MAX_ACCOUNTS_LOADED` it stops and `total` says how many it left out. The right long-term fix
- * is server-side `q`/`role`/`status` parameters, at which point this is the one function to swap.
- * Pages are fetched in parallel after the first (which supplies `total`), and rows are de-duplicated
- * by id in case accounts were added between requests and shifted the offsets.
+ * filter, the list screen does that itself, over this. Fine for a few thousand accounts; past the
+ * cap it stops and `total` says how many it left out. The right long-term fix is server-side
+ * `q`/`role`/`status` parameters, at which point this is the one function to swap.
  */
 export async function getAllAccounts(): Promise<AllAccounts> {
-  const first = await getAccountsPage(ACCOUNTS_PAGE_SIZE, 0)
-  const wanted = Math.min(first.total, MAX_ACCOUNTS_LOADED)
-  const offsets: number[] = []
-  for (let offset = ACCOUNTS_PAGE_SIZE; offset < wanted; offset += ACCOUNTS_PAGE_SIZE) offsets.push(offset)
-  const rest = await Promise.all(offsets.map((offset) => getAccountsPage(ACCOUNTS_PAGE_SIZE, offset)))
-
-  const seen = new Set<string>()
-  const accounts: AccountSummary[] = []
-  for (const page of [first, ...rest]) {
-    for (const account of page.accounts) {
-      if (!seen.has(account.id)) {
-        seen.add(account.id)
-        accounts.push(account)
-      }
-    }
-  }
-  return { accounts, total: first.total }
+  const { items, total } = await fetchAllPages(async (limit, offset) => {
+    const page = await getAccountsPage(limit, offset)
+    return { items: page.accounts, total: page.total }
+  })
+  return { accounts: items, total }
 }
 
 /**
@@ -526,5 +540,100 @@ export type AccountStatusAction = 'suspend' | 'reactivate'
  */
 export async function updateAccountStatus(id: string, action: AccountStatusAction): Promise<AccountSummary> {
   const res = await apiClient.patch<AccountSummary>(`/admin/accounts/${id}/status`, { action })
+  return res.data
+}
+
+/** One NGO as the admin routes return it (`GET /admin/ngos` per item, and `GET /admin/ngos/{id}`).
+ *  `approved_by_email`/`approved_at` are the admin's *decision*, whichever way it went — the schema
+ *  has no separate "rejected by", so a rejected NGO carries them too — and are absent while it's
+ *  still pending. `volunteer_count` is the number of `ngo_volunteer` accounts tied to it. */
+export interface AdminNgo {
+  id: string
+  name: string
+  status: NgoStatus
+  contact_email?: string
+  contact_phone?: string
+  created_by_id: string
+  created_by_email: string
+  approved_by_email?: string
+  approved_at?: string
+  created_at: string
+  updated_at: string
+  volunteer_count: number
+}
+
+interface NgosPage {
+  ngos: AdminNgo[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export const ADMIN_NGOS_QUERY_KEY = ['admin', 'ngos'] as const
+export const adminNgoQueryKey = (id: string) => ['admin', 'ngo', id] as const
+export const adminNgoVolunteersQueryKey = (id: string) => ['admin', 'ngo', id, 'volunteers'] as const
+
+/**
+ * GET /admin/ngos?status=&limit=&offset= — `admin`/`super_admin` only, newest first. Paged like
+ * `GET /admin/accounts` (`limit` outside `1..100` silently becomes 20). `status`, when given, must
+ * be one of the five NGO statuses (anything else is a `400`) and `total` respects it, so a tab's
+ * count is `?status=X&limit=1` read off `total`.
+ */
+export async function getNgosPage(limit: number, offset: number, status?: NgoStatus): Promise<NgosPage> {
+  const res = await apiClient.get<NgosPage>('/admin/ngos', { params: { limit, offset, status } })
+  return res.data
+}
+
+export interface AllNgos {
+  ngos: AdminNgo[]
+  total: number
+}
+
+/**
+ * Every NGO, newest first. There are few enough organisations that the list screen loads them all
+ * and does its tabs, counts and search itself (one request until there are 100 of them), which
+ * gives the search the API doesn't have and the tab counts without five extra `limit=1` requests.
+ */
+export async function getAllNgos(): Promise<AllNgos> {
+  const { items, total } = await fetchAllPages(async (limit, offset) => {
+    const page = await getNgosPage(limit, offset)
+    return { items: page.ngos, total: page.total }
+  })
+  return { ngos: items, total }
+}
+
+/** GET /admin/ngos/{ngoID} — `400 "invalid ngo id"`, `404 "ngo not found"`. */
+export async function getAdminNgo(id: string): Promise<AdminNgo> {
+  const res = await apiClient.get<AdminNgo>(`/admin/ngos/${id}`)
+  return res.data
+}
+
+/** GET /admin/ngos/{ngoID}/volunteers — the same bare array as `GET /ngo/volunteers`, for any NGO.
+ *  `[]` genuinely means none: an unknown id is a `404`, not an empty list. */
+export async function getAdminNgoVolunteers(id: string): Promise<Volunteer[]> {
+  const res = await apiClient.get<Volunteer[]>(`/admin/ngos/${id}/volunteers`)
+  return res.data
+}
+
+/**
+ * POST /admin/ngos/{ngoID}/approve — no body. Atomically flips the NGO to `active` and promotes its
+ * creator to `ngo_admin` (with `ngo_id` set), then revokes the creator's refresh tokens, so they
+ * must log in again to see the new role. A `409` means nothing was done: `"ngo is not pending
+ * approval"` if it was already decided, and — checked *first* — `"this account is already
+ * affiliated with an ngo"`, which is what approving an already-approved NGO actually returns (and
+ * also what a pending one gets if its creator has since joined a different organisation).
+ */
+export async function approveNgo(id: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>(`/admin/ngos/${id}/approve`)
+  return res.data
+}
+
+/**
+ * POST /admin/ngos/{ngoID}/reject — no body, so there is nowhere to send a reason and none is
+ * stored. Flips the NGO to `rejected` and touches nothing else (the creator stays a citizen and may
+ * submit again). `409 "ngo is not pending approval"` if it was already decided.
+ */
+export async function rejectNgo(id: string): Promise<{ message: string }> {
+  const res = await apiClient.post<{ message: string }>(`/admin/ngos/${id}/reject`)
   return res.data
 }

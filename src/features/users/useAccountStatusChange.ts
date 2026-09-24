@@ -13,13 +13,9 @@ import {
 } from '@/api/identity'
 import { moderationActionsQueryKey, recordModerationAction } from '@/api/trust'
 import { extractErrorMessage } from '@/api/errors'
+import type { PageNotice } from '@/components/ui/notice'
 import { statusReasonSchema, type StatusReasonFormValues } from './schemas'
 import type { AccountStatusDialogProps, StatusChangeTarget } from './AccountStatusDialog'
-
-export interface PageNotice {
-  tone: 'success' | 'caution'
-  text: string
-}
 
 type Outcome =
   | { kind: 'changed'; account: AccountSummary; action: AccountStatusAction; logError: string | null }

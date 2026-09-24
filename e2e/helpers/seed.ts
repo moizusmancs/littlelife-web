@@ -200,9 +200,13 @@ export function setAccountStatus(email: string, status: 'active' | 'suspended' |
   if (!updated) throw new Error(`no account found to set status on: ${email}`)
 }
 
-/** Sets an `E2E …` NGO's status, e.g. `deactivated` to see how a screen behaves once the
- *  organisation can no longer invite. Refuses any other NGO. */
-export function setNgoStatus(ngoId: string, status: 'active' | 'suspended' | 'deactivated') {
+/** Sets an `E2E …` NGO's status straight in the database — e.g. `deactivated` to see how a screen
+ *  behaves once the organisation can no longer invite, or `active` to make a pending application look
+ *  decided behind an open page's back. Refuses any other NGO. */
+export function setNgoStatus(
+  ngoId: string,
+  status: 'pending_approval' | 'active' | 'suspended' | 'rejected' | 'deactivated',
+) {
   const updated = psql(`
     UPDATE ngos SET status = ${lit(status)}, updated_at = now()
     WHERE id = ${lit(ngoId)} AND name LIKE 'E2E %'
@@ -263,4 +267,82 @@ export function readModerationActions(email: string): Array<{ type: string; reas
     const [type, ...reason] = line.split('|')
     return { type, reason: reason.join('|') }
   })
+}
+
+export type RegionLevel = 'province' | 'district' | 'tehsil'
+
+function assertE2eRegionName(name: string) {
+  if (!name.startsWith('E2E ')) throw new Error(`seed helper refuses a non-test region name: ${name}`)
+}
+
+const polygonWkt = (ring: Array<[number, number]>) => `POLYGON((${ring.map(([x, y]) => `${x} ${y}`).join(',')}))`
+
+/** A closed square ring, `size` degrees on a side with its south-west corner at (x, y). */
+export const squareRing = (x: number, y: number, size = 0.5): Array<[number, number]> => [
+  [x, y],
+  [x + size, y],
+  [x + size, y + size],
+  [x, y + size],
+  [x, y],
+]
+
+/**
+ * Seeds an `E2E …` region straight into `regions` (there is no delete route, so these rows are kept
+ * and cleaned up by name), for tests that need a hierarchy to already exist. Tests that are *about*
+ * creating a region use the UI and the real `POST /admin/regions` instead.
+ */
+export function seedRegion(name: string, level: RegionLevel, parentId?: string, ring: Array<[number, number]> = squareRing(67, 24)): string {
+  assertE2eRegionName(name)
+  return psql(`
+    INSERT INTO regions (name, level, parent_region_id, boundary)
+    VALUES (${lit(name)}, ${lit(level)}, ${parentId ? `${lit(parentId)}::uuid` : 'NULL'}, ST_GeomFromText(${lit(polygonWkt(ring))}, 4326))
+    RETURNING id`)
+}
+
+export interface StoredRegion {
+  id: string
+  name: string
+  level: string
+  parentId: string | null
+  boundary: { type: string; coordinates: number[][][] }
+  updatedAt: string
+}
+
+/** The stored row for an `E2E …` region, or `null` when there isn't one (a save the UI blocked). */
+export function readRegionByName(name: string): StoredRegion | null {
+  assertE2eRegionName(name)
+  const row = psql(`
+    SELECT json_build_object('id', id, 'name', name, 'level', level, 'parentId', parent_region_id,
+                             'boundary', ST_AsGeoJSON(boundary)::json, 'updatedAt', updated_at)
+    FROM regions WHERE name = ${lit(name)}`)
+  return row ? (JSON.parse(row) as StoredRegion) : null
+}
+
+export function readRegion(id: string): StoredRegion {
+  const row = psql(`
+    SELECT json_build_object('id', id, 'name', name, 'level', level, 'parentId', parent_region_id,
+                             'boundary', ST_AsGeoJSON(boundary)::json, 'updatedAt', updated_at)
+    FROM regions WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'`)
+  if (!row) throw new Error(`no E2E region ${id}`)
+  return JSON.parse(row) as StoredRegion
+}
+
+/** How many `E2E …` regions carry this name — to prove a blocked save wrote nothing. */
+export function countRegionsNamed(name: string): number {
+  assertE2eRegionName(name)
+  return Number(psql(`SELECT count(*) FROM regions WHERE name = ${lit(name)}`))
+}
+
+/** Puts a region in an `E2E …` NGO's coverage directly (what `POST /ngo/me/regions` does), for tests that need it pre-assigned. */
+export function seedNgoRegion(ngoId: string, regionId: string) {
+  psql(`
+    INSERT INTO ngo_regions (ngo_id, region_id)
+    SELECT n.id, r.id FROM ngos n, regions r
+    WHERE n.id = ${lit(ngoId)}::uuid AND n.name LIKE 'E2E %' AND r.id = ${lit(regionId)}::uuid AND r.name LIKE 'E2E %'`)
+}
+
+/** The ids of the regions an NGO covers, as stored — to prove an add or remove really reached the database. */
+export function readNgoRegionIds(ngoId: string): string[] {
+  const rows = psql(`SELECT region_id FROM ngo_regions WHERE ngo_id = ${lit(ngoId)}::uuid ORDER BY region_id`)
+  return rows ? rows.split('\n') : []
 }
