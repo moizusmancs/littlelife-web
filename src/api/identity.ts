@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { apiClient } from '@/api/client'
 import type { Role } from '@/store/auth'
 
@@ -172,5 +173,127 @@ export async function deleteAccount(currentPassword: string): Promise<{ message:
   const res = await apiClient.post<{ message: string }>('/auth/me/delete', {
     current_password: currentPassword,
   })
+  return res.data
+}
+
+export interface RegisterNgoResponse {
+  id: string
+  name: string
+  status: string
+}
+
+/** Matches the backend's `ngo_status` enum (api/00-identity.md). Only the first three are
+ *  reachable while the submitter is still a citizen; `suspended`/`deactivated` exist for an
+ *  already-approved org and are typed here so an unexpected value never crashes the UI. */
+export type NgoStatus = 'pending_approval' | 'active' | 'rejected' | 'suspended' | 'deactivated'
+
+/** Same shape as `GET /ngo/me`. `contact_*` are omitted entirely (not `""`) when unset. */
+export interface NgoRegistration {
+  id: string
+  name: string
+  status: NgoStatus
+  contact_email?: string
+  contact_phone?: string
+  created_at: string
+  updated_at: string
+}
+
+/** Shared TanStack Query key for `GET /ngos/mine`. */
+export const MY_NGO_QUERY_KEY = ['ngos', 'mine'] as const
+
+/**
+ * GET /ngos/mine — the caller's own most recent NGO submission at ANY status, looked up by
+ * `created_by` (not `accounts.ngo_id`, which `GET /ngo/me` uses and which stays empty until an
+ * admin approves). This is what lets a citizen see a still-pending or rejected registration
+ * after the `201` from `registerNgo` is long gone.
+ *
+ * A `404` means "never submitted one" — an empty state, not a failure — so it resolves to
+ * `null` here rather than throwing; every caller would otherwise have to re-derive that. Any
+ * other failure (401/403/network) still throws. The route is `RequireVerified`, so an unverified
+ * token gets a real `403 "email verification required"`.
+ *
+ * Worth knowing: a `rejected` submission doesn't block a new one, so the newest row wins; there
+ * is no rejection reason anywhere in the schema, so the UI can say "rejected" but not why. On
+ * `active`, the caller's stored access token still carries the OLD role until they log in again
+ * (approval also revokes their refresh tokens) — see MyNgoPage.
+ */
+export async function getMyNgoRegistration(): Promise<NgoRegistration | null> {
+  try {
+    const res = await apiClient.get<NgoRegistration>('/ngos/mine')
+    return res.data
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 404) return null
+    throw error
+  }
+}
+
+/**
+ * POST /ngos/register — any verified citizen may call this (already guaranteed by the time a
+ * `/app/*` route is reachable at all — see route guards). Always creates a `pending_approval`
+ * NGO; the calling account is only promoted to `ngo_admin` if an admin later approves it
+ * (`POST /admin/ngos/{ngoID}/approve`, Phase 1's Admin NGOs screen, not yet built).
+ *
+ * The `201` body is a thin `{id, name, status}` — to show the submission afterward (and on any
+ * later visit) read it back with `getMyNgoRegistration` (`GET /ngos/mine`), which resolves by
+ * `created_by`; `GET /ngo/me` can't, since it needs `accounts.ngo_id`, only set on approval.
+ */
+export async function registerNgo(
+  name: string,
+  contactEmail?: string,
+  contactPhone?: string,
+): Promise<RegisterNgoResponse> {
+  const res = await apiClient.post<RegisterNgoResponse>('/ngos/register', {
+    name,
+    contact_email: contactEmail || undefined,
+    contact_phone: contactPhone || undefined,
+  })
+  return res.data
+}
+
+/** One pending invitation addressed to the caller. `GET /volunteer-invitations` returns
+ *  pending ones only and just the inviting NGO's name — no inviter, role, or region details. */
+export interface VolunteerInvitation {
+  id: string
+  ngo_id: string
+  ngo_name: string
+  status: 'pending'
+  created_at: string
+}
+
+/** Shared TanStack Query key for `GET /volunteer-invitations` — the Invitations screen and the
+ *  Profile sidebar's pending-count badge read the same cache entry. */
+export const INVITATIONS_QUERY_KEY = ['volunteer-invitations'] as const
+
+/**
+ * GET /volunteer-invitations — the caller's own **pending** invitations, newest first, each with
+ * the inviting NGO's name (api/00-identity.md). Any authenticated account may call it
+ * (`RequireAuth` only, not `RequireVerified`). Always `[]` when there are none, never an error or
+ * `null`. Accepted/declined invitations are never returned, so there is no "past" history to show.
+ */
+export async function getVolunteerInvitations(): Promise<VolunteerInvitation[]> {
+  const res = await apiClient.get<VolunteerInvitation[]>('/volunteer-invitations')
+  return res.data
+}
+
+/**
+ * PATCH /volunteer-invitations/{id}/accept — promotes the caller to `ngo_volunteer` with the NGO's
+ * `ngo_id` set, atomically, then revokes every one of their sessions. **The access token in hand
+ * still carries the old `user` role**, so the caller must log in again (InvitationsPage signs out
+ * right after a successful accept). `404` for a missing *or someone else's* invitation
+ * (deliberately indistinguishable), `409 "invitation is not pending"`, or
+ * `409 "ngo is not active"` if the NGO was deactivated after the invite went out.
+ */
+export async function acceptVolunteerInvitation(id: string): Promise<{ message: string }> {
+  const res = await apiClient.patch<{ message: string }>(`/volunteer-invitations/${id}/accept`)
+  return res.data
+}
+
+/**
+ * PATCH /volunteer-invitations/{id}/decline — marks it `declined` and touches nothing else on the
+ * account (no role change, no session revocation). Same `404`/`409 "invitation is not pending"`
+ * shapes as accept.
+ */
+export async function declineVolunteerInvitation(id: string): Promise<{ message: string }> {
+  const res = await apiClient.patch<{ message: string }>(`/volunteer-invitations/${id}/decline`)
   return res.data
 }

@@ -10,7 +10,9 @@ import {
   UserCircleIcon,
   UsersThreeIcon,
 } from '@phosphor-icons/react'
-import { cn } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
+
+const INVITATIONS_PATH = '/app/profile/invitations'
 
 const NAV_ITEMS = [
   { label: 'Overview', to: '/app/profile', icon: UserCircleIcon, end: true },
@@ -21,7 +23,7 @@ const NAV_ITEMS = [
   { label: 'Activity', to: '/app/profile/activity', icon: ClockCounterClockwiseIcon },
   { label: 'Safety Groups', to: '/app/safety-groups', icon: UsersThreeIcon },
   { label: 'My NGO', to: '/app/profile/ngo', icon: BuildingsIcon },
-  { label: 'Invitations', to: '/app/profile/invitations', icon: EnvelopeOpenIcon },
+  { label: 'Invitations', to: INVITATIONS_PATH, icon: EnvelopeOpenIcon },
 ]
 
 export interface ProfileSidebarProps {
@@ -35,29 +37,25 @@ export interface ProfileSidebarProps {
    *  reference, Batch 2 §2g) — those come from Geo/Trust (Phases 2/4), not built yet; showing
    *  them now would mean fabricating data. */
   name: string | null
+  /** Real count of pending volunteer invitations (`GET /volunteer-invitations`), shown as the
+   *  pink pill on the Invitations item exactly as in the mockup. `undefined` while it's loading
+   *  or if the fetch failed, `0` when there are none — neither shows a badge. */
+  invitationCount?: number
 }
 
 /**
  * Pixel reference: Batch 2 (`LittleLife Web Mockups.dc.html`) §2g "Profile › Invitations" is
  * the only mockup that shows this shared W-Settings sub-nav shell — reused here verbatim (same
  * `profNav` item set/icons/layout) even though Edit Profile itself isn't separately pictured.
- * Every listed destination already exists as a real route (PlaceholderPage or, for Edit
- * Profile, the real screen) — see router.tsx — so nothing here links to a dead route. The
- * mockup's "Invitations" item carries a pending-count badge; omitted here since Invitations
- * isn't built yet and there's no real count to show.
+ * Every listed destination already exists as a real route (PlaceholderPage or the real screen) —
+ * see router.tsx — so nothing here links to a dead route. The mockup's "Invitations" item carries
+ * a pending-count badge, now backed by the real `GET /volunteer-invitations` count.
  * Purely presentational: `NavLink`'s own active-route detection is the only "state" here, same
  * precedent as `CitizenLayout`'s top nav.
  */
-export function ProfileSidebar({ name }: ProfileSidebarProps) {
+export function ProfileSidebar({ name, invitationCount }: ProfileSidebarProps) {
   const isLoaded = name !== null
-  const initials = name
-    ? name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join('')
-    : ''
+  const initials = getInitials(name ?? '')
 
   return (
     <div className="flex w-full flex-col gap-1 md:w-65 md:flex-none">
@@ -92,7 +90,12 @@ export function ProfileSidebar({ name }: ProfileSidebarProps) {
             }
           >
             <item.icon size={20} className="flex-none" />
-            <span className="truncate">{item.label}</span>
+            <span className="flex-1 truncate">{item.label}</span>
+            {item.to === INVITATIONS_PATH && !!invitationCount && (
+              <span className="flex-none rounded-full bg-primary-500 px-1.75 py-0.5 font-body text-[11px] font-semibold text-white">
+                {invitationCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

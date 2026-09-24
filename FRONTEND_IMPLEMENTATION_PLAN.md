@@ -10,10 +10,11 @@ change when that happens — that's the entire point of the service-layer split 
 
 **Phase 1 — Identity & Account Shell: 🚧 In progress.** Built, tested (unit + E2E against the
 real local backend), and visually verified: Login, Register, Logout, Verify Email (OTP), the
-onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), and
-Account Settings (deactivate/delete) — this closes out the full auth-screen set plus the first two
-W-Settings screens (steps 1–2 of Phase 1's build order). Not yet built: My NGO, Invitations,
-Organization Settings, NGO/Admin My Account, Volunteers, Users & Accounts, NGOs.
+onboarding profile-completion step, Forgot/Reset Password, Edit Profile (name portion), Account
+Settings (deactivate/delete), My NGO (register + live status), and Invitations — this closes out the full
+auth-screen set plus every citizen `/app/profile/*` screen this phase owns (steps 1–3 of Phase 1's
+build order; Invitations added since). Not yet built: Organization Settings, NGO/Admin My Account,
+Volunteers, Users & Accounts, NGOs.
 
 **Phases 2–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -59,8 +60,8 @@ short version.
   home region is Geo (Phase 2, not built — see the region-picker bullet above), verified/level
   are Trust (Phase 4, not built). `ProfileSidebar` renders only the real field (`name`), same
   principle as every other deviation here: build what's real, don't fabricate the rest. Same
-  reasoning for the mockup's "Invitations" nav item pending-count badge — omitted, no real count
-  exists (Invitations itself isn't built).
+  reasoning for the mockup's "Invitations" nav item pending-count badge — first omitted (no real
+  count), **now built** from the real `GET /volunteer-invitations` count once Invitations existed.
 - **Account Settings has exactly two rows, not the mockup's full security panel.** Batch 4 NGO
   §4m ("My Account") is the closest pixel reference to a settings screen with destructive account
   rows, but it's staff-facing and mostly fictional relative to the real backend — 2FA, recovery
@@ -68,6 +69,57 @@ short version.
   its row *layout* (icon + title/description + trailing action, divided rows in one card) is
   reused; the content is exactly the two real routes `WEB_DESIGN_PLAN.md` §6.2 documents —
   Deactivate (caution icon, reversible) and Delete (critical icon, irreversible) — nothing else.
+- **My NGO's status card needed a backend route that didn't exist — the backend added it.**
+  `WEB_DESIGN_PLAN.md` §9 describes "a status card (no NGO / pending / active) plus a 'Register an
+  NGO' form when none exists." The first build couldn't do that: `api/00-identity.md` had no route
+  for a citizen to read back their own submission — `GET /ngo/me` resolves via `accounts.ngo_id`,
+  which stays empty until an admin approves, so it 403s for exactly the accounts that need it —
+  and the screen fell back to a session-only pending card that a reload forgot. **You hit that
+  live** (submitted an NGO, reopened the page, got the register form again). The gap was real, not
+  a frontend bug; you added **`GET /ngos/mine`** on the backend (latest submission by
+  `created_by`, any status, same body as `GET /ngo/me`, `RequireAuth` + `RequireVerified`, `404`
+  when none), and the screen now renders what the server says, so it survives a reload:
+  `404` → the register form (an empty state, not an error — `getMyNgoRegistration` resolves it to
+  `null`); `pending_approval` → status card, no form (a second submit would `409`); `rejected` →
+  status card *and* the form again (a rejected row doesn't block a resubmit); `active` → status
+  card with **Log in again** (approval promotes the account to `ngo_admin` and revokes its refresh
+  tokens, but this session's access token still carries the old role); a real failure (`401`/`403`/
+  network) → an error card with **Try again**, never the empty-state form. A successful submit
+  invalidates the query and waits for the refetch, so the card that replaces the form is the
+  server's real row, not one rebuilt from the thin `201` body. Deviations that remain: there is
+  **no rejection reason** (the schema doesn't store one, so the card says "not approved" and no
+  more), and `suspended`/`deactivated` (post-approval statuses) are typed and rendered defensively
+  rather than designed. This web repo's copy of `api/00-identity.md` under `supporting-material/`
+  predates the route — the backend's own doc is the authoritative one.
+  Both `GET /ngos/mine` and `POST /ngos/register` are `RequireVerified`, not just `RequireAuth`
+  (unlike `GET`/`PATCH /profile`), so the `window.__authStore` debug-hook technique (see below)
+  correctly can't bypass them: a client-side-only-spoofed session gets a real
+  `403 "email verification required"` from either. Those real `403`s are E2E-tested for real; the
+  states that need a genuinely verified account (pending/rejected/active, and the submit-then-
+  refetch swap) are covered by stubbing **only `GET /ngos/mine`** (and, for the submit test, the
+  one `POST` response) with correctly-shaped fakes, so the real client code — query, status card,
+  form swap, refetch, logout — still runs for real. A deliberate, narrow exception to "E2E hits
+  the real backend," not a silent one. Lesson from this one: every original test passed while the
+  reload behavior was wrong, because the states a reload changes were exactly the ones the suite
+  couldn't reach for real — worth remembering when a "success" state is only reachable by stub.
+
+- **Invitations builds the mockup's pending list, not its history or inviter detail.** Pixel
+  reference: Batch 2 §2g "Profile › Invitations". Two parts of it have no backing data:
+  `GET /volunteer-invitations` returns **pending invitations only**, so the mockup's "PAST · n"
+  section (declined/accepted rows with dates) isn't built; and each row carries just `ngo_name` +
+  `created_at`, so the card's meta line is "Invited <date>" instead of "Invited by <person> · <role>"
+  plus a region/coverage line — nothing invented to fill the gap. Added beyond the mockup: an
+  empty state, a load-failure card with **Try again**, and a per-card in-flight state. **Accept
+  signs the user out on purpose**: the server promotes the account to `ngo_volunteer` and revokes
+  its sessions, but this tab's access token still carries the old `user` role, so success runs the
+  real `POST /auth/logout`, clears auth, and lands on `/login` with "You're now a volunteer with
+  <NGO>…" (via `pendingMessage`) — matching the mockup's own copy, "you'll be signed out of the
+  citizen app and continue in the NGO console" — and logging in again lands in `/ngo/dashboard`.
+  No confirm dialog, again following the mockup (its info banner about one-role-per-account does
+  that job). Decline touches nothing else on the account, so it just refetches and stays put. Any
+  accept/decline failure (`404`, `409 "invitation is not pending"`, `409 "ngo is not active"`) shows
+  the server's own message and refetches, since the likeliest cause is the invitation changing
+  after the page loaded. `RequireAuth` only (not `RequireVerified`), unlike My NGO.
 
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
@@ -94,7 +146,22 @@ short version.
   event), never `page.goto` — a hard reload re-bootstraps auth from the real, still-unverified
   cookie session and wipes the override. Doing the override while still mounted on a route whose
   own guard reacts to it (e.g. `/verify-email`) also races that guard's own redirect effect —
-  let it settle first, then navigate again.
+  let it settle first, then navigate again. **Its real limit, found building My NGO:** it only
+  fools *frontend route guards*, which read the client-side store — a backend route that itself
+  checks verification status server-side (`RequireVerified`, e.g. `POST /ngos/register`) still
+  correctly rejects the real access token, which genuinely still carries `email_verified: false`.
+  Only `RequireAuth`-only routes (`GET`/`PATCH /profile`, `POST /auth/me/deactivate`, etc.) are
+  reachable this way; `RequireVerified` ones (`GET /ngos/mine`, `POST /ngos/register`) are not.
+  (Dead end explored while looking for a workaround: the real OTP isn't recoverable from the
+  backend's data stores — Redis holds a hash of it, not the plaintext. **The workaround that does
+  work, first used for Invitations:** web sessions may read the backend freely and seed rows into
+  *existing* Postgres tables (never schema changes, never backend code), so `e2e/helpers/seed.ts`
+  marks a freshly-registered `e2e-` account verified + active and gives it a profile name *before*
+  its first login — the token's `email_verified` claim is minted at login, so the session is
+  genuinely verified and onboarded. No `window.__authStore` spoofing and no stubbed responses; it
+  reaches `RequireVerified` routes and every screen behind the onboarding gates for real. The
+  helper only ever writes to `e2e-` accounts / `E2E ` NGOs. This makes My NGO's stubbed states
+  (pending/rejected/active) replaceable with real ones — a follow-up, not yet done.)
 - **`ProfileLayout` — a new shared shell for every `/app/profile/*` screen**, nested inside
   `CitizenLayout`'s own `<Outlet>` (so it only owns the sidebar/content split, not the top nav).
   Fetches the account's `name` once via a shared `PROFILE_QUERY_KEY` (`src/api/profiling.ts`) so
@@ -193,6 +260,17 @@ without its generated code.
   splitting the read (pure, in the initializer) from the clear (a real side effect, moved to a
   `useEffect`) — `useEffect`'s own StrictMode double-fire is harmless here since clearing an
   already-null field is a no-op.
+- **The TanStack Query cache survived logout, so the next account in the same tab could be served
+  the previous account's data.** Found while adding a second per-user cached query (pending
+  invitations, alongside the profile name): `staleTime` is 30s and nothing cleared the cache when
+  the session ended, so logging out and signing in as someone else inside that window would show
+  the previous person's name in the Profile sidebar (and their invitations) until a refetch
+  landed — a privacy leak, not just stale UI. Proved with failing tests first
+  (`src/lib/queryClient.test.ts`: two red, two green), then fixed once, centrally: a subscription
+  in `queryClient.ts` clears the whole cache whenever the signed-in account goes away or changes.
+  It keys off the auth store, so every path is covered — logout, deactivate/delete, a failed silent
+  refresh in the axios interceptor — without each caller remembering; a plain token refresh for the
+  same account (same `user.id`) and the first login (null → user) deliberately keep the cache.
 
 ---
 
@@ -472,8 +550,8 @@ screens sit behind auth.
 | Forgot / Reset Password | `/forgot-password`, `/reset-password` | All | W-Auth | ✅ Built |
 | Edit Profile (name portion only — full profile is Phase 4) | `/app/profile/edit` | Citizen | W-Settings | ✅ Built |
 | Account Settings (deactivate/delete) | `/app/profile/account-settings` | Citizen | W-Settings | ✅ Built |
-| My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ⬜ Not built |
-| Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ⬜ Not built |
+| My NGO **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/ngo` | Citizen | W-Settings | ✅ Built |
+| Invitations **(NEW screen, per WEB_DESIGN_PLAN §9)** | `/app/profile/invitations` | Citizen | W-Settings | ✅ Built |
 | Organization Settings | `/ngo/settings/organization` | NGO (`ngo_admin` only) | W-Settings | ⬜ Not built |
 | My Account | `/ngo/settings/account`, `/admin/settings/account` | NGO, Admin | W-Settings | ⬜ Not built |
 | Volunteers | `/ngo/volunteers` | NGO | W-List | ⬜ Not built |
@@ -491,11 +569,12 @@ screens sit behind auth.
 | `PATCH /auth/password` | Account Settings (change password while logged in) | ⬜ Not wired |
 | `POST /auth/password/forgot`, `POST /auth/password/reset` | Forgot/Reset Password | ✅ Wired |
 | `POST /auth/me/deactivate`, `POST /auth/me/delete` | Account Settings | ✅ Wired |
-| `POST /ngos/register` | My NGO → Register form | ⬜ Not wired |
+| `POST /ngos/register` | My NGO → Register form | ✅ Wired |
+| `GET /ngos/mine` **(added to the backend after My NGO's first build — see Progress log)** | My NGO → status card (pending / rejected / active), survives a reload | ✅ Wired |
 | `POST /admin/ngos/{ngoID}/approve`, `POST /admin/ngos/{ngoID}/reject` | Admin NGOs list | ⬜ Not wired |
 | `GET /ngo/me`, `PATCH /ngo/me`, `POST /ngo/me/deactivate` | Organization Settings | ⬜ Not wired |
 | `POST /ngo/volunteers/invitations`, `GET /ngo/volunteers`, `PATCH /ngo/volunteers/{id}/deactivate` | Volunteers (NGO side) | ⬜ Not wired |
-| `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side) | ⬜ Not wired |
+| `GET /volunteer-invitations`, `PATCH /volunteer-invitations/{id}/accept`, `PATCH /volunteer-invitations/{id}/decline` | Invitations (citizen side); the count also feeds the Profile sidebar badge | ✅ Wired |
 | `GET /admin/accounts?limit=&offset=`, `GET /admin/accounts/{id}`, `PATCH /admin/accounts/{id}/status` | Users & Accounts | ⬜ Not wired |
 
 ### Build steps
@@ -512,9 +591,13 @@ screens sit behind auth.
    later `/app/profile/*` screen (built or still placeholder) now renders inside — see Progress
    log's "New architecture" entry.
 4. ✅ Account Settings (deactivate/delete), plus the generic `Dialog` primitive it needed — see
-   Progress log. ⬜ My NGO, Invitations remain — the last two `/app/profile/*` screens.
-5. ⬜ Organization Settings, My Account, Volunteers (NGO).
-6. ⬜ Users & Accounts, NGOs (Admin).
+   Progress log.
+5. ✅ My NGO (register form + live status card via `GET /ngos/mine` — see Progress log).
+   ✅ Invitations (pending list, accept → sign out and re-login as a volunteer, decline, and the
+   sidebar's real count badge) — the last `/app/profile/*` screen, so the citizen half of Phase 1
+   is complete.
+6. ⬜ Organization Settings, My Account, Volunteers (NGO).
+7. ⬜ Users & Accounts, NGOs (Admin).
 
 ### Testing
 - ✅ Component: form validation (Zod schemas matching each route's documented required fields),
@@ -526,7 +609,17 @@ screens sit behind auth.
   empty-name states (the `null` vs `""` distinction — see the real-bug entry in Progress log),
   Saved-indicator dirty-tracking, `ProfileLayout`'s shared query cache feeding both the sidebar
   and the form, Account Settings' two dialogs (open/close, form reset between opens, error
-  banners), and the `pendingMessage` store field itself (set → shown once on `/login` → cleared).
+  banners), the `pendingMessage` store field itself (set → shown once on `/login` → cleared), and
+  My NGO's status-driven rendering (a `404` resolves to the register form; a fresh mount shows an
+  existing pending row with no form; rejected shows the card *and* the form with a single `h1`;
+  active → **Log in again** really logs out and sets the `/login` message; a real failure shows an
+  error card that recovers on retry; submit → refetch swaps in the server's row; a `409` from a
+  stale page surfaces as an ordinary form error), Invitations (list / empty / load-failure states;
+  decline refetches and stays signed in; accept signs out through a real logout with the NGO named
+  in the `/login` message; `409`s surface the server's message and refetch; per-card in-flight
+  state), the Profile sidebar's real invitation-count badge (shown for n>0, absent for 0/unknown/a
+  failed fetch), and the query cache being dropped on logout / account switch but kept on a plain
+  token refresh (`queryClient.test.ts`).
 - ✅ E2E (Playwright, real backend, for what's built): register → land on `/verify-email` (not
   `/app/onboarding/region` — that assumption was wrong, see Progress log); login of an
   unverified account → lands in the onboarding chain, not the role landing route; an unverified
@@ -545,22 +638,45 @@ screens sit behind auth.
   account for real, then proves reactivation by actually logging back in and landing on real
   (still-unverified) `/verify-email` — not just checking a 200 came back; a wrong password on
   delete gets the real `401 "invalid email or password"`; a real delete redirects to `/login`
-  with the message and a follow-up real login attempt confirms the account is genuinely gone.
-  - ⬜ Still not possible: a full "register → really verify (real OTP, no client-side override) →
-    land in the app" E2E path, or "request reset → really reset → log in with the new password"
-    — both real OTP/reset tokens are only server-logged, not obtainable from any response this
-    test suite can read. Revisit once/if there's a way to read them without a human checking a
-    server log.
-  - ⬜ NGO registration → admin approval → promoted account login; volunteer invitation → accept
-    → promoted to `ngo_volunteer` — blocked on Users & Accounts / NGOs / Volunteers screens
-    (steps 4–5 above) not being built yet.
+  with the message and a follow-up real login attempt confirms the account is genuinely gone. My
+  NGO's validation errors never call the network (real assertion, not just an inference); both
+  its real `GET /ngos/mine` and `POST /ngos/register` get a genuine `403 "email verification
+  required"` from the backend for the debug-hook's spoofed session (proving `RequireVerified`
+  routes can't be bypassed that way — see Progress log), and the load failure surfaces as an error
+  card with a retry rather than the empty-state form. Its pending / rejected / active states, and
+  the submit-then-refetch swap, are the one deliberate exception to "E2E hits the real backend" in
+  this whole suite — only `GET /ngos/mine` (and the one `POST` response, in the submit test) are
+  stubbed with correctly-shaped fakes, since a genuinely verified account isn't producible here;
+  the real client code around them, including the "open the page again" remount and the real
+  logout behind **Log in again**, still runs for real (also see Progress log).
+  **Invitations is the first spec with no spoofing and no stubbed responses at all**
+  (`e2e/profile-invitations.spec.ts`, using `e2e/helpers/seed.ts` — see the debug-hook entry): a
+  real registration, the account marked verified + onboarded in Postgres before it logs in, and a
+  real `E2E` NGO's pending invitation seeded against it. Then everything is genuine — the list and
+  the sidebar badge (visible on Edit Profile before Invitations is even opened), a real decline
+  that leaves the account a citizen, a real accept whose promotion is confirmed by reading the
+  account's role back from the database (`ngo_volunteer`, `ngo_id` set) and whose re-login really
+  lands on `/ngo/dashboard`, and a real `409 "invitation is not pending"` provoked by changing the
+  row under an open page.
+  - ⬜ Still not possible: a full "register → really verify via the real OTP → land in the app" E2E
+    path and "request reset → really reset → log in with the new password" — both need a real
+    OTP/reset token, only server-logged (Redis holds a hash). The DB-seeding helper is the
+    substitute for the verified-session half; it doesn't exercise the OTP screens themselves.
+    Follow-ups now unblocked: replace My NGO's stubbed pending/rejected/active states with real
+    ones the same way, and the *user's own* real verified account (with a real pending NGO) is a
+    manual check — reopen `/app/profile/ngo` and it should show the pending card, not the form.
+  - ⬜ NGO registration → admin approval → promoted account login — the approval half is blocked on
+    the Admin NGOs screen not being built yet. Volunteer invitation → accept → promoted is now
+    covered for the *citizen* half; the NGO-admin half (sending the invitation from
+    `POST /ngo/volunteers/invitations`) is blocked on the Volunteers screen (steps 6–7 above).
 - ⬜ Manual: 401-refresh-retry against a real expired token.
 
 **Exit criteria:** every role can register/login/manage their own account for real; NGO
 approval and volunteer promotion flows work end-to-end against the real backend. **Partially
 met** — the full auth-screen set (register/login/logout/verify/onboard/forgot/reset) plus Edit
-Profile and Account Settings are real and tested; My NGO/Invitations and the NGO/admin
-account-lifecycle screens remain.
+Profile, Account Settings, My NGO, and Invitations are real and tested — every citizen
+`/app/profile/*` screen this phase owns; the NGO/admin account-lifecycle screens (including the
+admin-approval half of NGO registration and the NGO side of volunteer invitations) remain.
 
 ---
 

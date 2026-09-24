@@ -17,3 +17,16 @@ export const deleteAccountSchema = z.object({
 })
 
 export type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>
+
+/** POST /ngos/register (api/00-identity.md) — `name` required, trimmed non-blank;
+ *  `contact_email`/`contact_phone` are both optional, and `contact_email` is only validated as
+ *  an email shape when non-empty (the backend's own rule: "if provided (non-empty after
+ *  trimming), must be a valid email shape"). `contact_phone` has no format rule at all
+ *  server-side — free text, so no client-side pattern is invented here either. */
+export const registerNgoSchema = z.object({
+  name: z.string().trim().min(1, 'NGO name is required'),
+  contactEmail: z.union([z.literal(''), z.string().trim().email('Enter a valid email address')]),
+  contactPhone: z.string(),
+})
+
+export type RegisterNgoFormValues = z.infer<typeof registerNgoSchema>
