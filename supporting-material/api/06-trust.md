@@ -26,7 +26,7 @@ that later phase ships.
 
 ## FE-5 (M1) — Family/safety group connections + live GPS during active emergencies
 
-**What it covers:** requesting, accepting/declining, listing, and removing a
+**What it covers:** requesting (by email or by member id), accepting/declining, listing, and removing a
 family/safety-group relationship with another account, plus a WebSocket that relays a tracked
 citizen's live GPS position to everyone in an **accepted** connection with them.
 
@@ -34,47 +34,110 @@ citizen's live GPS position to everyone in an **accepted** connection with them.
 `PATCH /safety-connections/{id}/accept`, `PATCH /safety-connections/{id}/decline`,
 `DELETE /safety-connections/{id}`, `WS /ws/safety-connections/location`.
 
-### `POST /safety-connections`
+### The connection object, and who sees whom
 
-**Auth required:** Yes.
-
-**Request**
-```json
-{ "recipient_account_id": "48434d1b-...", "connection_type": "family" }
-```
-`connection_type` is one of `family`/`safety_group`.
-
-**Behavior**
-
-Creates a `pending` request — the requester is always the caller's own account (from the JWT).
-**Only one pending request may exist between the same ordered pair at a time** (database-enforced)
-— you cannot send a second request to the same recipient while one is still outstanding.
-
-**Responses**
-
-| Condition | Status | Body |
-|---|---|---|
-| Success | `201 Created` | see shape below |
-| `recipient_account_id`/`connection_type` missing | `400` | bind-failure shape |
-| `recipient_account_id` not a valid UUID | `400` | `{"error":"recipient_account_id must be a valid uuid"}` |
-| `connection_type` not `family`/`safety_group` | `400` | `{"error":"connection_type must be one of: family, safety_group"}` |
-| Requesting a connection to yourself | `400` | `{"error":"cannot send a safety connection request to yourself"}` |
-| `recipient_account_id` well-formed but no such account exists | `404` | `{"error":"recipient account not found"}` |
-| A pending request already exists between this pair (either direction — same ordered pair, i.e. calling this twice with the same requester/recipient) | `409 Conflict` | `{"error":"a pending connection request already exists between these two accounts"}` |
+Every route that returns a connection (`POST`, `GET`, and both `PATCH`es) returns the **same shape**:
 
 ```json
 {
   "id": "3d4e5f6a-...",
   "requester_account_id": "48434d1b-...",
+  "requester_name": "Amna Khan",
+  "requester_email": "amna@example.com",
   "recipient_account_id": "086fa55a-...",
+  "recipient_name": "Bilal Rehman",
+  "recipient_email": "bilal@example.com",
   "connection_type": "family",
-  "status": "pending",
+  "status": "accepted",
   "created_at": "2026-09-20T06:00:00Z",
-  "updated_at": "2026-09-20T06:00:00Z"
+  "responded_at": "2026-09-20T06:05:00Z",
+  "updated_at": "2026-09-20T06:05:00Z"
 }
 ```
-Note **`responded_at` is omitted entirely** for a still-pending connection (this `POST` response
-always omits it — there's nothing to respond to yet).
+The four `requester_*` / `recipient_*` name and email fields are **always present, never omitted** — so
+a client handles one shape. They are `""` when the person hasn't set a name yet (the "not yet set" state
+in [05-profiling.md](05-profiling.md)), when the person's account no longer exists, or when **you aren't
+allowed to see them yet**. `responded_at` is omitted while the connection is still `pending`.
+
+**Who sees whom.** A stranger's name and email are not shown to just anyone:
+
+| Status | You are the… | Requester's name / email | Recipient's name / email |
+|---|---|---|---|
+| `pending` | **recipient** (you were asked) | ✅ shown — you need it to decide | ✅ yours |
+| `pending` | **requester** (you asked) | ✅ yours | ❌ `""` / `""` |
+| `declined` | recipient | ✅ | ✅ yours |
+| `declined` | requester | ✅ yours | ❌ `""` / `""` |
+| `accepted` | either | ✅ | ✅ |
+
+**Why the requester can't see the recipient until they accept:** account ids are *not* secret — public
+incident reports, community updates and missing-person reports all carry them. If sending a request by id
+returned the recipient's email, anyone signed in could turn a public id into someone's email address. So the
+person being asked sees who is asking, and the person who asked learns nothing about them until they say yes.
+
+**Frontend handling:** show each person by `name`, falling back to `email`, falling back to
+"Member XXXXXXXX" (the first 8 characters of the account id). An *outgoing pending* request will therefore
+show the fallback — you know who you asked, so if you want to show the email you typed, keep it in your own
+state.
+
+---
+
+### `POST /safety-connections`
+
+**Auth required:** Yes.
+
+**Request** — name the recipient by **email** *or* by **account id** (exactly one of the two):
+```json
+{ "recipient_email": "bilal@example.com", "connection_type": "family" }
+```
+```json
+{ "recipient_account_id": "48434d1b-...", "connection_type": "family" }
+```
+- `recipient_email` — trimmed and matched case-insensitively against registered accounts (`  Bilal@Example.com ` finds `bilal@example.com`).
+- `recipient_account_id` — the account's UUID (its "Member ID"). The original form; it still works exactly as before.
+- `connection_type` — `family` or `safety_group`.
+
+**Who can be invited.** The recipient must be an **active citizen** (`role` `user`, `status` `active`). NGO
+staff, admins, and accounts that are unverified, suspended, deactivated or deleted **cannot** — and you get
+the **same** `404 recipient account not found` for all of those as for an account that doesn't exist, so the
+response never says why. This gates *new* requests only; existing connections are unaffected.
+
+**Behavior**
+
+Creates a `pending` request — the requester is always the caller's own account (from the JWT).
+
+**There is at most one live relationship between any two people, whichever way round it was asked.** A
+request is refused (`409`) while a `pending` or `accepted` connection already exists between the two accounts
+in *either* direction. A `declined` request doesn't count, so asking again after a decline works. This is
+enforced by the database itself (a unique index over the unordered pair), not just by a check.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `201 Created` | the connection object (see above) — `responded_at` omitted |
+| `connection_type` missing, or a field has the wrong JSON type | `400` | bind-failure shape |
+| Neither `recipient_account_id` nor `recipient_email` given (missing, `""`, or whitespace) | `400` | `{"error":"one of recipient_account_id or recipient_email is required"}` |
+| Both given | `400` | `{"error":"send either recipient_account_id or recipient_email, not both"}` |
+| `recipient_email` not an email | `400` | `{"error":"recipient_email must be a valid email"}` |
+| `recipient_account_id` not a valid UUID | `400` | `{"error":"recipient_account_id must be a valid uuid"}` |
+| `connection_type` not `family`/`safety_group` | `400` | `{"error":"connection_type must be one of: family, safety_group"}` |
+| The recipient is yourself (your own id **or** your own email, any case) | `400` | `{"error":"cannot send a safety connection request to yourself"}` |
+| No such account, **or** it isn't an active citizen (see above) | `404` | `{"error":"recipient account not found"}` |
+| You already sent this person a pending request | `409 Conflict` | `{"error":"a pending connection request already exists between these two accounts"}` |
+| This person already sent **you** a pending request | `409 Conflict` | `{"error":"this person has already sent you a request"}` |
+| You are already connected (`accepted`, either direction) | `409 Conflict` | `{"error":"you are already connected to this person"}` |
+| Two requests between the same pair landed at the same instant and this one lost | `409 Conflict` | `{"error":"a connection or pending request already exists between you and this person"}` |
+
+Request problems that can be judged without looking anyone up (malformed body, both/neither field, a bad
+email, a bad `connection_type`) are always a `400` — they never reveal whether an account exists.
+
+**Frontend handling**
+- Prefer the email form; the `409` messages are written to be shown to a person as they are.
+- **A `404` on an email is the only signal that it isn't registered as an active citizen** — anyone signed in
+  can probe for that, and there is no rate limit on this route today. Treat "recipient account not found"
+  as "we couldn't find an active member with that email".
+- The requester does **not** get the recipient's name or email back (see the table above) — the `201`
+  shows `recipient_name`/`recipient_email` as `""`.
 
 ---
 
@@ -88,6 +151,10 @@ Returns **every** connection the caller is party to, on **either** side (sent or
 status (`pending`/`accepted`/`declined`), newest first. **Direction is not labeled in the
 response** — determine whether the caller sent or received a given connection by comparing
 `requester_account_id`/`recipient_account_id` against the caller's own account ID client-side.
+
+Each entry carries the people's names and emails **as far as the caller may see them** — see
+[the connection object, and who sees whom](#the-connection-object-and-who-sees-whom). The lookup is
+one batched query for the whole list, however long it is.
 
 **Responses**
 
@@ -109,7 +176,7 @@ an ownership rule, not just authentication.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | the updated connection object |
+| Success | `200 OK` | the updated connection object — now `accepted`, so **both** people's names and emails are visible |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
 | No connection with that ID | `404` | `{"error":"safety connection not found"}` |
 | Connection exists, but caller is the **requester**, not the recipient | `403` | `{"error":"only the recipient can accept or decline this connection"}` |
@@ -133,7 +200,7 @@ body's `status`.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | the updated connection object, `status: "declined"` |
+| Success | `200 OK` | the updated connection object, `status: "declined"` (the person who declined still sees who asked; the requester still sees nothing about them) |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
 | No connection with that ID | `404` | `{"error":"safety connection not found"}` |
 | Caller is the requester, not the recipient (or unrelated) | `403` | `{"error":"only the recipient can accept or decline this connection"}` |

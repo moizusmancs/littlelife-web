@@ -44,10 +44,10 @@ export async function logIn(page: Page, email: string, landing: RegExp) {
   await expect(page).toHaveURL(landing)
 }
 
-/** A verified, onboarded citizen (optionally with a home region), signed in and on `/app/home`. */
-export async function signInCitizen(page: Page, label: string, homeRegionId?: string) {
+/** A verified, onboarded citizen (optionally with a home region and a chosen profile name), signed in and on `/app/home`. */
+export async function signInCitizen(page: Page, label: string, homeRegionId?: string, name = 'E2E Citizen') {
   const email = await register(page.request, label)
-  verifyAndOnboardAccount(email, 'E2E Citizen')
+  verifyAndOnboardAccount(email, name)
   if (homeRegionId) seedHomeRegion(email, homeRegionId)
   await logIn(page, email, /\/app\/home$/)
   return email

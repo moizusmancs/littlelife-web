@@ -1,12 +1,28 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ProfileSidebar } from './ProfileSidebar'
 
-function renderSidebar(name: string | null, invitationCount?: number, homeRegion?: string | null) {
+function renderSidebar(
+  name: string | null,
+  invitationCount?: number,
+  homeRegion?: string | null,
+  safetyRequestCount?: number,
+  menu: { currentPath?: string; menuOpen?: boolean; onMenuOpenChange?: (open: boolean) => void } = {},
+) {
+  const currentPath = menu.currentPath ?? '/app/profile/edit'
   return render(
-    <MemoryRouter initialEntries={['/app/profile/edit']}>
-      <ProfileSidebar name={name} invitationCount={invitationCount} homeRegion={homeRegion} />
+    <MemoryRouter initialEntries={[currentPath]}>
+      <ProfileSidebar
+        name={name}
+        invitationCount={invitationCount}
+        homeRegion={homeRegion}
+        safetyRequestCount={safetyRequestCount}
+        currentPath={currentPath}
+        menuOpen={menu.menuOpen ?? false}
+        onMenuOpenChange={menu.onMenuOpenChange ?? vi.fn()}
+      />
     </MemoryRouter>,
   )
 }
@@ -72,5 +88,97 @@ describe('ProfileSidebar', () => {
 
     renderSidebar('Hina Khan')
     expect(screen.getByRole('link', { name: /Invitations/ })).not.toHaveTextContent(/\d/)
+  })
+
+  it('shows the number of safety-group requests waiting on you as a badge on Safety Groups — and keeps it apart from the invitation count', () => {
+    renderSidebar('Hina Khan', 1, null, 4)
+
+    expect(screen.getByRole('link', { name: /Safety Groups/ })).toHaveTextContent('4')
+    expect(screen.getByRole('link', { name: /Invitations/ })).toHaveTextContent('1')
+  })
+
+  it('shows no Safety Groups badge for zero or while unknown', () => {
+    const { unmount } = renderSidebar('Hina Khan', 0, null, 0)
+    expect(screen.getByRole('link', { name: /Safety Groups/ })).not.toHaveTextContent(/\d/)
+    unmount()
+
+    renderSidebar('Hina Khan')
+    expect(screen.getByRole('link', { name: /Safety Groups/ })).not.toHaveTextContent(/\d/)
+  })
+
+  describe('the phone menu (below md)', () => {
+    // jsdom applies no CSS, so `hidden` / `md:hidden` can't be seen as hidden here; the tests assert the
+    // state the classes hang off (aria-expanded, the class itself) and the browser check confirms the look.
+    const toggle = () => screen.getByRole('button', { name: /Edit Profile/ })
+
+    it('names the current section on a button that says whether the links are showing', () => {
+      renderSidebar('Hina Khan', undefined, null, undefined, { currentPath: '/app/safety-groups/abc' })
+
+      expect(screen.getByRole('button', { name: /Safety Groups/ })).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.getByRole('button', { name: /Safety Groups/ })).toHaveAttribute('aria-controls', 'profile-nav-links')
+    })
+
+    it('hides the links while closed and shows them while open — the links stay in the page for the wide layout either way', () => {
+      const { unmount } = renderSidebar('Hina Khan')
+      expect(document.getElementById('profile-nav-links')).toHaveClass('hidden', 'md:flex')
+      expect(screen.getAllByRole('link')).toHaveLength(9)
+      unmount()
+
+      renderSidebar('Hina Khan', undefined, null, undefined, { menuOpen: true })
+      expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+      expect(document.getElementById('profile-nav-links')).toHaveClass('flex')
+      expect(document.getElementById('profile-nav-links')).not.toHaveClass('hidden')
+    })
+
+    it('reports a click as the opposite of the current state', async () => {
+      const onMenuOpenChange = vi.fn()
+      const { unmount } = renderSidebar('Hina Khan', undefined, null, undefined, { onMenuOpenChange })
+      await userEvent.click(toggle())
+      expect(onMenuOpenChange).toHaveBeenLastCalledWith(true)
+      unmount()
+
+      renderSidebar('Hina Khan', undefined, null, undefined, { menuOpen: true, onMenuOpenChange })
+      await userEvent.click(toggle())
+      expect(onMenuOpenChange).toHaveBeenLastCalledWith(false)
+    })
+
+    it('closes on Escape and puts focus back on the button', async () => {
+      const onMenuOpenChange = vi.fn()
+      renderSidebar('Hina Khan', undefined, null, undefined, { menuOpen: true, onMenuOpenChange })
+
+      screen.getByRole('link', { name: /Account Settings/ }).focus()
+      await userEvent.keyboard('{Escape}')
+
+      expect(onMenuOpenChange).toHaveBeenCalledWith(false)
+      expect(toggle()).toHaveFocus()
+    })
+
+    it('ignores Escape while it is already closed', async () => {
+      const onMenuOpenChange = vi.fn()
+      renderSidebar('Hina Khan', undefined, null, undefined, { onMenuOpenChange })
+
+      screen.getByRole('link', { name: /Account Settings/ }).focus()
+      await userEvent.keyboard('{Escape}')
+
+      expect(onMenuOpenChange).not.toHaveBeenCalled()
+    })
+
+    it('shows the current section\'s own count on the button, and what is waiting in the other sections as a separate pill', () => {
+      renderSidebar('Hina Khan', 1, null, 4, { currentPath: '/app/safety-groups' })
+
+      const button = screen.getByRole('button', { name: /Safety Groups/ })
+      expect(button).toHaveTextContent('Safety Groups4')
+      expect(button).toHaveTextContent('1 waiting in other sections')
+    })
+
+    it('shows no pill when nothing is waiting anywhere else', () => {
+      renderSidebar('Hina Khan', 0, null, 2, { currentPath: '/app/safety-groups' })
+      expect(screen.getByRole('button', { name: /Safety Groups/ })).not.toHaveTextContent(/waiting in other sections/)
+    })
+
+    it('falls back to Overview for a path outside the sub-nav rather than showing an empty button', () => {
+      renderSidebar('Hina Khan', undefined, null, undefined, { currentPath: '/app/somewhere-else' })
+      expect(screen.getByRole('button', { name: /Overview/ })).toBeInTheDocument()
+    })
   })
 })

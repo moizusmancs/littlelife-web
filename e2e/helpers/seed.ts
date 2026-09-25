@@ -265,6 +265,53 @@ export function readAccountId(email: string): string {
   return id
 }
 
+export type SeedConnectionStatus = 'pending' | 'accepted' | 'declined'
+
+/** Seeds a safety connection between two `e2e-` accounts (requester → recipient) in the given state, newest-created last so order is predictable. Returns its id. */
+export function seedSafetyConnection(
+  requesterEmail: string,
+  recipientEmail: string,
+  options: { status?: SeedConnectionStatus; type?: 'family' | 'safety_group' } = {},
+): string {
+  assertE2eEmail(requesterEmail)
+  assertE2eEmail(recipientEmail)
+  const status = options.status ?? 'pending'
+  const id = psql(`
+    INSERT INTO safety_connections (requester_account_id, recipient_account_id, connection_type, status, responded_at)
+    SELECT r.id, t.id, ${lit(options.type ?? 'family')}::connection_type, ${lit(status)}::connection_status, ${status === 'pending' ? 'NULL' : 'now()'}
+    FROM accounts r, accounts t
+    WHERE lower(r.email) = lower(${lit(requesterEmail)}) AND lower(t.email) = lower(${lit(recipientEmail)})
+    RETURNING id`)
+  if (!id) throw new Error(`no accounts found to connect: ${requesterEmail} → ${recipientEmail}`)
+  return id
+}
+
+export interface StoredConnection {
+  id: string
+  type: string
+  status: string
+  requesterEmail: string
+  recipientEmail: string
+}
+
+/** Read-only: every safety connection either of the two `e2e-` accounts is in *with the other*, oldest first — to assert the database says what the screen says. */
+export function readSafetyConnectionsBetween(emailA: string, emailB: string): StoredConnection[] {
+  assertE2eEmail(emailA)
+  assertE2eEmail(emailB)
+  const out = psql(`
+    SELECT c.id || '|' || c.connection_type || '|' || c.status || '|' || r.email || '|' || t.email
+    FROM safety_connections c
+    JOIN accounts r ON r.id = c.requester_account_id
+    JOIN accounts t ON t.id = c.recipient_account_id
+    WHERE (lower(r.email) = lower(${lit(emailA)}) AND lower(t.email) = lower(${lit(emailB)}))
+       OR (lower(r.email) = lower(${lit(emailB)}) AND lower(t.email) = lower(${lit(emailA)}))
+    ORDER BY c.created_at`)
+  return out === '' ? [] : out.split('\n').map((line) => {
+    const [id, type, status, requesterEmail, recipientEmail] = line.split('|')
+    return { id, type, status, requesterEmail, recipientEmail }
+  })
+}
+
 /** Gives an `e2e-` account a stored credibility score (the row `GET /accounts/{id}/trust-score`
  *  reads; without one the backend reports an implicit, never-scored `0`). */
 export function seedTrustScore(email: string, score: number) {

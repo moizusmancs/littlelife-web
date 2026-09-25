@@ -1,31 +1,8 @@
+import { useRef, type KeyboardEvent } from 'react'
 import { NavLink } from 'react-router-dom'
-import {
-  BellRingingIcon,
-  BuildingsIcon,
-  ClockCounterClockwiseIcon,
-  EnvelopeOpenIcon,
-  GearIcon,
-  MapPinIcon,
-  PencilSimpleIcon,
-  SealCheckIcon,
-  UserCircleIcon,
-  UsersThreeIcon,
-} from '@phosphor-icons/react'
+import { CaretDownIcon, MapPinIcon, UserCircleIcon } from '@phosphor-icons/react'
 import { cn, getInitials } from '@/lib/utils'
-
-const INVITATIONS_PATH = '/app/profile/invitations'
-
-const NAV_ITEMS = [
-  { label: 'Overview', to: '/app/profile', icon: UserCircleIcon, end: true },
-  { label: 'Edit Profile', to: '/app/profile/edit', icon: PencilSimpleIcon },
-  { label: 'Alert Preferences', to: '/app/profile/alert-preferences', icon: BellRingingIcon },
-  { label: 'Account Settings', to: '/app/profile/account-settings', icon: GearIcon },
-  { label: 'Credibility', to: '/app/profile/credibility', icon: SealCheckIcon },
-  { label: 'Activity', to: '/app/profile/activity', icon: ClockCounterClockwiseIcon },
-  { label: 'Safety Groups', to: '/app/safety-groups', icon: UsersThreeIcon },
-  { label: 'My NGO', to: '/app/profile/ngo', icon: BuildingsIcon },
-  { label: 'Invitations', to: INVITATIONS_PATH, icon: EnvelopeOpenIcon },
-]
+import { currentProfileNavItem, INVITATIONS_PATH, PROFILE_NAV_ITEMS, SAFETY_GROUPS_PATH } from './profileNav'
 
 export interface ProfileSidebarProps {
   /** The account's real `name` (Profiling's only built field) once loaded — `null` specifically
@@ -45,6 +22,15 @@ export interface ProfileSidebarProps {
    *  pink pill on the Invitations item exactly as in the mockup. `undefined` while it's loading
    *  or if the fetch failed, `0` when there are none — neither shows a badge. */
   invitationCount?: number
+  /** Connection requests waiting on *this* account's answer (`GET /safety-connections`, pending and
+   *  sent to them), shown as the same pink pill on Safety Groups — there's no notification for a new
+   *  request, so this is how it gets noticed. `undefined`/`0` shows nothing. */
+  safetyRequestCount?: number
+  /** The current URL's path — what the collapsed (phone) menu names as the current section. */
+  currentPath: string
+  /** Whether the phone menu is open. Has no effect from `md` up, where the links are always shown. */
+  menuOpen: boolean
+  onMenuOpenChange: (open: boolean) => void
 }
 
 /**
@@ -55,16 +41,41 @@ export interface ProfileSidebarProps {
  * see router.tsx — so nothing here links to a dead route. The mockup's "Invitations" item carries
  * a pending-count badge, now backed by the real `GET /volunteer-invitations` count, and its header
  * shows the account's home region (the mockup's "Johi, Dadu") when one is set.
- * Purely presentational: `NavLink`'s own active-route detection is the only "state" here, same
- * precedent as `CitizenLayout`'s top nav.
+ * From `md` up it is a sidebar with every link showing. Below it (a phone) nine stacked links would push
+ * the page's own content a screen down, so they collapse behind one button that names the current section
+ * (with its count, and a pill for what's waiting in the *other* sections, so a pending request isn't hidden
+ * by the menu being shut). The phone's open/closed state belongs to ProfileLayout (`menuOpen`); which links
+ * are current is `NavLink`'s own route matching. Escape closes the menu and returns focus to the button.
+ * The links are hidden with CSS (`hidden md:flex`), not unmounted, so the wide layout can't lose them.
  */
-export function ProfileSidebar({ name, homeRegion, invitationCount }: ProfileSidebarProps) {
+export function ProfileSidebar({
+  name,
+  homeRegion,
+  invitationCount,
+  safetyRequestCount,
+  currentPath,
+  menuOpen,
+  onMenuOpenChange,
+}: ProfileSidebarProps) {
   const isLoaded = name !== null
   const initials = getInitials(name ?? '')
+  const badges: Record<string, number | undefined> = {
+    [INVITATIONS_PATH]: invitationCount,
+    [SAFETY_GROUPS_PATH]: safetyRequestCount,
+  }
+  const current = currentProfileNavItem(currentPath) ?? PROFILE_NAV_ITEMS[0]
+  const waitingElsewhere = PROFILE_NAV_ITEMS.reduce((sum, item) => (item.to === current.to ? sum : sum + (badges[item.to] ?? 0)), 0)
+  const toggle = useRef<HTMLButtonElement>(null)
+
+  const closeOnEscape = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !menuOpen) return
+    onMenuOpenChange(false)
+    toggle.current?.focus()
+  }
 
   return (
     <div className="flex w-full flex-col gap-1 md:w-65 md:flex-none">
-      <div className="flex items-center gap-3 px-3 pt-2 pb-5">
+      <div className="flex items-center gap-3 px-3 pt-2 pb-3 md:pb-5">
         {isLoaded ? (
           <div className="flex size-13 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-body-lg font-bold text-primary-700">
             {initials || <UserCircleIcon size={26} />}
@@ -87,28 +98,54 @@ export function ProfileSidebar({ name, homeRegion, invitationCount }: ProfileSid
         </div>
       </div>
 
-      <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              cn(
-                'flex h-11 items-center gap-3 rounded-md px-3.5 font-body text-body-md text-ink-700 hover:bg-surface-sunken',
-                isActive && 'bg-primary-50 text-primary-700',
-              )
-            }
-          >
-            <item.icon size={20} className="flex-none" />
-            <span className="flex-1 truncate">{item.label}</span>
-            {item.to === INVITATIONS_PATH && !!invitationCount && (
-              <span className="flex-none rounded-full bg-primary-500 px-1.75 py-0.5 font-body text-[11px] font-semibold text-white">
-                {invitationCount}
-              </span>
-            )}
-          </NavLink>
-        ))}
+      <nav className="flex flex-col gap-1" onKeyDown={closeOnEscape}>
+        <button
+          ref={toggle}
+          type="button"
+          className="flex h-11 items-center gap-3 rounded-md border border-surface-border bg-surface-raised px-3.5 font-body text-body-md text-ink-900 md:hidden"
+          aria-expanded={menuOpen}
+          aria-controls="profile-nav-links"
+          onClick={() => onMenuOpenChange(!menuOpen)}
+        >
+          <current.icon size={20} className="flex-none text-primary-700" aria-hidden="true" />
+          <span className="flex-1 truncate text-left font-semibold">{current.label}</span>
+          {!!badges[current.to] && (
+            <span className="flex-none rounded-full bg-primary-500 px-1.75 py-0.5 font-body text-[11px] font-semibold text-white">
+              {badges[current.to]}
+            </span>
+          )}
+          {waitingElsewhere > 0 && (
+            <span className="flex-none rounded-full border border-primary-500 px-1.75 py-0.5 font-body text-[11px] font-semibold text-primary-700">
+              {waitingElsewhere}
+              <span className="sr-only"> waiting in other sections</span>
+            </span>
+          )}
+          <CaretDownIcon size={16} className={cn('flex-none text-ink-500 transition-transform', menuOpen && 'rotate-180')} aria-hidden="true" />
+        </button>
+
+        <div id="profile-nav-links" className={cn('flex-col gap-1 md:flex', menuOpen ? 'flex' : 'hidden')}>
+          {PROFILE_NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(
+                  'flex h-11 items-center gap-3 rounded-md px-3.5 font-body text-body-md text-ink-700 hover:bg-surface-sunken',
+                  isActive && 'bg-primary-50 text-primary-700',
+                )
+              }
+            >
+              <item.icon size={20} className="flex-none" />
+              <span className="flex-1 truncate">{item.label}</span>
+              {!!badges[item.to] && (
+                <span className="flex-none rounded-full bg-primary-500 px-1.75 py-0.5 font-body text-[11px] font-semibold text-white">
+                  {badges[item.to]}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </nav>
     </div>
   )

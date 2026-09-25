@@ -51,7 +51,17 @@ certification (admins only, since that is all the API lets them do); and a page 
 citizens can see it at all. The sixth, the admin **Facilities** (`/admin/facilities`), is built: three tabs — **Shelters** (read-only oversight, with the organisation that runs each), **Infrastructure**
 (add one, update its status) and **Essential locations** (add one, read its report log) — over a region scope, with a per-place map that says whether it sits inside an active hazard zone. The seventh and last, Offline Map Packages, is **skipped for now by decision (2026-09-25)**: the backend only stores a pointer to a bundle it does not generate and none exists yet (the five rows in the database are placeholders), the mockup is a build dashboard with no backing routes, and there is no list route. The thin version — register dialog, per-region lookup — is written up under *Offline Map Packages (skipped)* below and can be built once real packages exist. **The phase-end pass ran on 2026-09-25:** every deferred test that can be run against the real backend was written and run (81 new E2E tests in seven spec files, plus the unit tests each finding needed), the full E2E suite was run spec by spec with the guarded cleanup between files, and the pass found and fixed **nine real bugs** that no earlier test could have — four that stopped a keyboard user or took a phone page down, and a set of admin and NGO tables that were unusable at 768–1024px. Details under *Testing done so far (Phase-end pass)* and *Real bugs*. **Still waiting on decisions or on the backend:** the citizen floor on `POST /hazard-zones/risk-check` (deferred tests 6 and 13), what to call the score the model produces (see *Backend gaps*), and the four small product questions listed at the end of the phase-end section.
 
-**Phases 4–10:** not started. Full detail on what's done and how lives in each phase's own
+**Phase 4 — Trust: 🚧 in progress.** The first screen, **Safety Groups** (`/app/safety-groups` and `/:id`), is built, tested against the
+real backend (two real browser contexts, one per person) and visually verified. The backend has **no group entity** — only pairwise connections between two
+accounts — so the screen is the account's *circle*: how people can invite you (your email, and your Member ID with Copy), requests waiting on you (Accept / Decline),
+the people you're connected to, requests you've sent (Cancel) and declined ones (Remove); an Invite dialog that takes an **email** (or, from a link underneath, a Member
+ID); a page per connection with its facts and Remove; and a count on the sidebar's Safety Groups item for requests waiting on you. **People are shown by name, then email**
+(both added to the API on your request, 2026-09-25) — except that the backend deliberately keeps a recipient's details from the person who asked until they accept, so a
+request you sent shows the email you typed (remembered on this device), or "Member XXXXXXXX". The mockup's "Create group", member counts, check-in request and
+per-member location switch have nothing behind them and are not built (see *Real deviations* and *Backend gaps found building Safety Groups*). The Profile sub-nav also
+collapses to one button on a phone. Still to do in this phase: the live-location WebSocket, Credibility, Alert Preferences, the remaining Edit Profile fields and the Activity Timeline.
+
+**Phases 5–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
 short version.
 
@@ -751,6 +761,22 @@ colour ramp is right. The card and legend still say "model confidence", which is
   cheaper and more reliable than hitting the real network in a unit test, while E2E still runs
   against the real backend for the same flows.
 
+- **Safety Groups: no groups, no "Create group" (Phase 4).** The mockup (Batch 3 §3e) and `WEB_DESIGN_PLAN.md` picture named groups ("Rehman family · 5 members · created
+  by you · check-in requested 42 min ago") with a Create Group button, a member list with Safe / No response / Need help counts, "Add member" and "Request check-in". The backend has
+  none of that: `safety_connections` is one row per *pair* of accounts with a `family` / `safety_group` type. So the screen shows the circle as sections (Requests for you ·
+  Connected · Waiting for a reply · Declined); the primary action is **Invite member** (not Create Group); nothing about group names, member counts, safe/need-help status or
+  check-ins is drawn, because none of it exists to draw. The route keeps its own URL (`/app/safety-groups`, per §2) but renders inside the Profile sub-nav (the mockup and the sidebar both
+  put it there). The per-member **live-location switch** is not on the detail page — it needs the WebSocket, which is its own build step — so nothing on the page pretends to share a location yet.
+- **Safety Groups: people are shown by name, then email — but an outgoing request shows what *you* typed (Phase 4).** The connection object carries `requester_name/email` and `recipient_name/email`
+  (added 2026-09-25). The backend's rule (`06-trust.md`, *who sees whom*): you always see your own; once accepted both see each other's; until then the person asked sees who is asking, but the
+  **requester sees nothing about the recipient — even after a decline** (account ids are public, so answering a request-by-id with an email would turn any id into an address). So the label is
+  name → email → "Member 8D0D395C", and a request you sent would always be the last. The email you typed when inviting is therefore remembered on this device (`localStorage`, keyed by your own
+  account id, only what you entered, guarded because storage can throw) and put back on that row until the real details arrive; a request sent by Member ID, or after the storage is cleared, shows "Member …".
+- **Inviting is by email, with the Member ID still offered.** `POST /safety-connections` takes `recipient_email` (the default in the dialog; the server trims and lowercases it) or `recipient_account_id`.
+  Only the *shape* of what's typed is checked in the browser. Everything else is the server's call and shown in its own words — your own email/id, an existing or crossed request, an accepted
+  connection — except "recipient account not found", which is put in plainer terms ("We couldn't find an active LittleLife member with that email"), because it also covers an account that exists but
+  isn't an active citizen (unverified, suspended, an NGO or admin account) and the server deliberately doesn't say which. The list page's "How people invite you" card shows your email and your Member ID (Copy).
+
 ### Component library actually built so far (`src/components/ui/`)
 
 `Button` (variants: primary, secondary, ghost, dangerOutline, criticalSolid, safeSolid — the
@@ -761,7 +787,7 @@ toggle, optional leading lock icon), `OtpInput` (6 boxes, auto-advance/backspace
 fully responsive down to 320px), `Checkbox` (real native input, `group-has-checked:` for visual
 styling), `Dialog` (wraps `@radix-ui/react-dialog` — overlay, centered content, title/description,
 close button), `Drawer` (the same Radix dialog as a full-height side sheet, full width on a phone, for forms
-too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `Notice`
+too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `CopyButton` (copies a string with the async Clipboard API and says "Copied" — or that it couldn't, so the text can be selected instead; used by Safety Groups for Member IDs), `Notice`
 (a page-level `role="status"` banner), `TabBar` (a proper tablist over one panel — arrow keys, Home and End — used by Resources and Facilities), and `ListPagination` (rows-per-page and previous/next, shared by
 the admin lists); `button-variants.ts` exports `buttonVariants` for links styled as buttons. **Not built via shadcn's CLI** — every component is hand-built
 directly against the verified design tokens (§2.4); shadcn's generated components assume a
@@ -1018,6 +1044,14 @@ without its generated code.
   columns were a character wide, and the Regions detail beside its tree was 140px. The tables now start at `xl` (cards below it), the Regions tree beside its detail and the
   two-column detail pages start at `lg`/`xl`, the Hazard Zones table-beside-map split starts at 1280 (below it: List | Map), and the three-column detail pages at `xl`. A new
   check loads each list at 768 and 1024, fails on anything clipped or sticking out, and keeps a screenshot to look at.
+- **The Profile sub-nav pushed every profile page a screen down on a phone (raised by you, 2026-09-25).** Nine stacked links sat above the page's own content on `/app/profile/*` and Safety Groups, so the
+  first request in Safety Groups was below the fold. Below `md` the links now collapse behind one button that names the current section (its own count on it, plus an outlined pill for what's waiting in the *other*
+  sections, so a shut menu doesn't hide a pending request); tapping a link, or Escape (focus returns to the button), closes it. From `md` up nothing changed. The open state is "open *for this path*" in
+  `ProfileLayout`, so following any link or the back button closes it without an effect. `profileNav.ts` now holds the item list and `currentProfileNavItem` (the same matching rule as `NavLink`). Checked at 390, 767/768 and 1440.
+- **Safety Groups' rows were squeezed at 768–1023px (found by the visual check, first look).** The same lesson a third time: the Profile sub-nav takes ~300px from the content
+  column between `md` and `lg`, and the rows put Accept / Decline beside the name from `sm`, leaving "Member 72B4E4FA" wrapping onto two lines; the Member ID card had the same fault. The
+  inline actions now start at `lg` (below it they sit under the name, full width, as on a phone). **Rule going forward: anything inside a page that has a sidebar switches to its wide
+  layout at `lg`, not `sm`/`md`.**
 
 
 ---
@@ -2167,17 +2201,44 @@ reimplemented) by every screen above.
 
 ---
 
-## Phase 4 — Trust
+## Phase 4 — Trust 🚧 In progress (Safety Groups built; the WebSocket and four screens to go)
 
 ### Screens
 
-| Screen | Route | Role | Pattern |
-|---|---|---|---|
-| Safety Groups (+ detail) | `/app/safety-groups`, `/app/safety-groups/:id` | Citizen | W-List / W-Detail |
-| Credibility | `/app/profile/credibility` | Citizen | W-Settings |
-| Alert Preferences | `/app/profile/alert-preferences` | Citizen | W-Settings |
-| Personal profile (remaining fields) | `/app/profile/edit` | Citizen | W-Settings |
-| Activity Timeline | `/app/profile/activity` | Citizen | W-Settings |
+| Screen | Route | Role | Pattern | Status |
+|---|---|---|---|---|
+| Safety Groups (+ detail) | `/app/safety-groups`, `/app/safety-groups/:id` | Citizen | W-List / W-Detail | ✅ Built (CRUD) — the circle in four sections shown by name and email, "How people invite you" (your email, your Member ID with Copy), Invite by email or Member ID, Accept / Decline, Cancel request, Remove (confirmed), a detail page per connection, and a sidebar count of requests waiting on you. **No groups or live-location switch** — see *Real deviations* and *Backend gaps found building Safety Groups*. The live-location toggle waits for the WebSocket (step 3 below) |
+| Credibility | `/app/profile/credibility` | Citizen | W-Settings | ⬜ |
+| Alert Preferences | `/app/profile/alert-preferences` | Citizen | W-Settings | ⬜ |
+| Personal profile (remaining fields) | `/app/profile/edit` | Citizen | W-Settings | ⬜ |
+| Activity Timeline | `/app/profile/activity` | Citizen | W-Settings | ⬜ |
+
+**Where the code is.** `src/api/trust.ts` (types and the five calls; `SAFETY_CONNECTIONS_QUERY_KEY` is shared by the list, the detail page and the sidebar count, so one cache entry keeps
+all three in step); `src/features/safetyGroups/` — `connections.ts` (the pure rules: **standing** = incoming / outgoing / connected / declined worked out from the two account ids and yours,
+`otherParty` / `partyLabel` / `personLabel` (name → email → "Member XXXXXXXX"), the four sections, the sidebar count, `removeTargetOf`), `inviteHints.ts` (the email you typed, remembered per account) and
+`useSafetyConnections` (the shared query with those emails put back on the requests you sent), the hooks `useConnectionActions` (accept / decline / remove, one at a time, refetch on success *and* failure)
+and `useInviteMember` (the dialog, the email-or-id form and the request), and the presentational parts (`SafetyGroupsPanel`, `ConnectionRow`, `MemberIdCard` — "How people invite you", `MemberAvatar` — initials when
+there's a name, `SafetyGroupDetail`, `InviteMemberDialog`, `RemoveConnectionDialog`, `ActionBanner`, `SafetyGroupsLoadState`, `SafetyGroupNotFound`); containers `src/pages/citizen/SafetyGroupsPage.tsx` and
+`SafetyGroupDetailPage.tsx`. There is no `GET /safety-connections/{id}`, so the detail page finds its connection in the list query; an id that isn't in it is the "not in your list" state. Removing from
+the detail page goes back to the list with the confirmation passed as router state (shown once, then cleared from the history entry). `CopyButton` and `useCopyToClipboard` are shared (`src/components/ui`, `src/lib`).
+The client no longer checks for duplicate or crossed requests itself — the backend now refuses them (see below), so the dialog shows its message.
+
+### Backend gaps found building Safety Groups — the first two, and the duplicate rule, were fixed on request (2026-09-25, migration 000015)
+1. ~~No names.~~ **Fixed.** All four routes that return a connection (`POST`, `GET`, both `PATCH`es) carry `requester_name`, `requester_email`, `recipient_name`, `recipient_email` — always present, `""` when unset or hidden.
+2. ~~No way to find a person.~~ **Fixed.** `POST /safety-connections` takes `recipient_email` as an alternative to `recipient_account_id` (exactly one; trimmed, case-insensitive). Both the id and email forms now require an
+   **active citizen** recipient — anything else (unverified, suspended, deactivated, deleted, NGO staff, admin) is the same `404 recipient account not found`. The contract I wrote for it is
+   `supporting-material/backend-requests/safety-connections-names-and-email-invite.md`; the backend's own doc (`supporting-material/api/06-trust.md`, now re-copied) is authoritative.
+   **One deliberate deviation by the backend:** the requester never sees the recipient's name or email until they accept (even after a decline), not only the reverse of what I asked — see *Real deviations*. It lives in one
+   function (`CanSeeContactDetails`), a one-line change if you want it looser; the frontend needs no change either way (it falls back name → email → "Member XXXXXXXX", and the email typed).
+3. **No groups, member counts or check-ins.** The mockup's named group, "5 members", Safe / No response / Need help tallies and "Request check-in" have no entity or route behind them. *Still open.*
+4. ~~The doc is wrong about duplicates, and the backend lets two through.~~ **Fixed.** A pending or accepted connection between two accounts, in either direction, is now `409` ("you are already connected to this person" /
+   "this person has already sent you a request" / "a pending connection request already exists between these two accounts"), enforced by a unique index on the unordered pair; asking again after a decline still works.
+   Confirmed against the running server. The client-side duplicate check I had written was removed.
+5. ~~Any account can be invited.~~ **Fixed** with #2.
+6. **Timestamps are in the server's zone** — `POST`/`PATCH` answer in `Z`, `GET` in `+05:00`. Both parse the same; noted only because they look different in a raw response.
+7. **Account enumeration is not mitigated (backend's note).** Any signed-in citizen can probe whether an email is a registered active citizen (`404` vs `201`), and there's no rate limit on the route. The recipient's *name*
+   isn't revealed by the probe. A per-caller limiter on the email form is the suggested next step; the frontend assumes the `404` behaviour.
+8. Already documented: the WebSocket's "active alert" gate is a stub that always allows, so the 403 path can't be exercised yet.
 
 Trust score/credibility also appears **embedded** (read-only) inside NGO Incidents and Admin
 Account Detail — build those embeds here too, even though the parent screens ship in later phases,
@@ -2197,8 +2258,8 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 | `GET /profile/activity-timeline` | roadmap "No Single Owner" — hosted in `internal/profiling`, reads across contexts | Activity Timeline |
 
 ### Build steps
-1. Profile/Alert Preferences/Activity Timeline first — straightforward CRUD, no real-time.
-2. Safety Groups CRUD (connections, accept/decline).
+1. Profile/Alert Preferences/Activity Timeline first — straightforward CRUD, no real-time. *(Order changed by decision: Safety Groups was started first, 2026-09-25.)*
+2. Safety Groups CRUD (connections, accept/decline). **✅ Done.**
 3. The WebSocket hook: `?token=<access_token>` query-param auth (browser WS can't set custom
    headers), reconnect-with-backoff, gated behind an active safety connection + active emergency
    per the backend's own gating rules — **note explicitly in the UI** that web location-sharing
@@ -2216,12 +2277,62 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 - Manual: verify the WS auth gate really does reject when there's no active emergency, per the
   backend's documented pre-upgrade checks.
 
+### Testing done so far (Safety Groups)
+- **Unit (Vitest + RTL + MSW), 1,337 tests in the whole suite (+94 for the first build, +26 for names and email invites, +15 for the phone nav):** the rules (`standingOf` in both directions and from the other side; `otherParty` /
+  `partyLabel` / `personLabel` — name, email, the "Member …" fallback, a whitespace-only name; the four sections in server order; the sidebar count; `removeTargetOf` including `null` for a request waiting on you; the Member ID
+  pattern); **fixtures that follow the server's visibility rule exactly** (a request you sent has `""` for the recipient until accepted); the hint store (remembered per account, put back only on an empty, unaccepted request you
+  sent, never over what the server sent, capped at a hundred, garbage or blocked storage read as none); every part (the row's names, email line, initials and fallbacks, actions per standing; the panel's sections, counts, empty
+  state and routing of each action; the detail page's title, email, facts and actions; the invite dialog's two modes — email default, "Use a Member ID instead" and back, each field's own rules, switching clearing what was typed
+  and the error; the confirm dialog's three wordings; the banner, skeleton and failure card; `CopyButton` copying / refusing / no clipboard at all); the sidebar badge and `ProfileLayout` feeding it; and both pages over MSW with an
+  **in-memory server that enforces the backend's real rules** (unknown email → 404, own email → 400, the three 409s, hidden recipient details): accept, decline, a 409 shown and refetched, cancel behind a confirm, a 403 kept in
+  the dialog, invite by email (as typed → sent as typed, dialog closed, the new row shown under the typed email, remembered across a remount), by Member ID (lower-cased, "Member …"), the shape check with no request, the
+  plainer "not found" for an email and for an id, the server's own words for every refusal, asking again after a decline, a clean reopen, the message handed over from the detail page; and on the detail page: found by id, the
+  remembered email as the title, unknown id, failure with a retry, accept / decline in place, remove → list with a message, and "the other person removed it first".
+- **E2E (Playwright, real backend, real Postgres) — `e2e/safety-groups.spec.ts`, 12 tests, run alone, all passing.** Two people are two real browser contexts, each with a real profile name. Covered: a new account's empty circle and
+  "How people invite you" (its **own email and its real Member ID**), inside the profile sub-nav; **Copy** putting the real id on the clipboard; **A invites B by email typed in the wrong case with padding** → the row under the email
+  typed, the stored row `pending` / `family` / requester A / recipient B, **still shown after a reload**; then **B's sidebar badge reads 1**, B sees **A's name and email**, accepts, Postgres says `accepted`, and A, after a reload,
+  sees **B's real name and email** in place of the typed one; **inviting by Member ID** from the link under the field (a `safety_group`); **the visibility rule against the real API** — for a pending request A's `GET` has the
+  recipient's name/email `""` while B's shows both people, and **after B declines** A's row is still only "Member …", the page shows nothing of B, and A's `GET` still has them `""`; then A removing the declined request (after
+  the confirm) leaves nothing in Postgres or in B's list; **cancel** (asks first, "Keep request" changes nothing, then gone for B too); the **detail page** by name (heading, email, full id, relationship, requested by, accepted on)
+  and **Remove member** (the dialog names the person and says it ends for both) → back on the list with the message, Postgres empty, the other side's deep link "not in your list"; **someone else's connection id** → "not in
+  your list", untouched; **the invite's refusals** (not an email; your own email in capitals → the server's message; an email that's nobody's → the plainer message with the dialog still open; and by Member ID: not a UUID, your
+  own, nobody's) with nothing created; **only an active citizen can be invited** — an unverified account and a real NGO admin both get the *same* "couldn't find an active member" as no account at all; **the backend's duplicate
+  rules** — already connected / already invited / has invited you each refused with the server's own message, exactly one row per pair left in Postgres; and a **phone (390×844)** with all four sections: none missing, the first
+  request on the first screen, no horizontal scroll, the detail page the same. API-side checks use the `request` fixture, never a page's (logging in through `page.request` put another account's cookie in the page's context and
+  turned the signed-in person into someone else — found when a first draft of the visibility test did it). New helpers: `signInCitizen(..., name)`, `seedSafetyConnection`, `readSafetyConnectionsBetween` (guarded to `e2e-`
+  accounts); the cleanup script now removes `safety_connections` of test accounts and refuses to run if one of them is connected to a real account.
+- **Visual:** 1440×900, 1024×768, 768×1024 and 390×844 — the list with all four sections, the detail page, the invite dialog with an error, and the remove dialog; **zero horizontal overflow** in all twelve captures (the dialogs at 1440 and 390 included).
+  It caught the rows and Member ID card squeezed at 768 (see *Real bugs*) and the header button wrapping under the text at 1440. **Re-shot after the names change** (1440, 768, 390 lists — names, emails, initials, an email-only person, the typed email, a fallback row — the not-found error in the email dialog, the Member ID mode, and the detail page at 1440 and 390): no overflow; long addresses wrap.
+- **Profile sub-nav on a phone (added 2026-09-25) — unit (1,311 tests in the whole suite after it, +15):** `currentProfileNavItem` (every route, a connection page under Safety Groups, Overview only at its exact path, nothing for a foreign path); the sidebar's
+  menu (names the current section with `aria-expanded` / `aria-controls`, the links stay in the page and hang off `hidden md:flex`, a click reports the opposite state, Escape closes and refocuses the button, Escape while closed
+  is ignored, the current section's own count vs the "waiting in other sections" pill, Overview as the fallback) and `ProfileLayout` (starts closed, opens and closes, closes when a link is followed and names the page it
+  landed on, isn't still "open" when you come back to the first page). **E2E — `e2e/profile-phone-nav.spec.ts`, 6 tests, all passing:** at 390 one button, every link hidden, the Edit Profile heading on the first
+  screen, no sideways scroll; open → every link visible → Escape closes with focus on the button → following a link closes it and renames the button; a seeded pending request showing as "1 waiting in other sections"
+  on Edit Profile and, in Safety Groups, as its own count with the first request in the viewport; and the edge — **767px collapsed, 768px and 1440px the plain sidebar with all nine links and no button**. Re-ran
+  `safety-groups`, `profile-invitations`, `profile-edit`, `my-ngo`, `account-settings` and `profile-home-region` after the change: all pass.
+- **Probed against the real API** (throwaway `e2e-` accounts) before building, and again after the backend change: every status code and message in the new doc, the visibility table row by row, both ways to name a recipient, and each 409.
+- **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first (probes, then the spec's runs; every guard 0). Six connections between real accounts are in the database and were left alone.
+
 ### Deferred tests (run before closing the phase)
 
-_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
-matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
-phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
-the `E2E …` test data.
+Written down, not run yet. Run them all before the phase closes, then the full suite, then the guarded cleanup.
+
+**Safety Groups**
+- **Live location** (needs the WebSocket, step 3): the two-browser test the plan calls for — one account shares, the other's map updates; a **declined** connection and a **pending** one never receive a ping; the
+  gate rejecting a socket with no active emergency (blocked until the backend's gate is real).
+- **Switching accounts in one tab:** sign out of A, sign in as B without a reload — B sees B's circle and B's badge, never A's (the connections list is a new query key, so the account-switch cache clear should cover
+  it; prove it).
+- **Staleness across tabs:** accept in one tab; the other tab's list and badge only refresh on focus / after 30 s. Confirm nothing misleading is shown in between and that a stale Accept gets the real `409` and refreshes.
+- **A long circle:** the backend returns every connection with no paging — seed 60–100 across all four sections and check scrolling, the section counts and the page's speed on a phone.
+- **The typed-email memory on a real device:** invite, close the tab, come back next day (still shown); clear site data (falls back to "Member …" without errors); a private window; two accounts in one browser (each sees only its own); the
+  same email invited, cancelled and invited again (the newer connection id gets the hint, the old one is inert).
+- **An account that changes its email or name after connecting** — the list should show the new one on the next fetch (the server sends it live); check nothing caches the old.
+- **The same person in two sections** — a declined request from them plus a fresh pending one from you is now *possible* again (the backend allows a new request after a decline): both rows, both actions, the right one
+  acted on. Seed straight into Postgres.
+- **A connection to an account that has since been suspended or deleted:** what the row and the detail page show (the API says nothing about the other party's state).
+- **Tablet widths (768 / 1024):** add the list and the detail page to `tablet-tables-deferred.spec.ts`'s clip check.
+- **Keyboard only and a screen reader:** Invite → Tab through the dialog → Send; Escape returns focus to Invite member; Copy's "Copied" / "Couldn't copy" is announced (a manual pass — the clipboard *failure* is only unit-tested).
+- **Double-click Accept:** the second click must not send a second request (disabled while pending — unit-tested, not driven in a browser).
 
 **Exit criteria:** the WS pattern is proven here before Phase 7 needs the same pattern for chat/nav.
 

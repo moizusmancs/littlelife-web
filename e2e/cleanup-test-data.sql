@@ -24,10 +24,23 @@ UNION ALL SELECT 'status reports on E2E places or by test accounts', count(*) FR
   WHERE essential_location_id IN (SELECT id FROM essential_locations WHERE name LIKE 'E2E %')
      OR shelter_id IN (SELECT id FROM shelters WHERE name LIKE 'E2E %')
      OR reported_by_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'safety connections of test accounts', count(*) FROM safety_connections
+  WHERE requester_account_id IN (SELECT id FROM t_accounts) OR recipient_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'safety connections with a REAL account on the other side (must be 0)', count(*) FROM safety_connections
+  WHERE (requester_account_id IN (SELECT id FROM t_accounts)) <> (recipient_account_id IN (SELECT id FROM t_accounts))
 UNION ALL SELECT 'hazard zones in E2E regions', count(*) FROM hazard_zones WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
 UNION ALL SELECT 'flood predictions in E2E regions', count(*) FROM flood_predictions WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
 UNION ALL SELECT 'hazard zones made by test accounts outside E2E regions (must be 0)', count(*) FROM hazard_zones
   WHERE created_by IN (SELECT id FROM t_accounts) AND region_id NOT IN (SELECT id FROM regions WHERE name LIKE 'E2E %');
+
+-- Refuse to run if a test account is connected to a real one, rather than silently severing someone's connection.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM safety_connections
+             WHERE (requester_account_id IN (SELECT id FROM t_accounts)) <> (recipient_account_id IN (SELECT id FROM t_accounts))) THEN
+    RAISE EXCEPTION 'a test account has a safety connection with a real account; not touching it';
+  END IF;
+END $$;
 
 -- Refuse to run if a real organisation covers a test region, rather than silently taking their coverage away.
 DO $$
@@ -56,6 +69,7 @@ DELETE FROM shelters              WHERE name LIKE 'E2E %';
 DELETE FROM infrastructure        WHERE name LIKE 'E2E %';
 DELETE FROM essential_locations   WHERE name LIKE 'E2E %';
 
+DELETE FROM safety_connections          WHERE requester_account_id IN (SELECT id FROM t_accounts) OR recipient_account_id IN (SELECT id FROM t_accounts);
 DELETE FROM alert_preferences           WHERE account_id IN (SELECT id FROM t_accounts);
 DELETE FROM profiles                    WHERE account_id IN (SELECT id FROM t_accounts);
 DELETE FROM trust_scores                WHERE account_id IN (SELECT id FROM t_accounts);
@@ -88,6 +102,7 @@ SELECT 'essential locations left', count(*) FROM essential_locations UNION ALL
 SELECT 'hazard zones left', count(*) FROM hazard_zones UNION ALL
 SELECT 'flood predictions left', count(*) FROM flood_predictions UNION ALL
 SELECT 'status reports left', count(*) FROM essential_location_status_reports UNION ALL
+SELECT 'safety_connections left', count(*) FROM safety_connections UNION ALL
 SELECT 'trust_scores left', count(*) FROM trust_scores UNION ALL
 SELECT 'moderation_actions left', count(*) FROM moderation_actions UNION ALL
 SELECT 'refresh_tokens left', count(*) FROM refresh_tokens;

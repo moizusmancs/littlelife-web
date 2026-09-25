@@ -28,6 +28,8 @@ import { FacilitiesPage } from '@/pages/admin/FacilitiesPage'
 import { HazardZonesPage } from '@/pages/admin/HazardZonesPage'
 import { MapPage } from '@/pages/citizen/MapPage'
 import { ResourcesPage } from '@/pages/citizen/ResourcesPage'
+import { SafetyGroupDetailPage } from '@/pages/citizen/SafetyGroupDetailPage'
+import { SafetyGroupsPage } from '@/pages/citizen/SafetyGroupsPage'
 import { ShelterDetailPage } from '@/pages/citizen/ShelterDetailPage'
 import { MyAccountPage } from '@/pages/account/MyAccountPage'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
@@ -78,8 +80,6 @@ export function AppRouter() {
             <Route path="/app/resources/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />
             <Route path="/app/resources/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
             <Route path="/app/navigate" element={<PlaceholderPage title="Safe Route Navigation" phase="Phase 7 (mocked)" />} />
-            <Route path="/app/safety-groups" element={<PlaceholderPage title="Safety Groups" phase="Phase 4" />} />
-            <Route path="/app/safety-groups/:id" element={<PlaceholderPage title="Safety Group Detail" phase="Phase 4" />} />
             <Route path="/app/messages/:conversationId" element={<PlaceholderPage title="Message Thread" phase="Phase 7 (mocked)" />} />
             <Route path="/app/alerts/:id" element={<PlaceholderPage title="Alert Takeover" phase="Phase 7 (mocked)" />} />
             {/* Shared W-Settings sub-nav shell (ProfileLayout) — every /app/profile/* screen
@@ -95,6 +95,11 @@ export function AppRouter() {
               <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
               <Route path="/app/profile/ngo" element={<MyNgoPage />} />
               <Route path="/app/profile/invitations" element={<InvitationsPage />} />
+              {/* Safety Groups keep their own `/app/safety-groups` URLs (WEB_DESIGN_PLAN §2) but sit
+                  under the Profile sub-nav (the mockup and the sidebar both put them there), so they
+                  render inside this layout too. */}
+              <Route path="/app/safety-groups" element={<SafetyGroupsPage />} />
+              <Route path="/app/safety-groups/:id" element={<SafetyGroupDetailPage />} />
             </Route>
           </Route>
         </Route>
