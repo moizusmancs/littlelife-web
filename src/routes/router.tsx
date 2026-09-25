@@ -12,6 +12,7 @@ import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
 import { OnboardingRegionPage } from '@/pages/onboarding/OnboardingRegionPage'
 import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
+import { CredibilityPage } from '@/pages/profile/CredibilityPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
 import { NgoShelterDetailPage } from '@/pages/ngo/NgoShelterDetailPage'
@@ -91,7 +92,7 @@ export function AppRouter() {
               <Route path="/app/profile/edit" element={<EditProfilePage />} />
               <Route path="/app/profile/alert-preferences" element={<PlaceholderPage title="Alert Preferences" phase="Phase 4" />} />
               <Route path="/app/profile/account-settings" element={<AccountSettingsPage />} />
-              <Route path="/app/profile/credibility" element={<PlaceholderPage title="Credibility" phase="Phase 4" />} />
+              <Route path="/app/profile/credibility" element={<CredibilityPage />} />
               <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
               <Route path="/app/profile/ngo" element={<MyNgoPage />} />
               <Route path="/app/profile/invitations" element={<InvitationsPage />} />

@@ -8,8 +8,8 @@ import { apiClient } from '@/api/client'
  * navigation rerouting and chat once those backend domains ship.
  *
  * Wired so far: the two admin-facing pieces the Users & Accounts screen needs (Phase 1's Admin
- * half) and the safety-connection CRUD behind Safety Groups. The WebSocket and the citizen's own
- * trust score are still to do.
+ * half), the safety-connection CRUD behind Safety Groups, and the citizen's own trust score
+ * (Credibility). The WebSocket is still to do.
  */
 
 export interface TrustScore {
@@ -21,6 +21,18 @@ export interface TrustScore {
 }
 
 export const accountTrustScoreQueryKey = (id: string) => ['trust', 'score', id] as const
+export const MY_TRUST_SCORE_QUERY_KEY = ['trust', 'score', 'me'] as const
+
+/**
+ * GET /trust-score — always the caller's own, for any signed-in account. Never `404`s: an account with no
+ * stored row gets `score: 0` and **no `updated_at`**, which means "never scored", not "scored zero". Nothing
+ * writes scores yet (`credibility_events`, the table meant to feed them, is a later backend phase), so today that
+ * is every account except the seeded ones. There is no level, tier, breakdown or history in the response.
+ */
+export async function getMyTrustScore(): Promise<TrustScore> {
+  const res = await apiClient.get<TrustScore>('/trust-score')
+  return res.data
+}
 
 /**
  * GET /accounts/{id}/trust-score — open to NGO staff and admins. Never `404`s: an account with no

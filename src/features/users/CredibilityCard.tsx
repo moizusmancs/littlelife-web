@@ -1,6 +1,8 @@
 import { format, parseISO } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import type { TrustScore } from '@/api/trust'
+import { ScoreMeter } from '@/features/trust/ScoreMeter'
+import { isScored } from '@/features/trust/score'
 
 export interface CredibilityCardProps {
   score: TrustScore | undefined
@@ -17,8 +19,6 @@ export interface CredibilityCardProps {
  * assumes a 0–100 scale, which is what every stored score so far fits (the API doesn't state one).
  */
 export function CredibilityCard({ score, isLoading, error, onRetry }: CredibilityCardProps) {
-  const scored = score?.updated_at !== undefined
-
   return (
     <section className="rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm" aria-labelledby="credibility-heading">
       <h2 id="credibility-heading" className="font-heading text-h3 font-bold text-ink-900">
@@ -36,20 +36,14 @@ export function CredibilityCard({ score, isLoading, error, onRetry }: Credibilit
             Try again
           </Button>
         </div>
-      ) : scored && score ? (
+      ) : isScored(score) ? (
         <div className="mt-3">
           <div className="flex items-end gap-3">
             <span className="font-heading text-[32px] leading-none font-bold text-ink-900">{score.score}</span>
-            <span className="pb-0.5 font-body text-body-sm text-ink-500">
-              updated {format(parseISO(score.updated_at as string), 'd MMM yyyy')}
-            </span>
+            <span className="pb-0.5 font-body text-body-sm text-ink-500">updated {format(parseISO(score.updated_at), 'd MMM yyyy')}</span>
           </div>
-          <div
-            className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-sunken"
-            role="img"
-            aria-label={`Credibility score ${score.score} out of 100`}
-          >
-            <div className="h-full rounded-full bg-status-trust" style={{ width: `${Math.max(0, Math.min(100, score.score))}%` }} />
+          <div className="mt-3">
+            <ScoreMeter score={score.score} />
           </div>
         </div>
       ) : (

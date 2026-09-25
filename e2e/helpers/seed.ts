@@ -323,6 +323,17 @@ export function seedTrustScore(email: string, score: number) {
   if (!id) throw new Error(`no account found to score: ${email}`)
 }
 
+/** Sets an `e2e-` account's stored credibility score, creating the row if there is none (`updated_at` becomes now). Unlike `seedTrustScore` it can change a score that already exists — including to one outside 0–100, which the table allows. */
+export function setTrustScore(email: string, score: number) {
+  assertE2eEmail(email)
+  const id = psql(`
+    INSERT INTO trust_scores (account_id, score, updated_at)
+    SELECT id, ${Math.trunc(score)}, now() FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    ON CONFLICT (account_id) DO UPDATE SET score = EXCLUDED.score, updated_at = now()
+    RETURNING id`)
+  if (!id) throw new Error(`no account found to score: ${email}`)
+}
+
 /** Read-only: the moderation log entries recorded against an `e2e-` account, oldest first, to
  *  assert a log action really reached the database. */
 export function readModerationActions(email: string): Array<{ type: string; reason: string }> {

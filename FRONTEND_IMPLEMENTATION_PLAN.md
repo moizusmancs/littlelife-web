@@ -59,7 +59,9 @@ ID); a page per connection with its facts and Remove; and a count on the sidebar
 (both added to the API on your request, 2026-09-25) — except that the backend deliberately keeps a recipient's details from the person who asked until they accept, so a
 request you sent shows the email you typed (remembered on this device), or "Member XXXXXXXX". The mockup's "Create group", member counts, check-in request and
 per-member location switch have nothing behind them and are not built (see *Real deviations* and *Backend gaps found building Safety Groups*). The Profile sub-nav also
-collapses to one button on a phone. Still to do in this phase: the live-location WebSocket, Credibility, Alert Preferences, the remaining Edit Profile fields and the Activity Timeline.
+collapses to one button on a phone. The second screen, **Credibility** (`/app/profile/credibility`), is built too: the account's own score as a ring (from `GET /trust-score`), when it last changed, "Not scored yet" for an account that has never
+been scored (the API's implicit `0` is not a score), and a plain account of what the score is for. The mockup's level, progress, statistics, "how to raise your score" and history have nothing behind them and are not drawn.
+Still to do in this phase: the live-location WebSocket, Alert Preferences, the remaining Edit Profile fields and the Activity Timeline.
 
 **Phases 5–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -776,6 +778,13 @@ colour ramp is right. The card and legend still say "model confidence", which is
   Only the *shape* of what's typed is checked in the browser. Everything else is the server's call and shown in its own words — your own email/id, an existing or crossed request, an accepted
   connection — except "recipient account not found", which is put in plainer terms ("We couldn't find an active LittleLife member with that email"), because it also covers an account that exists but
   isn't an active citizen (unverified, suspended, an NGO or admin account) and the server deliberately doesn't say which. The list page's "How people invite you" card shows your email and your Member ID (Copy).
+
+- **Credibility: score only, in a white card with a teal ring (Phase 4).** The mockup (Batch 3 §3h) is a pink gradient hero — a ring at 88, "Level 4 · Trusted reporter", "Your reports are verified 2× faster and weighted higher in alert
+  fusion", a progress bar "88 / 95 to Level 5" — then four statistics (reports submitted / verified / rejected / upvotes), "How to raise your score" with points, and "Recent changes". `GET /trust-score` returns `{account_id, score,
+  updated_at?}` and nothing else, and nothing writes scores yet, so **none of the level, progress, statistics, tips or history is drawn** (each would be invented). What remains is the ring, "Last updated", and a short "How it works" —
+  written as intent ("designed to rise when your reports are verified by NGOs and admins…", from `06-trust.md`'s description of what will feed the score), not as something that is happening. The hero is a white card with a teal ring
+  (the design system's "trust" colour, the same as the admin card's bar) because the gradient was built around the level line and white text on pink is below AA at the small sizes it used. The sidebar's "Level 4" chip is likewise not shown.
+  An account with no stored row comes back as `score: 0` with **no `updated_at`** and is shown as "Not scored yet" — a stored `0` (it has an `updated_at`) is a score of zero.
 
 ### Component library actually built so far (`src/components/ui/`)
 
@@ -2208,7 +2217,7 @@ reimplemented) by every screen above.
 | Screen | Route | Role | Pattern | Status |
 |---|---|---|---|---|
 | Safety Groups (+ detail) | `/app/safety-groups`, `/app/safety-groups/:id` | Citizen | W-List / W-Detail | ✅ Built (CRUD) — the circle in four sections shown by name and email, "How people invite you" (your email, your Member ID with Copy), Invite by email or Member ID, Accept / Decline, Cancel request, Remove (confirmed), a detail page per connection, and a sidebar count of requests waiting on you. **No groups or live-location switch** — see *Real deviations* and *Backend gaps found building Safety Groups*. The live-location toggle waits for the WebSocket (step 3 below) |
-| Credibility | `/app/profile/credibility` | Citizen | W-Settings | ⬜ |
+| Credibility | `/app/profile/credibility` | Citizen | W-Settings | ✅ Built — the score as a ring with the date it last changed, "Not scored yet" for an account never scored, and "How it works"; **no level, statistics, tips or history** (the API has none — see *Backend gaps found building Credibility*). The reusable `<CredibilityBadge>` is deferred until its first consumer (NGO Incidents, Phase 5) |
 | Alert Preferences | `/app/profile/alert-preferences` | Citizen | W-Settings | ⬜ |
 | Personal profile (remaining fields) | `/app/profile/edit` | Citizen | W-Settings | ⬜ |
 | Activity Timeline | `/app/profile/activity` | Citizen | W-Settings | ⬜ |
@@ -2240,6 +2249,12 @@ The client no longer checks for duplicate or crossed requests itself — the bac
    isn't revealed by the probe. A per-caller limiter on the email form is the suggested next step; the frontend assumes the `404` behaviour.
 8. Already documented: the WebSocket's "active alert" gate is a stub that always allows, so the 403 path can't be exercised yet.
 
+### Backend gaps found building Credibility (none block the frontend)
+1. **Nothing writes scores yet**, so every account except the seeded ones is "Not scored yet" (already documented: `credibility_events` is backend Phase 8). The screen is complete for what exists but will look empty until then.
+2. **No levels or tiers.** The mockup's "Level 4 · Trusted reporter", next-level progress, and the profile header's level chip need a definition of the levels (names, thresholds) — they aren't in any response.
+3. **No breakdown or history.** No reports-submitted / verified / rejected / upvotes counts, no "what changed your score" list, and no points per action — the mockup's statistics, tips and "Recent changes" have no route.
+4. **No stated scale.** The response is a bare integer; the column is `INTEGER` with no range check (probed: `-5` and `250` are stored and returned as they are). The ten seeded scores run 10–100 and the mockup is a percentage, so the ring assumes 0–100 (clamped, and "of 100" is only shown for a score inside it) — the same assumption the admin card has always made. Worth stating in the API doc.
+
 Trust score/credibility also appears **embedded** (read-only) inside NGO Incidents and Admin
 Account Detail — build those embeds here too, even though the parent screens ship in later phases,
 since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` component.
@@ -2266,7 +2281,7 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
    only works while the tab is open/foregrounded (no background-task equivalent to mobile's
    `expo-task-manager`, per `WEB_DESIGN_PLAN.md` §8) — this is a real capability gap to surface
    honestly, not paper over.
-4. Credibility screen + the embeddable badge component.
+4. Credibility screen ✅ + the embeddable badge component (deferred until NGO Incidents needs it; the score helpers and `ScoreMeter` it will use are already shared in `src/features/trust/`).
 
 ### Testing
 - Component: WS hook's reconnect logic (mock WebSocket, simulate drop/reconnect), alert-preference
@@ -2313,9 +2328,29 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 - **Probed against the real API** (throwaway `e2e-` accounts) before building, and again after the backend change: every status code and message in the new doc, the visibility table row by row, both ways to name a recipient, and each 409.
 - **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first (probes, then the spec's runs; every guard 0). Six connections between real accounts are in the database and were left alone.
 
+### Testing done so far (Credibility)
+- **Unit (Vitest + RTL + MSW), 1,356 tests in the whole suite (+19 for this screen):** the score helpers (`isScored` — true only with an `updated_at`, so a stored zero is a score and the implicit zero is not; `scorePercent` clamped at the
+  ends; `isOnScale`); `ScoreRing` (the reading as its name, the fill, an empty ring and a dash for no score, a score of 250 or -5 shown as the number with the ring stopped at the ends and no "of 100", the scale ends 0 and 100) and
+  `ScoreMeter`; the panel (a stored score with its date, "Not scored yet" for the implicit zero and not "score 0", a stored zero, the "how it works" copy with **no** level / statistics, the skeleton, and a failure with a retry that
+  never reads as "not scored"); and the page over MSW (a stored score and its date, the never-scored answer, 250, and a failure that recovers on retry). The admin `CredibilityCard`, which now uses the shared helpers and meter, still passes its own tests.
+- **E2E (Playwright, real backend, real Postgres) — `e2e/profile-credibility.spec.ts`, 6 tests, run alone, all passing.** A new account sees "Not scored yet" and an empty ring, inside the sub-nav with Credibility active, while the real
+  API says `{score: 0}` with no `updated_at`; a seeded 88 shows as 88 "of 100" with **the date the API gives**, and none of the level / statistics text; **two accounts each see only their own** (73 vs "Not scored yet"); a score changed
+  in Postgres shows on the next visit (40 → 61), **250 is shown as 250 with no "of 100"**, and a stored **0 is a score, not "not scored"**; the sub-nav link reaches it; and on a **phone (390×844)** the collapsed menu reaches it, the ring and
+  the date are on the first screen, and nothing scrolls sideways. New helper: `setTrustScore` (guarded to `e2e-` accounts; can change an existing score and set one outside 0–100). Re-ran `admin-users.spec.ts` (14) after the admin card
+  started sharing the meter: all pass.
+- **Probed against the real API:** the fresh-account, stored, negative and 250 answers, the 401 without a token, and the table's constraints (none on the range); the ten seeded real scores run 10–100.
+- **Visual:** 1440×900, 1024×768, 768×1024 and 390×844 for "Not scored yet", the scored state at 1440 / 768 / 390, and an out-of-range score at 390; **zero horizontal overflow** in all of them. The ring's empty track was too faint against white and was darkened.
+
 ### Deferred tests (run before closing the phase)
 
 Written down, not run yet. Run them all before the phase closes, then the full suite, then the guarded cleanup.
+
+**Credibility**
+- **A real seeded account:** sign in as one of the dev seed accounts that has a score (10–100 exist) and check the number, the date and the ring against `GET /trust-score` — none of the E2E accounts is a real seed account.
+- **The score changing under an open page:** the query is cached 30 s, so a score updated elsewhere shows on the next visit or focus — confirm nothing misleading is shown in between.
+- **Dark mode and RTL:** the ring's teal, the track and the number on the raised surface (Phase 9's matrix); mirrored layout for Urdu.
+- **Screen reader:** the ring's name ("Credibility score 88 out of 100") is read once, not again through the decorative digits; the loading state's status.
+- **When `credibility_events` ships:** this whole screen gets its real content (levels, statistics, tips, history) — re-open the mockup then; the "How it works" copy must be re-checked against what actually moves the score.
 
 **Safety Groups**
 - **Live location** (needs the WebSocket, step 3): the two-browser test the plan calls for — one account shares, the other's map updates; a **declined** connection and a **pending** one never receive a ping; the
