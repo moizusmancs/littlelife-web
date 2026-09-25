@@ -1,10 +1,12 @@
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { server } from '@/mocks/server'
 import { useAuthStore } from '@/store/auth'
 import type { SafetyConnection } from '@/api/trust'
+import { LiveLocationContext } from '@/features/liveLocation/liveLocationContext'
+import type { LiveLocationController } from '@/features/liveLocation/liveLocationController'
 import { link, ME, PEOPLE } from '@/features/safetyGroups/fixtures'
 import { SafetyGroupDetailPage } from './SafetyGroupDetailPage'
 import { SafetyGroupsPage } from './SafetyGroupsPage'
@@ -76,14 +78,27 @@ export function serveConnections(initial: SafetyConnection[]) {
 }
 
 /** Renders the list and detail routes together, starting at `path`, with a probe for where navigation ends up. */
-export function renderSafetyGroups(path = '/app/safety-groups', state?: unknown) {
+export function renderSafetyGroups(path = '/app/safety-groups', state?: unknown, live?: LiveLocationController) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[{ pathname: path, state }]}>
         <Routes>
-          <Route path="/app/safety-groups" element={<SafetyGroupsPage />} />
-          <Route path="/app/safety-groups/:id" element={<SafetyGroupDetailPage />} />
+          {/* With a controller, it is where the real provider would be. */}
+          <Route
+            element={
+              live ? (
+                <LiveLocationContext.Provider value={live}>
+                  <Outlet />
+                </LiveLocationContext.Provider>
+              ) : (
+                <Outlet />
+              )
+            }
+          >
+            <Route path="/app/safety-groups" element={<SafetyGroupsPage />} />
+            <Route path="/app/safety-groups/:id" element={<SafetyGroupDetailPage />} />
+          </Route>
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

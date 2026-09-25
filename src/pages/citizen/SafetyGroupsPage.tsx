@@ -7,10 +7,14 @@ import { InviteMemberDialog } from '@/features/safetyGroups/InviteMemberDialog'
 import { RemoveConnectionDialog } from '@/features/safetyGroups/RemoveConnectionDialog'
 import { SafetyGroupsLoadState } from '@/features/safetyGroups/SafetyGroupsLoadState'
 import { SafetyGroupsPanel } from '@/features/safetyGroups/SafetyGroupsPanel'
-import { removeTargetOf } from '@/features/safetyGroups/connections'
+import { groupConnections, otherParty, removeTargetOf } from '@/features/safetyGroups/connections'
 import { actionNotice, requestSentNotice } from '@/features/safetyGroups/notices'
 import { useConnectionActions } from '@/features/safetyGroups/useConnectionActions'
 import { useInviteMember } from '@/features/safetyGroups/useInviteMember'
+import { useLiveLocation, useNow, useWatchLiveLocation } from '@/features/liveLocation/liveLocationContext'
+import { isLive } from '@/features/liveLocation/liveLocationModel'
+import { shareStatus } from '@/features/liveLocation/shareStatus'
+import { ShareLocationCard } from '@/features/liveLocation/ShareLocationCard'
 import { useSafetyConnections } from '@/features/safetyGroups/useSafetyConnections'
 import { useAuthStore } from '@/store/auth'
 
@@ -48,6 +52,15 @@ export function SafetyGroupsPage() {
 
   const invite = useInviteMember({ me, onSent: (sentTo) => setNotice(requestSentNotice(sentTo)) })
 
+  // Live location: listen for members' positions while this screen shows anyone connected, and offer the switch that shares yours.
+  const live = useLiveLocation()
+  const now = useNow()
+  const connected = groupConnections(query.data ?? [], me).connected
+  useWatchLiveLocation(connected.length > 0)
+  const liveIds = new Set(
+    connected.map((c) => otherParty(c, me).accountId).filter((id) => live.positions[id] && isLive(live.positions[id], now)),
+  )
+
   if (query.isPending) return <SafetyGroupsLoadState error={null} onRetry={() => void query.refetch()} />
   if (query.isError) return <SafetyGroupsLoadState error={extractErrorMessage(query.error)} onRetry={() => void query.refetch()} />
 
@@ -58,6 +71,18 @@ export function SafetyGroupsPage() {
         me={me}
         email={email}
         onInvite={invite.openDialog}
+        liveIds={liveIds}
+        shareCard={
+          connected.length > 0 || live.sharing ? (
+            <ShareLocationCard
+              status={shareStatus(live)}
+              on={live.sharing}
+              connectedCount={connected.length}
+              onChange={(on) => (on ? live.startSharing() : live.stopSharing())}
+              onRetry={live.retry}
+            />
+          ) : undefined
+        }
         banner={<ActionBanner notice={notice} onDismissNotice={() => setNotice(null)} error={removeTarget ? null : actions.error} />}
         pending={actions.pending}
         onAccept={(connection) => {

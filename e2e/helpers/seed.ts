@@ -334,6 +334,145 @@ export function setTrustScore(email: string, score: number) {
   if (!id) throw new Error(`no account found to score: ${email}`)
 }
 
+export interface StoredAlertPreferences {
+  push: boolean
+  sms: boolean
+  whatsapp: boolean
+  voice: boolean
+  language: string
+  severity: string
+}
+
+/** Read-only: an `e2e-` account's stored alert preferences, to assert a change really reached the database (and nothing else changed). */
+export function readAlertPreferences(email: string): StoredAlertPreferences {
+  assertE2eEmail(email)
+  const row = psql(`
+    SELECT p.push_enabled || '|' || p.sms_enabled || '|' || p.whatsapp_enabled || '|' || p.voice_call_enabled || '|' || p.language || '|' || p.minimum_severity
+    FROM alert_preferences p JOIN accounts a ON a.id = p.account_id
+    WHERE lower(a.email) = lower(${lit(email)}) AND a.deleted_at IS NULL`)
+  if (!row) throw new Error(`no alert preferences found for ${email}`)
+  const [push, sms, whatsapp, voice, language, severity] = row.split('|')
+  return { push: push === 'true', sms: sms === 'true', whatsapp: whatsapp === 'true', voice: voice === 'true', language, severity }
+}
+
+/** Changes an `e2e-` account's stored alert preferences behind the page's back (any text may be a language — the column is free text). */
+export function setAlertPreferences(email: string, changes: { language?: string; severity?: 'general_advisory' | 'watch' | 'warning' | 'critical_emergency'; whatsapp?: boolean }) {
+  assertE2eEmail(email)
+  const sets = [
+    changes.language !== undefined ? `language = ${lit(changes.language)}` : '',
+    changes.severity !== undefined ? `minimum_severity = ${lit(changes.severity)}::alert_severity` : '',
+    changes.whatsapp !== undefined ? `whatsapp_enabled = ${changes.whatsapp}` : '',
+  ].filter(Boolean)
+  if (sets.length === 0) return
+  const id = psql(`
+    UPDATE alert_preferences SET ${sets.join(', ')}, updated_at = now()
+    WHERE account_id IN (SELECT id FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL)
+    RETURNING id`)
+  if (!id) throw new Error(`no alert preferences found to change for ${email}`)
+}
+
+export interface ActivityTimes {
+  incidentReport: Date
+  incidentVote: Date
+  aidRequest: Date
+  donation: Date
+  shelterReport: Date
+  placeReport: Date
+  missingPerson: Date
+  sighting: Date
+}
+
+export interface SeededActivity {
+  incidentReportId: string
+  incidentVoteId: string
+  aidRequestId: string
+  donationId: string
+  campaignId: string
+  missingPersonId: string
+  sightingId: string
+  otherReportId: string
+}
+
+const stamp = (d: Date) => `${lit(d.toISOString())}::timestamptz`
+
+/**
+ * Seeds one of every kind of activity the timeline holds for an `e2e-` account, each at the time given, so the order and the day headings are
+ * exact: an incident report (verified), an up vote on **another** account's report, an aid request (medical, high), a donation (5000, delivered) to
+ * a campaign the other account runs, a status report on a shelter and one on an essential location (both `open`), a missing-person report (found)
+ * and a sighting of a missing person the other account reported. The other account's own rows are seeded too — they must never appear in this
+ * account's list. `shelterId` / `essentialLocationId` come from the map seeders (an `E2E …` region's places). Returns the ids.
+ */
+export function seedActivityEvents(email: string, options: { otherEmail: string; shelterId: string; essentialLocationId: string; at: ActivityTimes }): SeededActivity {
+  assertE2eEmail(email)
+  assertE2eEmail(options.otherEmail)
+  const { at } = options
+  const row = psql(`
+    WITH me AS (SELECT id FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL),
+         other AS (SELECT id FROM accounts WHERE lower(email) = lower(${lit(options.otherEmail)}) AND deleted_at IS NULL),
+         rep AS (
+           INSERT INTO incident_reports (reporter_account_id, category, description, location, status, created_at, updated_at)
+           SELECT me.id, 'flooding', 'E2E activity', ${point(67.0, 24.8)}, 'verified', ${stamp(at.incidentReport)}, ${stamp(at.incidentReport)} FROM me RETURNING id),
+         other_rep AS (
+           INSERT INTO incident_reports (reporter_account_id, category, description, location, created_at, updated_at)
+           SELECT other.id, 'blocked_road', 'E2E activity (someone else)', ${point(67.1, 24.9)}, ${stamp(new Date(at.incidentVote.getTime() - 3_600_000))}, ${stamp(new Date(at.incidentVote.getTime() - 3_600_000))} FROM other RETURNING id),
+         vote AS (
+           INSERT INTO incident_report_votes (incident_report_id, account_id, vote_type, created_at)
+           SELECT other_rep.id, me.id, 'upvote', ${stamp(at.incidentVote)} FROM other_rep, me RETURNING id),
+         aid AS (
+           INSERT INTO aid_requests (requester_account_id, category, description, location, severity, status, created_at, updated_at)
+           SELECT me.id, 'medical', 'E2E activity', ${point(67.0, 24.8)}, 'high', 'pending', ${stamp(at.aidRequest)}, ${stamp(at.aidRequest)} FROM me RETURNING id),
+         other_aid AS (
+           INSERT INTO aid_requests (requester_account_id, category, description, location, severity, created_at, updated_at)
+           SELECT other.id, 'food', 'E2E activity (someone else)', ${point(67.0, 24.8)}, 'low', ${stamp(at.aidRequest)}, ${stamp(at.aidRequest)} FROM other RETURNING id),
+         campaign AS (
+           INSERT INTO donation_campaigns (organizer_account_id, title, description, status)
+           SELECT other.id, 'E2E Activity Campaign', 'E2E', 'active' FROM other RETURNING id),
+         donation AS (
+           INSERT INTO donations (campaign_id, donor_account_id, amount, status, collected_at)
+           SELECT campaign.id, me.id, 5000, 'delivered', ${stamp(at.donation)} FROM campaign, me RETURNING id),
+         other_donation AS (
+           INSERT INTO donations (campaign_id, donor_account_id, amount, status, collected_at)
+           SELECT campaign.id, other.id, 111, 'collected', ${stamp(at.donation)} FROM campaign, other RETURNING id),
+         shelter_report AS (
+           INSERT INTO essential_location_status_reports (shelter_id, reported_by_account_id, status, created_at)
+           SELECT ${lit(options.shelterId)}::uuid, me.id, 'open', ${stamp(at.shelterReport)} FROM me RETURNING id),
+         place_report AS (
+           INSERT INTO essential_location_status_reports (essential_location_id, reported_by_account_id, status, created_at)
+           SELECT ${lit(options.essentialLocationId)}::uuid, me.id, 'open', ${stamp(at.placeReport)} FROM me RETURNING id),
+         other_place_report AS (
+           INSERT INTO essential_location_status_reports (essential_location_id, reported_by_account_id, status, created_at)
+           SELECT ${lit(options.essentialLocationId)}::uuid, other.id, 'closed', ${stamp(at.placeReport)} FROM other RETURNING id),
+         mp AS (
+           INSERT INTO missing_persons (reported_by_account_id, name, description, last_seen_location, last_seen_at, status, created_at, updated_at)
+           SELECT me.id, 'E2E Missing Person', 'E2E activity', ${point(67.0, 24.8)}, ${stamp(at.missingPerson)}, 'found', ${stamp(at.missingPerson)}, ${stamp(at.missingPerson)} FROM me RETURNING id),
+         other_mp AS (
+           INSERT INTO missing_persons (reported_by_account_id, name, description, last_seen_location, last_seen_at, created_at, updated_at)
+           SELECT other.id, 'E2E Missing Person (someone else)', 'E2E activity', ${point(67.0, 24.8)}, ${stamp(new Date(at.sighting.getTime() - 3_600_000))}, ${stamp(new Date(at.sighting.getTime() - 3_600_000))}, ${stamp(new Date(at.sighting.getTime() - 3_600_000))} FROM other RETURNING id),
+         sighting AS (
+           INSERT INTO missing_person_sightings (missing_person_id, reported_by_account_id, location, description, sighted_at, created_at)
+           SELECT other_mp.id, me.id, ${point(67.0, 24.8)}, 'E2E activity', ${stamp(at.sighting)}, ${stamp(at.sighting)} FROM other_mp, me RETURNING id)
+    SELECT json_build_object(
+      'incidentReportId', (SELECT id FROM rep), 'incidentVoteId', (SELECT id FROM vote), 'aidRequestId', (SELECT id FROM aid),
+      'donationId', (SELECT id FROM donation), 'campaignId', (SELECT id FROM campaign), 'missingPersonId', (SELECT id FROM mp),
+      'sightingId', (SELECT id FROM sighting), 'otherReportId', (SELECT id FROM other_rep))`)
+  if (!row) throw new Error(`could not seed activity for ${email}`)
+  return JSON.parse(row) as SeededActivity
+}
+
+/** Adds `count` incident reports for an `e2e-` account, one minute apart going back from `before` — for tests about paging a long timeline. */
+export function seedIncidentReports(email: string, count: number, before: Date) {
+  assertE2eEmail(email)
+  const seeded = psql(`
+    WITH me AS (SELECT id FROM accounts WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL),
+         ins AS (
+           INSERT INTO incident_reports (reporter_account_id, category, description, location, status, created_at, updated_at)
+           SELECT me.id, (ARRAY['flooding', 'blocked_road', 'other_hazard'])[1 + (g % 3)]::incident_category, 'E2E activity bulk ' || g, ${point(67.0, 24.8)}, 'reported',
+                  ${stamp(before)} - (g * interval '1 minute'), ${stamp(before)} - (g * interval '1 minute')
+           FROM me, generate_series(1, ${Math.trunc(count)}) AS g RETURNING id)
+    SELECT count(*) FROM ins`)
+  if (Number(seeded) !== count) throw new Error(`seeded ${seeded} of ${count} incident reports for ${email}`)
+}
+
 /** Read-only: the moderation log entries recorded against an `e2e-` account, oldest first, to
  *  assert a log action really reached the database. */
 export function readModerationActions(email: string): Array<{ type: string; reason: string }> {

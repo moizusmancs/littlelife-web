@@ -28,6 +28,11 @@ UNION ALL SELECT 'safety connections of test accounts', count(*) FROM safety_con
   WHERE requester_account_id IN (SELECT id FROM t_accounts) OR recipient_account_id IN (SELECT id FROM t_accounts)
 UNION ALL SELECT 'safety connections with a REAL account on the other side (must be 0)', count(*) FROM safety_connections
   WHERE (requester_account_id IN (SELECT id FROM t_accounts)) <> (recipient_account_id IN (SELECT id FROM t_accounts))
+UNION ALL SELECT 'incident reports by test accounts', count(*) FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'aid requests by test accounts', count(*) FROM aid_requests WHERE requester_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'missing persons by test accounts', count(*) FROM missing_persons WHERE reported_by_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'donation campaigns by test accounts', count(*) FROM donation_campaigns WHERE organizer_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'location trail rows of test accounts (the relay persists what a sharing account sends)', count(*) FROM location_trail WHERE account_id IN (SELECT id FROM t_accounts)
 UNION ALL SELECT 'hazard zones in E2E regions', count(*) FROM hazard_zones WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
 UNION ALL SELECT 'flood predictions in E2E regions', count(*) FROM flood_predictions WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
 UNION ALL SELECT 'hazard zones made by test accounts outside E2E regions (must be 0)', count(*) FROM hazard_zones
@@ -69,6 +74,17 @@ DELETE FROM shelters              WHERE name LIKE 'E2E %';
 DELETE FROM infrastructure        WHERE name LIKE 'E2E %';
 DELETE FROM essential_locations   WHERE name LIKE 'E2E %';
 
+-- Activity: what a test account reported, voted on, requested, donated or sighted, and the rows those hang from (votes, media and sightings first; donations before the campaigns and aid requests they cite).
+-- The live-location relay writes a throttled trail of what a sharing account sends; those rows point at the account.
+DELETE FROM location_trail        WHERE account_id IN (SELECT id FROM t_accounts);
+DELETE FROM incident_report_votes  WHERE account_id IN (SELECT id FROM t_accounts) OR incident_report_id IN (SELECT id FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts));
+DELETE FROM incident_report_media  WHERE incident_report_id IN (SELECT id FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts));
+DELETE FROM incident_reports       WHERE reporter_account_id IN (SELECT id FROM t_accounts);
+DELETE FROM missing_person_sightings WHERE reported_by_account_id IN (SELECT id FROM t_accounts) OR missing_person_id IN (SELECT id FROM missing_persons WHERE reported_by_account_id IN (SELECT id FROM t_accounts));
+DELETE FROM missing_persons        WHERE reported_by_account_id IN (SELECT id FROM t_accounts);
+DELETE FROM donations              WHERE donor_account_id IN (SELECT id FROM t_accounts) OR campaign_id IN (SELECT id FROM donation_campaigns WHERE organizer_account_id IN (SELECT id FROM t_accounts)) OR allocated_to_aid_request_id IN (SELECT id FROM aid_requests WHERE requester_account_id IN (SELECT id FROM t_accounts));
+DELETE FROM donation_campaigns     WHERE organizer_account_id IN (SELECT id FROM t_accounts);
+DELETE FROM aid_requests           WHERE requester_account_id IN (SELECT id FROM t_accounts);
 DELETE FROM safety_connections          WHERE requester_account_id IN (SELECT id FROM t_accounts) OR recipient_account_id IN (SELECT id FROM t_accounts);
 DELETE FROM alert_preferences           WHERE account_id IN (SELECT id FROM t_accounts);
 DELETE FROM profiles                    WHERE account_id IN (SELECT id FROM t_accounts);
@@ -103,6 +119,12 @@ SELECT 'hazard zones left', count(*) FROM hazard_zones UNION ALL
 SELECT 'flood predictions left', count(*) FROM flood_predictions UNION ALL
 SELECT 'status reports left', count(*) FROM essential_location_status_reports UNION ALL
 SELECT 'safety_connections left', count(*) FROM safety_connections UNION ALL
+SELECT 'location_trail left', count(*) FROM location_trail UNION ALL
+SELECT 'incident_reports left', count(*) FROM incident_reports UNION ALL
+SELECT 'aid_requests left', count(*) FROM aid_requests UNION ALL
+SELECT 'missing_persons left', count(*) FROM missing_persons UNION ALL
+SELECT 'donation_campaigns left', count(*) FROM donation_campaigns UNION ALL
+SELECT 'donations left', count(*) FROM donations UNION ALL
 SELECT 'trust_scores left', count(*) FROM trust_scores UNION ALL
 SELECT 'moderation_actions left', count(*) FROM moderation_actions UNION ALL
 SELECT 'refresh_tokens left', count(*) FROM refresh_tokens;

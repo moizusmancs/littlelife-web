@@ -24,7 +24,7 @@ is missing here.
 | 1 | Geo (regions, NGO operational coverage) | [01-geo.md](01-geo.md) | Complete |
 | 3 | Flood Intelligence (flood predictions, hazard zones) | [03-flood-intelligence.md](03-flood-intelligence.md) | Complete |
 | 4 | Facilities (shelters, infrastructure, essential locations, offline maps) | [04-facilities.md](04-facilities.md) | Complete |
-| 5 | Profiling (personal profile, alert preferences) | [05-profiling.md](05-profiling.md) | Complete |
+| 5 | Profiling (personal profile, alert preferences, activity timeline) | [05-profiling.md](05-profiling.md) | Complete |
 | 6 | Trust (safety connections + live GPS WS, trust scores, moderation actions) | [06-trust.md](06-trust.md) | Complete |
 | 7 | Community Intelligence (incident reports, votes, AI classification, community updates) | [07-community-intelligence.md](07-community-intelligence.md) | Complete |
 | 8 | Trust, follow-up: `credibility_events` | — | **Not built.** No migration, no route, no code exists for this phase yet — confirmed by checking the repo directly, not an oversight in this index. Skip it; there is nothing to document. |
@@ -139,6 +139,15 @@ rejects a body where **every** field was omitted (nothing to update), documented
 Where a route paginates, it uses `limit`/`offset` query parameters, not cursor-based pagination.
 An out-of-range or non-numeric `limit`/`offset` is **silently clamped to a default**, not rejected
 with a `400` — documented per-route with its exact default/max.
+
+### Compression
+
+Responses are gzip-compressed when the request sends `Accept-Encoding: gzip` — browsers do this by
+themselves and transparently decompress, so a web client needs no code for it. It matters for the
+large JSON responses (map overlays, region boundaries, the admin lists): typically **80–90%
+smaller on the wire**. Responses under 2 KB, WebSocket upgrades, and `/uploads/` files are never
+compressed. A non-browser client (a script, a mobile HTTP library that doesn't add the header)
+gets the plain body.
 
 ### What this document does not cover
 

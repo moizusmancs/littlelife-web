@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { BILAL, connected, incoming, link, ME } from './fixtures'
+import { AMNA, BILAL, connected, incoming, link, ME } from './fixtures'
 import { SafetyGroupsPanel } from './SafetyGroupsPanel'
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof SafetyGroupsPanel>> = {}) {
@@ -102,5 +102,27 @@ describe('SafetyGroupsPanel', () => {
   it('renders whatever banner it is given under the header', () => {
     renderPanel({ connections: [connected()], banner: <p>You're now connected.</p> })
     expect(screen.getByText("You're now connected.")).toBeInTheDocument()
+  })
+
+  it('puts the share-location card between the requests waiting on you and the people you are connected to — so a request stays near the top', () => {
+    renderPanel({
+      connections: [incoming({ id: 'i' }), connected({ id: 'c' })],
+      shareCard: <section aria-label="Share card">card</section>,
+    })
+
+    const order = [screen.getByRole('region', { name: 'Requests for you' }), screen.getByRole('region', { name: 'Share card' }), screen.getByRole('region', { name: 'Connected' })]
+    order.forEach((node, i) => {
+      if (i > 0) expect(order[i - 1].compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  })
+
+  it('marks connected members who are sharing as Live, and leaves the rest alone', () => {
+    renderPanel({ connections: [connected({ id: 'c' })], liveIds: new Set([AMNA]) })
+    expect(screen.getByText('Live')).toBeInTheDocument()
+  })
+
+  it('shows no Live badge when nobody is sharing', () => {
+    renderPanel({ connections: [connected({ id: 'c' })], liveIds: new Set() })
+    expect(screen.queryByText('Live')).not.toBeInTheDocument()
   })
 })

@@ -2,9 +2,10 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
 import type { ProfileResponse } from '@/api/profiling'
+import { useAuthStore } from '@/store/auth'
 import { sampleRegions } from '@/features/regions/testRegion'
 import { EditProfilePage } from './EditProfilePage'
 
@@ -219,5 +220,30 @@ describe('EditProfilePage — home region', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Saved')
     expect(calls.patches).toEqual([{ name: 'Hina K' }])
+  })
+})
+
+describe('EditProfilePage — account details', () => {
+  afterEach(() => useAuthStore.getState().clearAuth())
+
+  it("shows the account's email, its verified state and when it was created — read-only, beside the two things that can be edited", async () => {
+    useAuthStore.getState().setAuth('token', { id: 'a1', email: 'hina@example.com', role: 'user', emailVerified: true, profileComplete: true })
+    server.use(http.get('*/profile', () => HttpResponse.json({ id: 'p', name: 'Hina Khan', created_at: '2026-09-20T06:44:36Z', updated_at: '2026-09-20T06:44:36Z' })))
+    renderEditProfilePage()
+
+    const card = within(await screen.findByRole('region', { name: 'Your account' }))
+    expect(card.getByText('hina@example.com')).toBeInTheDocument()
+    expect(card.getByText('Verified')).toBeInTheDocument()
+    expect(await card.findByText('20 September 2026')).toBeInTheDocument()
+    // Only the name is a field on this page; nothing in the account card is.
+    expect(screen.getAllByRole('textbox')).toHaveLength(1)
+  })
+
+  it('is not drawn when nobody is signed in', async () => {
+    server.use(http.get('*/profile', () => HttpResponse.json({ id: 'p', name: 'Hina Khan', created_at: '', updated_at: '' })))
+    renderEditProfilePage()
+
+    await screen.findByLabelText('Your name')
+    expect(screen.queryByRole('region', { name: 'Your account' })).not.toBeInTheDocument()
   })
 })

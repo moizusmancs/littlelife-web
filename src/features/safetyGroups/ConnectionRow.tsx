@@ -2,6 +2,7 @@ import { format, parseISO } from 'date-fns'
 import { CaretRightIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import type { SafetyConnection } from '@/api/trust'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ConnectionTypeBadge } from './ConnectionTypeBadge'
@@ -20,6 +21,8 @@ export interface ConnectionRowProps {
   onDecline: () => void
   /** Opens the confirm dialog to remove (cancel / sever / tidy away) the connection. */
   onRemove: () => void
+  /** This member is sharing their live location right now (a position heard within the last three heartbeats). */
+  live?: boolean
 }
 
 const day = (iso: string) => format(parseISO(iso), 'd MMM yyyy')
@@ -49,7 +52,7 @@ function metaLine(connection: SafetyConnection, standing: Standing, me: string):
  * takes ~300px from every width between `md` and `lg`, so they drop below it (full width) until then.
  * Purely presentational.
  */
-export function ConnectionRow({ connection, me, busy, disabled, onAccept, onDecline, onRemove }: ConnectionRowProps) {
+export function ConnectionRow({ connection, me, busy, disabled, onAccept, onDecline, onRemove, live = false }: ConnectionRowProps) {
   const standing = standingOf(connection, me)
   const party = otherParty(connection, me)
   const label = partyLabel(party)
@@ -70,6 +73,7 @@ export function ConnectionRow({ connection, me, busy, disabled, onAccept, onDecl
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="min-w-0 font-heading text-body-lg font-bold break-words text-ink-900 group-hover:underline">{label}</span>
             <ConnectionTypeBadge type={connection.connection_type} />
+            {live && <Badge tone="trust">Live</Badge>}
           </span>
           {party.name.trim() && party.email && (
             <span className="mt-0.5 block font-body text-body-sm break-all text-ink-700">{party.email}</span>

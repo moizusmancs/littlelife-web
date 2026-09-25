@@ -6,10 +6,14 @@ import { RemoveConnectionDialog } from '@/features/safetyGroups/RemoveConnection
 import { SafetyGroupDetail } from '@/features/safetyGroups/SafetyGroupDetail'
 import { SafetyGroupNotFound } from '@/features/safetyGroups/SafetyGroupNotFound'
 import { SafetyGroupsLoadState } from '@/features/safetyGroups/SafetyGroupsLoadState'
-import { removeTargetOf } from '@/features/safetyGroups/connections'
+import { groupConnections, otherParty, personLabel, removeTargetOf, standingOf } from '@/features/safetyGroups/connections'
 import { actionNotice } from '@/features/safetyGroups/notices'
 import { useConnectionActions } from '@/features/safetyGroups/useConnectionActions'
 import { useSafetyConnections } from '@/features/safetyGroups/useSafetyConnections'
+import { useLiveLocation, useNow, useWatchLiveLocation } from '@/features/liveLocation/liveLocationContext'
+import { MemberLiveLocation } from '@/features/liveLocation/MemberLiveLocation'
+import { shareStatus } from '@/features/liveLocation/shareStatus'
+import { ShareLocationCard } from '@/features/liveLocation/ShareLocationCard'
 import { useAuthStore } from '@/store/auth'
 
 /**
@@ -28,6 +32,12 @@ export function SafetyGroupDetailPage() {
 
   const query = useSafetyConnections(me)
   const connection = query.data?.find((c) => c.id === id)
+
+  // A connected member's live location: listen for it while this page is on screen, and offer the switch that shares yours.
+  const live = useLiveLocation()
+  const now = useNow()
+  const isConnected = connection ? standingOf(connection, me) === 'connected' : false
+  useWatchLiveLocation(isConnected)
 
   const actions = useConnectionActions({
     onDone: (action, done) => {
@@ -52,6 +62,29 @@ export function SafetyGroupDetailPage() {
       <SafetyGroupDetail
         connection={connection}
         me={me}
+        liveLocation={
+          isConnected ? (
+            <MemberLiveLocation
+              name={personLabel(connection, me)}
+              position={live.positions[otherParty(connection, me).accountId]}
+              now={now}
+              channel={live.channel}
+              blocked={live.blocked}
+              onRetry={live.retry}
+            />
+          ) : undefined
+        }
+        shareCard={
+          isConnected ? (
+            <ShareLocationCard
+              status={shareStatus(live)}
+              on={live.sharing}
+              connectedCount={groupConnections(query.data ?? [], me).connected.length}
+              onChange={(on) => (on ? live.startSharing() : live.stopSharing())}
+              onRetry={live.retry}
+            />
+          ) : undefined
+        }
         banner={<ActionBanner notice={notice} onDismissNotice={() => setNotice(null)} error={confirmingRemove ? null : actions.error} />}
         busy={actions.pending?.id === connection.id ? actions.pending.action : null}
         onAccept={() => {

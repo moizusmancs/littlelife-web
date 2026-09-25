@@ -51,6 +51,8 @@ export function useEditProfile() {
     serverError,
     /** The server's current name, `null` until the first load. */
     name: query.data?.name ?? null,
+    /** When the account was created — the profile's `created_at`; `undefined` until the first load. */
+    memberSince: query.data?.created_at,
     isLoaded: !query.isPending,
     /** A real load failure (e.g. `404 "profile not found"` for an account with no profile row). */
     loadError: query.isError ? extractErrorMessage(query.error) : null,

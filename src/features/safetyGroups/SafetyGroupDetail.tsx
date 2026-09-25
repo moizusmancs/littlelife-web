@@ -16,6 +16,9 @@ export interface SafetyGroupDetailProps {
   me: string
   /** Notices / errors from the last action, drawn under the header. */
   banner?: ReactNode
+  /** For a connected member: their live location, and the switch that shares yours. */
+  liveLocation?: ReactNode
+  shareCard?: ReactNode
   /** The action in flight for this connection, if any. */
   busy: ConnectionAction | null
   onAccept: () => void
@@ -46,10 +49,10 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
  * /app/safety-groups/:id — one connection. A back link, who it is (their name and email as far as the backend
  * shows them; the full Member ID is here too, with a copy button, since it is the one thing that always identifies them), the facts the API does return (kind, standing, who asked, when), and the
  * actions that fit where it stands: Accept/Decline for a request waiting on you, Cancel request for one
- * you sent, Remove for a connected or declined one. The mockup's per-member live-location switch isn't
- * here — it needs the WebSocket, which is its own step. Purely presentational.
+ * you sent, Remove for a connected or declined one. For a connected member the container also passes their live location and the
+ * switch that shares yours (one switch for everyone connected — the relay can't aim at one person). Purely presentational.
  */
-export function SafetyGroupDetail({ connection, me, banner, busy, onAccept, onDecline, onRemove }: SafetyGroupDetailProps) {
+export function SafetyGroupDetail({ connection, me, banner, liveLocation, shareCard, busy, onAccept, onDecline, onRemove }: SafetyGroupDetailProps) {
   const standing = standingOf(connection, me)
   const party = otherParty(connection, me)
   const otherId = party.accountId
@@ -80,6 +83,10 @@ export function SafetyGroupDetail({ connection, me, banner, busy, onAccept, onDe
       </div>
 
       {banner}
+
+      {liveLocation}
+
+      {shareCard}
 
       <section aria-labelledby="member-id-heading" className="rounded-md border border-surface-border bg-surface-raised p-4 shadow-sm">
         <h2 id="member-id-heading" className="font-body text-body-md font-semibold text-ink-900">

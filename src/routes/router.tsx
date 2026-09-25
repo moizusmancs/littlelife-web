@@ -12,6 +12,8 @@ import { OnboardingProfilePage } from '@/pages/onboarding/OnboardingProfilePage'
 import { OnboardingRegionPage } from '@/pages/onboarding/OnboardingRegionPage'
 import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
+import { ActivityPage } from '@/pages/profile/ActivityPage'
+import { AlertPreferencesPage } from '@/pages/profile/AlertPreferencesPage'
 import { CredibilityPage } from '@/pages/profile/CredibilityPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
@@ -33,6 +35,7 @@ import { SafetyGroupDetailPage } from '@/pages/citizen/SafetyGroupDetailPage'
 import { SafetyGroupsPage } from '@/pages/citizen/SafetyGroupsPage'
 import { ShelterDetailPage } from '@/pages/citizen/ShelterDetailPage'
 import { MyAccountPage } from '@/pages/account/MyAccountPage'
+import { LiveLocationProvider } from '@/features/liveLocation/LiveLocationProvider'
 import { RedirectIfAuthenticated, RequireIncompleteProfile, RequireRole, RequireUnverifiedSession } from '@/routes/guards'
 
 /** Full route tree per WEB_DESIGN_PLAN.md §2. Every leaf is a PlaceholderPage until its real
@@ -67,40 +70,44 @@ export function AppRouter() {
           {/* Optional last onboarding step (choose a home region, or skip) — full viewport, no nav
               chrome, and never forced: nothing in the backend requires a home region. */}
           <Route path="/app/onboarding/region" element={<OnboardingRegionPage />} />
-          {/* The map owns the whole area under the header: no page padding or scrolling. */}
-          <Route element={<CitizenLayout fullBleed />}>
-            <Route path="/app/map" element={<MapPage />} />
-          </Route>
-          <Route element={<CitizenLayout />}>
-            <Route path="/app/home" element={<PlaceholderPage title="Home" phase="Phase 8" />} />
-            <Route path="/app/map/shelters/:id" element={<ShelterDetailPage />} />
-            <Route path="/app/community" element={<PlaceholderPage title="Community Feed" phase="Phase 5" />} />
-            <Route path="/app/community/:incidentId" element={<PlaceholderPage title="Incident Detail" phase="Phase 5" />} />
-            <Route path="/app/resources" element={<ResourcesPage />} />
-            <Route path="/app/resources/aid/:id" element={<PlaceholderPage title="Aid Request Detail" phase="Phase 6" />} />
-            <Route path="/app/resources/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />
-            <Route path="/app/resources/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
-            <Route path="/app/navigate" element={<PlaceholderPage title="Safe Route Navigation" phase="Phase 7 (mocked)" />} />
-            <Route path="/app/messages/:conversationId" element={<PlaceholderPage title="Message Thread" phase="Phase 7 (mocked)" />} />
-            <Route path="/app/alerts/:id" element={<PlaceholderPage title="Alert Takeover" phase="Phase 7 (mocked)" />} />
-            {/* Shared W-Settings sub-nav shell (ProfileLayout) — every /app/profile/* screen
-                renders inside it, even the ones still ⬜ placeholder, so the sidebar stays
-                present and consistent while navigating between built and not-yet-built
-                sub-screens; see ProfileLayout/ProfileSidebar's own comments. */}
-            <Route element={<ProfileLayout />}>
-              <Route path="/app/profile" element={<PlaceholderPage title="Profile Overview" phase="Phase 4" />} />
-              <Route path="/app/profile/edit" element={<EditProfilePage />} />
-              <Route path="/app/profile/alert-preferences" element={<PlaceholderPage title="Alert Preferences" phase="Phase 4" />} />
-              <Route path="/app/profile/account-settings" element={<AccountSettingsPage />} />
-              <Route path="/app/profile/credibility" element={<CredibilityPage />} />
-              <Route path="/app/profile/activity" element={<PlaceholderPage title="Activity Timeline" phase="Phase 4" />} />
-              <Route path="/app/profile/ngo" element={<MyNgoPage />} />
-              <Route path="/app/profile/invitations" element={<InvitationsPage />} />
-              {/* Safety Groups keep their own `/app/safety-groups` URLs (WEB_DESIGN_PLAN §2) but sit
-                  under the Profile sub-nav (the mockup and the sidebar both put them there), so they
-                  render inside this layout too. */}
-              <Route path="/app/safety-groups" element={<SafetyGroupsPage />} />
-              <Route path="/app/safety-groups/:id" element={<SafetyGroupDetailPage />} />
+          {/* Live location (sharing, and members' positions) is owned by one controller above every citizen layout, so turning sharing on in Safety Groups
+              and then opening the map is still sharing; it ends with the citizen app (logging out unmounts it). */}
+          <Route element={<LiveLocationProvider />}>
+            {/* The map owns the whole area under the header: no page padding or scrolling. */}
+            <Route element={<CitizenLayout fullBleed />}>
+              <Route path="/app/map" element={<MapPage />} />
+            </Route>
+            <Route element={<CitizenLayout />}>
+              <Route path="/app/home" element={<PlaceholderPage title="Home" phase="Phase 8" />} />
+              <Route path="/app/map/shelters/:id" element={<ShelterDetailPage />} />
+              <Route path="/app/community" element={<PlaceholderPage title="Community Feed" phase="Phase 5" />} />
+              <Route path="/app/community/:incidentId" element={<PlaceholderPage title="Incident Detail" phase="Phase 5" />} />
+              <Route path="/app/resources" element={<ResourcesPage />} />
+              <Route path="/app/resources/aid/:id" element={<PlaceholderPage title="Aid Request Detail" phase="Phase 6" />} />
+              <Route path="/app/resources/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />
+              <Route path="/app/resources/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
+              <Route path="/app/navigate" element={<PlaceholderPage title="Safe Route Navigation" phase="Phase 7 (mocked)" />} />
+              <Route path="/app/messages/:conversationId" element={<PlaceholderPage title="Message Thread" phase="Phase 7 (mocked)" />} />
+              <Route path="/app/alerts/:id" element={<PlaceholderPage title="Alert Takeover" phase="Phase 7 (mocked)" />} />
+              {/* Shared W-Settings sub-nav shell (ProfileLayout) — every /app/profile/* screen
+                  renders inside it, even the ones still ⬜ placeholder, so the sidebar stays
+                  present and consistent while navigating between built and not-yet-built
+                  sub-screens; see ProfileLayout/ProfileSidebar's own comments. */}
+              <Route element={<ProfileLayout />}>
+                <Route path="/app/profile" element={<PlaceholderPage title="Profile Overview" phase="Phase 4" />} />
+                <Route path="/app/profile/edit" element={<EditProfilePage />} />
+                <Route path="/app/profile/alert-preferences" element={<AlertPreferencesPage />} />
+                <Route path="/app/profile/account-settings" element={<AccountSettingsPage />} />
+                <Route path="/app/profile/credibility" element={<CredibilityPage />} />
+                <Route path="/app/profile/activity" element={<ActivityPage />} />
+                <Route path="/app/profile/ngo" element={<MyNgoPage />} />
+                <Route path="/app/profile/invitations" element={<InvitationsPage />} />
+                {/* Safety Groups keep their own `/app/safety-groups` URLs (WEB_DESIGN_PLAN §2) but sit
+                    under the Profile sub-nav (the mockup and the sidebar both put them there), so they
+                    render inside this layout too. */}
+                <Route path="/app/safety-groups" element={<SafetyGroupsPage />} />
+                <Route path="/app/safety-groups/:id" element={<SafetyGroupDetailPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>

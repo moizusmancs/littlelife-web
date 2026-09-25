@@ -61,7 +61,14 @@ request you sent shows the email you typed (remembered on this device), or "Memb
 per-member location switch have nothing behind them and are not built (see *Real deviations* and *Backend gaps found building Safety Groups*). The Profile sub-nav also
 collapses to one button on a phone. The second screen, **Credibility** (`/app/profile/credibility`), is built too: the account's own score as a ring (from `GET /trust-score`), when it last changed, "Not scored yet" for an account that has never
 been scored (the API's implicit `0` is not a score), and a plain account of what the score is for. The mockup's level, progress, statistics, "how to raise your score" and history have nothing behind them and are not drawn.
-Still to do in this phase: the live-location WebSocket, Alert Preferences, the remaining Edit Profile fields and the Activity Timeline.
+**Alert Preferences** (`/app/profile/alert-preferences`) is built: the four channel switches, the minimum severity as one radio group and the alert language,
+each **saving the moment it changes** (only that field is sent; a live "Saving… / All changes saved"; a refused change puts the old value back and says why), with quiet hours and saved alert locations not drawn because
+the API has neither. **Edit Profile's "remaining fields" turned out to be none** — the profile is a name and a home region and nothing else — so the page gained a read-only "Your account" card (the email, verified, member since)
+instead. **Activity Timeline** (`/app/profile/activity`) is built too, once you added its route (`GET /profile/activity-timeline`, to the contract I wrote, 2026-09-25):
+everything the account has reported, voted on, requested, donated or sighted, newest first, as first-person sentences (with status pills) under a heading per day, filterable by kind
+(URL-mirrored), a page at a time with "Load more". A shelter's status report links to the shelter; every other subject is plain text until its screen exists. **Live location** — the plan's first real-time piece — is built into Safety Groups: one **Share my live location** switch (a browser
+position watch sent over the relay's WebSocket to everyone connected), a **Live** badge on the rows of members who are sharing, and on a connected member's page a map with their position, when it was last heard and the coordinates. It rests on a reusable reconnecting-socket engine (backoff with jitter, a fresh token
+on every attempt, a probe that tells a refused handshake from a dead network) that Phase 7's chat and navigation will use, and it is honest about the web's limits: sharing works only while the tab is open and in front. **Every Phase 4 screen is now built; the phase-end pass (full E2E suite and the deferred tests) has not been run.**
 
 **Phases 5–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -786,6 +793,22 @@ colour ramp is right. The card and legend still say "model confidence", which is
   (the design system's "trust" colour, the same as the admin card's bar) because the gradient was built around the level line and white text on pink is below AA at the small sizes it used. The sidebar's "Level 4" chip is likewise not shown.
   An account with no stored row comes back as `score: 0` with **no `updated_at`** and is shown as "Not scored yet" — a stored `0` (it has an `updated_at`) is a score of zero.
 
+- **Alert Preferences: auto-save, backend severity names, no quiet hours or alert locations (Phase 4).** The design plan's button table says the toggles/pickers **auto-save on change, no separate Save button**, while the mockup (Batch 3 §3g)
+  draws "Discard / Save preferences" — the plan's rule is followed. Each change is applied to the screen at once, sent as a partial patch of **only that field** (the API doc's warning: round-tripping values could switch off a channel the user
+  never touched), and saved one at a time in order (`scope`), so two quick taps can't arrive backwards or flicker back. The mockup's severities (Safe / Caution / High / Critical) are shown as the backend's own (`general_advisory` / `watch` /
+  `warning` / `critical_emergency`, lowest to highest), described as a *minimum* — so a critical emergency always gets through. **Quiet hours and "Alert locations" are not drawn:** the API has neither. SMS, WhatsApp and voice calls go to a
+  phone number and **the system stores none** (no column on `accounts` or `profiles`), which the page says once under the channels instead of letting the switches imply a delivery that can't happen. The language is a select of English / Urdu /
+  Sindhi (`en` / `ur` / `sd` — the codes the accounts in the database hold; the API stores any non-blank text, so an unfamiliar value is shown as an extra option rather than misreported).
+- **Edit Profile has no "remaining fields" (Phase 4).** The plan expected more personal fields; `05-profiling.md` says plainly that personal details are exactly `name`, and the table has `name` and `home_region_id` only — no phone, photo or date of birth.
+  Rather than invent fields, the page gained a read-only **Your account** card with what the API does return: the sign-in email (with a Verified badge) and the profile's creation date ("Member since"). It is text, not inputs — no route changes an email.
+
+- **Activity Timeline: sentences written here, links only where a screen exists (Phase 4).** The backend sends structured facts (`type` + `detail`), not prose, so it can be translated: `describeActivity` turns each event into a first-person sentence ("You reported flooding",
+  "You requested medical help", "You donated 5,000", "You reported a shelter as open") plus status / severity pills, in one place Phase 9's i18n can swap. A `type` the screen doesn't know is **skipped** (the backend may add kinds; the doc says a client ignores them) and a status or
+  category it has no wording for is shown as plain words. **Donation amounts print with no currency** — the API sends a bare number and states none. **Only a shelter's status report is a link** (`/app/map/shelters/:id`, a real screen); reports, votes, aid requests, campaigns
+  and missing persons stay plain text until Phases 5–6 build their pages (the doc's own advice: only link where the target exists), and an essential location has no page. Events are grouped under a heading per day in the *viewer's* zone ("Today", "Yesterday", "24 September 2026"), the
+  time as `HH:mm`. Paging is by offset — "Load more" asks for `offset` = the events already held and a page shorter than 25 is the last — and pages are merged with each id kept once, since an event arriving between two presses would otherwise repeat one. The mockup's chat "interactions"
+  wait on Communication (not in the API yet).
+
 ### Component library actually built so far (`src/components/ui/`)
 
 `Button` (variants: primary, secondary, ghost, dangerOutline, criticalSolid, safeSolid — the
@@ -796,7 +819,7 @@ toggle, optional leading lock icon), `OtpInput` (6 boxes, auto-advance/backspace
 fully responsive down to 320px), `Checkbox` (real native input, `group-has-checked:` for visual
 styling), `Dialog` (wraps `@radix-ui/react-dialog` — overlay, centered content, title/description,
 close button), `Drawer` (the same Radix dialog as a full-height side sheet, full width on a phone, for forms
-too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `CopyButton` (copies a string with the async Clipboard API and says "Copied" — or that it couldn't, so the text can be selected instead; used by Safety Groups for Member IDs), `Notice`
+too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `Switch` (Radix Switch — `role="switch"`, Space toggles, a bordered track so state doesn't rest on colour alone; first used by Alert Preferences), `CopyButton` (copies a string with the async Clipboard API and says "Copied" — or that it couldn't, so the text can be selected instead; used by Safety Groups for Member IDs), `Notice`
 (a page-level `role="status"` banner), `TabBar` (a proper tablist over one panel — arrow keys, Home and End — used by Resources and Facilities), and `ListPagination` (rows-per-page and previous/next, shared by
 the admin lists); `button-variants.ts` exports `buttonVariants` for links styled as buttons. **Not built via shadcn's CLI** — every component is hand-built
 directly against the verified design tokens (§2.4); shadcn's generated components assume a
@@ -2210,7 +2233,7 @@ reimplemented) by every screen above.
 
 ---
 
-## Phase 4 — Trust 🚧 In progress (Safety Groups built; the WebSocket and four screens to go)
+## Phase 4 — Trust ✅ Screens done (Safety Groups incl. live location, Credibility, Alert Preferences, Edit Profile, Activity Timeline) — phase-end pass still to run
 
 ### Screens
 
@@ -2218,9 +2241,9 @@ reimplemented) by every screen above.
 |---|---|---|---|---|
 | Safety Groups (+ detail) | `/app/safety-groups`, `/app/safety-groups/:id` | Citizen | W-List / W-Detail | ✅ Built (CRUD) — the circle in four sections shown by name and email, "How people invite you" (your email, your Member ID with Copy), Invite by email or Member ID, Accept / Decline, Cancel request, Remove (confirmed), a detail page per connection, and a sidebar count of requests waiting on you. **No groups or live-location switch** — see *Real deviations* and *Backend gaps found building Safety Groups*. The live-location toggle waits for the WebSocket (step 3 below) |
 | Credibility | `/app/profile/credibility` | Citizen | W-Settings | ✅ Built — the score as a ring with the date it last changed, "Not scored yet" for an account never scored, and "How it works"; **no level, statistics, tips or history** (the API has none — see *Backend gaps found building Credibility*). The reusable `<CredibilityBadge>` is deferred until its first consumer (NGO Incidents, Phase 5) |
-| Alert Preferences | `/app/profile/alert-preferences` | Citizen | W-Settings | ⬜ |
-| Personal profile (remaining fields) | `/app/profile/edit` | Citizen | W-Settings | ⬜ |
-| Activity Timeline | `/app/profile/activity` | Citizen | W-Settings | ⬜ |
+| Alert Preferences | `/app/profile/alert-preferences` | Citizen | W-Settings | ✅ Built — channels (push, SMS, WhatsApp, voice call), minimum severity, language; auto-saves per change, no Save button (per the design plan). **No quiet hours or saved alert locations** (no API). See *Real deviations* and *Backend gaps found building Alert Preferences, Edit Profile and Activity* |
+| Personal profile (remaining fields) | `/app/profile/edit` | Citizen | W-Settings | ✅ Done — there are **no remaining editable fields** (the API's profile is `name` + home region, both already built); added a read-only "Your account" card: email, verified, member since |
+| Activity Timeline | `/app/profile/activity` | Citizen | W-Settings | ✅ Built — first-person sentences with status pills, a heading per day, filter pills by kind (`?show=`), Load more by offset, a link only for a shelter's status report. See *Real deviations* and *Testing done so far (Activity Timeline)* |
 
 **Where the code is.** `src/api/trust.ts` (types and the five calls; `SAFETY_CONNECTIONS_QUERY_KEY` is shared by the list, the detail page and the sidebar count, so one cache entry keeps
 all three in step); `src/features/safetyGroups/` — `connections.ts` (the pure rules: **standing** = incoming / outgoing / connected / declined worked out from the two account ids and yours,
@@ -2231,6 +2254,22 @@ there's a name, `SafetyGroupDetail`, `InviteMemberDialog`, `RemoveConnectionDial
 `SafetyGroupDetailPage.tsx`. There is no `GET /safety-connections/{id}`, so the detail page finds its connection in the list query; an id that isn't in it is the "not in your list" state. Removing from
 the detail page goes back to the list with the confirmation passed as router state (shown once, then cleared from the history entry). `CopyButton` and `useCopyToClipboard` are shared (`src/components/ui`, `src/lib`).
 The client no longer checks for duplicate or crossed requests itself — the backend now refuses them (see below), so the dialog shows its message.
+
+### Live location — how it is built, and what it does not do
+**Code.** `src/lib/reconnectingSocket.ts` is the generic engine — backoff 1 s × 2ⁿ capped at 30 s with ±20% jitter (reset only once a connection has *held* 5 s), a `getUrl` asked on **every** attempt (a token in a query string goes stale), `onFailure` asked before retrying an attempt that never
+opened (a browser reports no reason for a failed handshake), `close()` final and `send()` never queuing. `src/features/liveLocation/` is the feature: `locationChannel.ts` (the `ws(s)` URL from the API base, a token refreshed if it has under a minute left, and `classifyRejection` — the same URL over plain HTTP,
+where a `401`, the gate's `403 "… active alert"` or a `400` (the upgrader saying "that wasn't a websocket", i.e. every check before it passed) *can* be read), `liveLocationController.ts` (the state machine — no React, so it is tested with a fake socket, fake geolocation and fake timers),
+`liveLocationModel.ts`, `shareStatus.ts`, the `LiveLocationProvider` layout route (**above both `CitizenLayout`s**, so sharing survives moving to the map and ends when the citizen app unmounts), `useLiveLocation` / `useWatchLiveLocation` / `useNow`, and the parts (`ShareLocationCard`, `MemberLiveLocation`, `MemberLocationMap`).
+
+**Rules it follows, most of them the backend's, learned by probing it from real browser pages:**
+- **One connection per account, last one wins — and the older one stays open but deaf.** So the socket is held **only by the tab in front** (a hidden tab closes it at once and reopens on return), and only while a screen is watching for members or the person is sharing. A grace period of 3 s before closing an unwanted socket
+  keeps it (and the positions already heard) across the hand-over from the list to a member's page — found by the E2E, which counted two connections for one page load (React's dev double-mount and the navigation both did it).
+- **Foreground-only.** No background location on the web (`WEB_DESIGN_PLAN` §8): the card says so, sharing **pauses** when the tab is hidden (the switch stays on, the status says "Paused — this tab is in the background"), and **never resumes on its own after a reload** (a location share must be turned on by a person, each time).
+- **One switch for everyone connected, not one per member as the design plan drew it.** The relay sends every position to every accepted connection; it cannot aim at one. The card says "There's no setting for just one of them."
+- **No snapshot on connect.** A viewer only hears a member's *next* ping, so a sharing tab re-sends its last fix every 15 s (a viewer counts a position as live for three of those, 45 s) — and a fix that arrives inside the 2 s send window is held and the **newest** one goes out when it ends, rather than waiting for the next heartbeat.
+  Positions are kept only for the session (no history, no "last seen" after a reload — the durable trail the backend writes is not readable through any route).
+- **Bad frames are dropped silently by the server** (a non-JSON frame, out-of-range coordinates) and the connection stays open; frames from the relay end in a newline. A position from an account that isn't a connected member is never shown.
+- **The gate.** The backend's "only during an active alert" check is a stub that always allows, so the `403` path is built (`blocked-not-allowed`, with "Try again") and unit-tested but **cannot be exercised for real**; likewise an expired session (`blocked-unauthorized`).
 
 ### Backend gaps found building Safety Groups — the first two, and the duplicate rule, were fixed on request (2026-09-25, migration 000015)
 1. ~~No names.~~ **Fixed.** All four routes that return a connection (`POST`, `GET`, both `PATCH`es) carry `requester_name`, `requester_email`, `recipient_name`, `recipient_email` — always present, `""` when unset or hidden.
@@ -2249,6 +2288,25 @@ The client no longer checks for duplicate or crossed requests itself — the bac
    isn't revealed by the probe. A per-caller limiter on the email form is the suggested next step; the frontend assumes the `404` behaviour.
 8. Already documented: the WebSocket's "active alert" gate is a stub that always allows, so the 403 path can't be exercised yet.
 
+### Backend gaps found building Live location (none block the frontend)
+1. **One connection per account, last wins** (`registry.go`): a second tab or device silently makes the first deaf while it stays open. The web works around it by letting only the foreground tab hold the socket, but a person with two visible windows, or the mobile app open too, will lose one of them without any signal.
+2. **No snapshot / "last known position" on connect** and no route for the durable trail (`location_trail`, written throttled — a row per ~30 s or 50 m). A viewer who opens the page hears nothing until the member's next ping; the web compensates with a 15 s heartbeat from the sharer.
+3. **No "stopped sharing" message.** Silence is the only signal, so a viewer infers it after 45 s. A tiny `{type: "stopped"}` frame on unshare, or on disconnect, would make it instant and precise.
+4. **No per-member targeting** — the design's per-member switch can't be built (see above); a `to`/`account_ids` field on the ping would allow it.
+5. **A failed handshake carries no reason in a browser**, so the client has to re-ask over plain HTTP to tell "session gone" from "gate closed" from "network down" (it works: `401` JSON, `403` JSON with the gate's message, `400` from the upgrader). Fine as is; worth knowing that `403` is also what a disallowed **origin** returns, in plain text — the app's origin must be in `CORS_ALLOWED_ORIGIN` (it is, for `http://localhost:5173`).
+6. **The gate is a stub** (already documented): live location works at any time today.
+7. **Redis stream / trail rows for deleted accounts:** a test account that shared leaves `location_trail` rows (the guarded cleanup now removes them); anything the relay still had buffered in Redis for an account deleted meanwhile can only fail its flush — not checked.
+
+### Backend gaps found building Alert Preferences, Edit Profile and Activity
+1. ~~`GET /profile/activity-timeline` doesn't exist.~~ **Fixed 2026-09-25**, to the contract I proposed (`limit`/`offset`, `type` filter with the exact `400` message, newest first with ties by id, `[]` for no activity, only the caller's own events, structured `detail`, seven
+   types). Differences and findings: a **`place_type`** (`shelter` / `essential_location`) was added to a `status_report`'s `detail`, because its `subject_id` could be either and the id alone can't say which screen to open; **`limit=1000` is reset to 25, not clamped to 100**
+   (the doc is explicit); the backend's tests caught a 500 on six of the seven `type=` filters before it shipped; and my claim that every source had an index on its account column was wrong (only 2 of 7) — migration 000016 adds the other five.
+2. **No phone number anywhere.** `accounts` and `profiles` have none, so the SMS, WhatsApp and voice-call preferences are switches with nowhere to send to. Adding one (`PATCH /profile`, and shown on Edit Profile) is what "Personal profile (remaining fields)" would really need.
+3. **No quiet hours or saved alert locations** in `alert_preferences` — the mockup's two other sections have no fields or routes.
+4. **Preferences affect nothing yet.** Alerting (backend Phase 10) isn't built, so nothing reads these settings. They are stored for real; whether delivery honours them can't be tested until it exists.
+5. **`language` is free text** (only "not blank" is checked) with no list of supported languages; the frontend offers `en` / `ur` / `sd`, which are the values in the database.
+6. **Severity names differ from the mockup** (`general_advisory` / `watch` / `warning` / `critical_emergency` vs Safe / Caution / High / Critical). The backend's are used.
+
 ### Backend gaps found building Credibility (none block the frontend)
 1. **Nothing writes scores yet**, so every account except the seeded ones is "Not scored yet" (already documented: `credibility_events` is backend Phase 8). The screen is complete for what exists but will look empty until then.
 2. **No levels or tiers.** The mockup's "Level 4 · Trusted reporter", next-level progress, and the profile header's level chip need a definition of the levels (names, thresholds) — they aren't in any response.
@@ -2259,23 +2317,23 @@ Trust score/credibility also appears **embedded** (read-only) inside NGO Inciden
 Account Detail — build those embeds here too, even though the parent screens ship in later phases,
 since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` component.
 
-### Backend routes (all ✅ built)
+### Backend routes (all ✅ built — `GET /profile/activity-timeline` was wrongly listed here as built before it existed; it was added on request on 2026-09-25)
 
 | Route | Doc | Used by |
 |---|---|---|
 | `POST /safety-connections`, `GET /safety-connections`, `PATCH .../accept`, `PATCH .../decline`, `DELETE /safety-connections/{id}` | `06-trust.md` | Safety Groups |
-| `WS /ws/safety-connections/location` | `06-trust.md` | Safety Group Detail's live-location toggle — first real-time feature, see build note below |
+| `WS /ws/safety-connections/location` | `06-trust.md` | Live location — the share switch (Safety Groups list and a member's page) and the member's live map — first real-time feature, ✅ built (see *Live location* below) |
 | `GET /trust-score` | `06-trust.md` | Credibility |
 | `GET /accounts/{id}/trust-score` | `06-trust.md` | NGO/Admin embedded credibility badge — Admin Account Detail's credibility card is **built (Phase 1)**; the reusable `<CredibilityBadge>` for NGO Incidents is still to do |
 | `POST /admin/accounts/{id}/moderation-actions`, `GET /admin/accounts/{id}/moderation-actions` | `06-trust.md` | Admin Account Detail — **built in Phase 1** with Users & Accounts (history list, Log dialog, and the reason saved by Suspend/Reactivate) |
 | `GET /profile`, `PATCH /profile` | `05-profiling.md` | Edit Profile — **the service-layer functions (`getProfile`/`updateProfile`) and the `name` field already exist**, pulled forward into Phase 1 for the onboarding gate; this phase is just the standalone Edit Profile screen reusing them, no new backend work |
 | `GET /profile/alert-preferences`, `PATCH /profile/alert-preferences` | `05-profiling.md` | Alert Preferences (auto-saves on change, no Save button, per spec) |
-| `GET /profile/activity-timeline` | roadmap "No Single Owner" — hosted in `internal/profiling`, reads across contexts | Activity Timeline |
+| `GET /profile/activity-timeline` | `05-profiling.md` (*FE-4*) — added 2026-09-25 to the contract in `supporting-material/backend-requests/activity-timeline.md`, plus `place_type` on status reports | Activity Timeline |
 
 ### Build steps
-1. Profile/Alert Preferences/Activity Timeline first — straightforward CRUD, no real-time. *(Order changed by decision: Safety Groups was started first, 2026-09-25.)*
+1. Profile/Alert Preferences/Activity Timeline first — straightforward CRUD, no real-time. *(Order changed by decision: Safety Groups was started first, 2026-09-25. Done since: Alert Preferences and Edit Profile's account card; Activity Timeline waits on its backend route.)*
 2. Safety Groups CRUD (connections, accept/decline). **✅ Done.**
-3. The WebSocket hook: `?token=<access_token>` query-param auth (browser WS can't set custom
+3. **✅ Done.** The WebSocket hook: `?token=<access_token>` query-param auth (browser WS can't set custom
    headers), reconnect-with-backoff, gated behind an active safety connection + active emergency
    per the backend's own gating rules — **note explicitly in the UI** that web location-sharing
    only works while the tab is open/foregrounded (no background-task equivalent to mobile's
@@ -2341,9 +2399,84 @@ since the embed is a small reusable `<CredibilityBadge>`/`<TrustScorePanel>` com
 - **Probed against the real API:** the fresh-account, stored, negative and 250 answers, the 401 without a token, and the table's constraints (none on the range); the ten seeded real scores run 10–100.
 - **Visual:** 1440×900, 1024×768, 768×1024 and 390×844 for "Not scored yet", the scored state at 1440 / 768 / 390, and an out-of-range score at 390; **zero horizontal overflow** in all of them. The ring's empty track was too faint against white and was darkened.
 
+### Testing done so far (Alert Preferences, Edit Profile, Activity)
+- **Unit (Vitest + RTL + MSW), 1,393 tests in the whole suite (+37 for these three):** `Switch` (labelled, click and Space, disabled); the option lists (four channels, three needing a phone, four severities in order, `languageOptions` adding an unfamiliar
+  value); the panel (each switch in its stored state, described by its line; a toggle, a severity and a language each reported as **a patch of only that field**; the phone note once; the four severities as one radio group with the current
+  one chosen and "critical emergencies always reach you"; an unfamiliar language as an extra option; the live "Saving… / All changes saved"; a refused change as a dismissible alert; **no Save button**); the skeleton and failure card; and the
+  page over MSW with an in-memory preferences server (the stored state shown; a failed load recovering on retry; only the changed field ever sent; the new value on screen **before** the server answers, with "Saving…"; a severity and a language
+  as their own patches; **two quick taps kept in order with no flicker** — a MutationObserver on the second switch records that it changed once and stayed changed; a switch tapped twice ends as the last tap left it; a refused change putting the
+  old value back with the server's message; the message clearing on the next success or on Dismiss). **Mutation-checked:** always overwriting the cache with the server's copy (dropping the "another save is queued" guard) fails the no-flicker test.
+  Edit Profile's `AccountDetailsCard` (email, Verified, date, an unverified email, a placeholder until loaded, nothing to edit) and the page (the card beside the two editable things; one textbox on the whole page; not drawn when nobody is signed in).
+- **E2E (Playwright, real backend, real Postgres) — `e2e/profile-alert-preferences.spec.ts`, 7 tests, and `e2e/profile-edit-account.spec.ts`, 3 tests, each run alone, all passing.** Alert Preferences: a new account shows the defaults every account starts with (push, SMS, voice
+  on; WhatsApp off; English; general advisory) inside the sub-nav with no Save button, matching the row in Postgres; toggling WhatsApp **sends exactly `{whatsapp_enabled: true}`**, shows "All changes saved", and Postgres has that change and **nothing else moved** (the
+  whole row compared), surviving a reload; a severity (including the highest) and a language each saved on their own and read back from Postgres; **four quick changes** (push off, SMS off, WhatsApp on, push back on) all landing in order, in the database and after a reload;
+  what's really stored shown — including a language (`fr`) the screen has no name for — and **two accounts each seeing only their own**; the phone-number note; and a **phone (390×844)** reaching it through the collapsed menu, toggling, choosing a severity, no sideways scroll.
+  Edit Profile: the account's real email, Verified, and the creation date **matching `GET /profile`'s `created_at`**; the page having exactly one textbox and no phone / photo / date-of-birth text; and a phone with a very long email wrapping without overflow. New seed helpers
+  (`readAlertPreferences`, `setAlertPreferences`, guarded to `e2e-` accounts). Re-ran `profile-edit`, `profile-home-region`, `profile-phone-nav` and `account-my-account` (which share the Edit Profile page or the sub-nav): all pass. The severity cards are clicked by their label,
+  as a person would — the radio itself is visually hidden and can't be force-clicked.
+- **Probed against the real API:** `GET /profile`, `GET /profile/alert-preferences` and `GET /auth/me` shapes and defaults; and the missing activity route (`404` on five guessed paths, authenticated and not).
+- **Visual:** Alert Preferences at 1440, 1024, 768 and 390 (with a non-default severity, language and channel), the saved state, Edit Profile's new card at 1440 and 390, and the Activity placeholder; **zero horizontal overflow** in all of them. It caught the empty "saving" status wrapping onto its own row and leaving a gap under the intro (moved onto the title row).
+
+### Testing done so far (Activity Timeline)
+- **Unit (Vitest + RTL + MSW), 1,438 tests in the whole suite (+45 for this screen):** the model (the sentence for each of the seven kinds and each category / vote / status, the pills and their tones, a donation with and without an amount, a shelter vs another place, an unfamiliar status shown as words, a missing `detail`, an unknown
+  `type` returning nothing; links — a shelter's status report only; `mergePages` keeping each id once; the day headings for today / yesterday / a date and grouping in the viewer's zone in order; skipping unknown kinds without an empty day; the time; the filter list and reading `?show=`); the panel (headings per day, sentences with
+  pills and times, the one link, eight pills with the current one pressed, the skeleton, a failure with a retry that never reads as "no activity", the empty state and the named-filter empty state, Load more and its spinner, and a later-page failure keeping the list with the button turned into a retry); and the page over MSW with an in-memory
+  route that applies `type` **before** paging: the first page, an empty account, an unknown kind skipped, a filter asked of the server and kept in the URL, starting from `?show=`, an unknown `?show=` becoming All, a filter with nothing in it, **paging 60 events by offset (25 → 50 → 60, stopping at the short page)**, a full last page finding
+  nothing more, a repeated event shown once, a failed later page keeping the list and recovering on retry, and a first-page failure recovering. **Mutation-checked:** removing the dedupe fails both the model and the page test; making the "last page" rule "an empty page" fails the paging test.
+- **E2E (Playwright, real backend, real Postgres) — `e2e/profile-activity.spec.ts`, 8 tests, run alone, all passing.** One row of **every kind is seeded straight into the seven tables at exact times** (two today, two yesterday, four ten days ago), beside a second account's own rows in the same tables. Covered: an account with none sees
+  the empty state and the API says `[]`; **every kind as its sentence and pills under the right day headings**, and the rows' `datetime`s and order **identical to what the API returns** (the ids `type:row-id` for each seeded row) — while **the other account's rows never appear** (and are seen by that account: blocked road, food, donation 111, a place closed);
+  a shelter's status report **links to the real shelter page** and it is the only link; **each filter** showing exactly its kind's count (1, 1, 1, 1, **2** place updates, 1, 1), asked of the server, in the URL and surviving a reload; an empty kind and an unknown `?show=`; **a 68-event timeline paged 25 → 50 → 68** with no repeat or gap and every `datetime` equal to the API
+  walked by `offset` the same way; a **phone (390×844)** with the filters wrapping, Load more reachable and no sideways scroll; and the API's own rules the screen leans on — `type` filtering *before* paging, `Donation` a `400`, `limit=1000` reset to 25, a bad `limit`/`offset` reset not refused, an `offset` past the end `[]`. New seed helpers
+  (`seedActivityEvents`, `seedIncidentReports`, guarded to `e2e-` accounts) and the **cleanup now removes what a test account reported, voted on, requested, donated and sighted** (votes, media and sightings before the rows they hang from; donations before campaigns and aid requests) — its dry run left exactly the real rows (28 reports, 12 aid requests, 8 missing
+  persons, 11 campaigns, 14 donations).
+- **Probed against the real API:** the empty account, the `401`, the `400` for a bad `type`, then every rule above.
+- **Visual:** 1440, 768 and 390 populated (days, pills, the shelter link), the filtered state and an empty filter at 1440; **zero horizontal overflow**.
+
+### Testing done so far (Live location)
+- **Unit (Vitest + RTL + MSW), 1,578 tests in the whole suite (+140 for this):** the **reconnecting-socket engine** with a fake WebSocket and fake timers (connect, open, messages; `send` only while open and never queued; the pauses 1, 2, 4, 8, 16, 30, 30 s and the jitter bounds; **a connection that dropped before it had held keeps growing the pause, one that held starts over** — found by
+  the first run of these tests; a fresh URL each attempt; an async `getUrl` and one that throws; `onFailure` deciding retry or stop, a throwing probe treated as retry, not consulted for a connection that had opened; `close()` final, cancelling a retry and a URL still being fetched, ignoring late events, re-openable); the **channel** (the `ws(s)` URL from an absolute or relative API base, token expiry read from the JWT, a token
+  reused while it has over a minute and not before, `classifyRejection` — 401, the gate's 403 vs a plain-text origin 403, 400, a dead network, a 500); the **model** (relay frames parsed incl. the trailing newline and every malformed shape, out-of-range and text coordinates; the bare `{lat,lng}` ping; three heartbeats of "live" to the millisecond; the age wording); the **controller** with a fake socket, fake geolocation and fake timers (no socket until something wants
+  one; watchers counted; **a hand-over between screens keeping the socket and the positions**; the 3 s grace before closing and **no grace for a hidden tab**; positions kept per member with the browser's own receipt time; junk frames ignored; connecting / live / reconnecting through a drop; sharing asking for the position, sending once open, **never queuing a stale fix**, **one send per 2 s window with the newest going out at its end**, a heartbeat re-send,
+  nothing sent before a fix or after off, denied switching sharing off, unavailable carrying on and recovering, no geolocation, a hidden tab pausing everything and **not replaying a fix from before the pause**, a held-back send dropped on hide, a gate/session refusal stopping retries and `retry()` reopening); `shareStatus` in every combination (never "sharing" unless the socket is live **and** there is a fix); the cards
+  (the switch, who it goes to, the foreground-only note said once, disabled with nobody connected but still able to turn a share off, every status in words in a live region, Try again only when it helps) and the member's page card with **real Leaflet in jsdom** (not sharing, live with age and coordinates, "Not live — last seen" one second past 45 s, a marker kept for where they last were, connecting / reconnecting, the two
+  refusals) and the small map (one marker, teal vs grey, following a move, **not following once the viewer has touched the map**); the provider (visibility changes reach the controller; starts hidden if the page did; removes its listener); and both Safety Groups pages against a fake controller (no card and no socket with nobody connected; the switch starting the watch and sending `{lat,lng}`; turning off; a refusal switching it off with the reason; a Live badge for
+  the sharing member only and never for a stranger's frame; a member's page going from "isn't sharing" to the map and coordinates and following them; the same switch, one controller; no card or socket for someone not yet connected; the socket closing after removal; opening a member from the list **keeping the positions and the socket**). **Mutation-checked:** closing at once instead of after the grace period fails the controller's hand-over tests and the page test that opens a member from the list; dropping the send-throttle reset after a pause fails the resume test. (Removing the explicit cancel of the pending close changes nothing observable — the timer re-checks that nothing wants the socket before closing — so it is not claimed.)
+- **E2E (Playwright, real backend, real WebSocket) — `e2e/safety-groups-live-location.spec.ts`, 9 tests, run alone, all passing.** Two to four real browser contexts, each its own person; the sharer's position is Playwright's emulated geolocation, so it can be moved. Covered: **A shares, B (on A's page) sees "Live", the map marker and `24.8600, 67.0500`; A moves and B follows; B's list marks A Live**; **a declined and a pending connection never receive a
+  position while the accepted one does** — proved with raw WebSockets in the receivers' pages, the app not involved (the plan's own test); **foreground-only**: a hidden tab shows "Paused", keeps the switch on, and what it moves to while hidden **never reaches B**, then coming back shares from where A is *now*; **turning it off stops the position going out, and a reload never resumes it**; **sharing survives opening the map** (a
+  different layout); **a browser refusing the position** switches it off with the reason; **a socket only when there is someone to hear or share with** (none for an account with no connections, **exactly one** for one with — which is how the hand-over/double-mount reconnect was found); **the viewer's socket being hung up from the server's side reconnects by itself and hears A again** (Playwright's WebSocket routing closes it; everything else real);
+  and **a member who stops sending goes from Live to Not live after 45 s of silence** (B's own clock moved on with `page.clock`), the map keeping where they last were. Re-ran `safety-groups` (12) after the panel changed, `citizen-map` (6, the layout tree changed) and `profile-phone-nav` (6): all pass. The plan's "manual: verify the gate rejects with no active emergency" **cannot be done** — the gate is a stub that always allows.
+- **Found by testing, fixed:** the backoff not growing for a connection that dropped right after opening; a fix dropped by the send throttle waiting up to a heartbeat (now a trailing send); the socket closing and reopening — and losing the positions heard — on the hop from the list to a member's page (a 3 s grace); the share card pushing "Requests for you" off the first phone screen (moved between the requests and the connected list);
+  and the cleanup script failing on `location_trail` rows the relay writes for a sharing account (now removed, guarded).
+- **Visual:** the sharer's card off and on at 1440 and 390, a viewer's list with the Live badge, a member's page with the live map at 1440 and 390 (real OpenStreetMap tiles); **zero horizontal overflow**. (One screenshot showed the switch grey while sharing — a capture taken mid-transition in a background browser context; the DOM (`aria-checked`) and the settled shot are correct.)
+
 ### Deferred tests (run before closing the phase)
 
 Written down, not run yet. Run them all before the phase closes, then the full suite, then the guarded cleanup.
+
+**Live location**
+- **A real phone:** iOS Safari and Android Chrome — the permission prompt, the position watch while the screen is on, what happens when the screen locks or the browser goes to the background (the code pauses on `visibilitychange`; confirm that is what the platform actually fires), and battery use of a `watchPosition` left running.
+- **Two visible windows of the same account** (or the web and the mobile app): the older connection goes deaf while staying open — the documented backend behaviour; check the UI's "Live" doesn't mislead in the deaf window.
+- **Token expiry mid-session:** leave a sharing tab open past 15 minutes and drop the connection — the reconnect must fetch a new token from the refresh cookie (unit-tested; try it for real with a short-lived token).
+- **The `403` gate and an origin the backend disallows** — untestable until Alerting (Phase 10) replaces the stub, and until an origin is misconfigured on purpose.
+- **A long-running session:** hours of sharing — no memory growth in the positions map (it holds one entry per member), the heartbeat interval and watch cleaned up on logout and account switch (unmounting the provider).
+- **Geolocation accuracy and jitter:** a real fix that jumps around — whether the 2 s window and 4-place coordinates look right on a moving map; whether a low-accuracy fix should be shown differently.
+- **Many connected members:** twenty accepted connections, several sharing at once — the list's Live badges and the detail page each pick their own member's frames.
+- **Screen reader:** the share status region, the map's name and the "Updated …" line being read once, not repeatedly each 5 s tick.
+- **When the backend adds a "stopped" frame or a snapshot:** replace the 45 s inference and the wait for the next ping.
+
+**Alert Preferences / Edit Profile / Activity**
+- **A refused change in a real browser:** no way to make the real backend refuse (the controls can't produce a blank language or a bad severity) — the "old value back + message" path is unit-tested only; try it by hand with the network blocked or the backend stopped mid-save.
+- **A slow or flaky network:** rapid changes while offline / throttled — the queue should keep order, "Saving…" should hold, and reconnecting should land them all.
+- **Preferences across devices:** change on one tab, look on another (30 s cache) — confirm nothing misleading and that the next change doesn't send stale values (it sends only its own field, so it can't).
+- **Screen reader and keyboard:** the switches (Space), the severity radios (arrow keys inside the group), the language select, and "Saving… / All changes saved" being announced politely without repeating.
+- **When alerting ships (backend Phase 10):** check that a delivery honours the channel switches, the minimum severity and the language — none of this is testable end to end until then.
+- **When a phone number exists:** add the field to Edit Profile, and make the phone note conditional on it.
+- **Activity Timeline — a long ties block:** 26+ events sharing one timestamp (the backend tested it; the screen has not) — paging through must not repeat or skip; and events created by the app itself (not seeded) appearing after a report / vote / request is made on the real screens once Phases 5–6 exist.
+- **Activity Timeline — links as screens arrive:** incident report, aid request, campaign and missing-person pages (Phases 5–6) — add each to `describeActivity` and its test; today they are plain text.
+- **Activity Timeline — a subject that has gone:** a shelter that was later closed to the public or deleted — the link then leads to Shelter Detail's not-found state; check that reads sensibly from here.
+- **Activity Timeline — time zones and midnight:** a viewer in another zone, and an event a few seconds either side of local midnight, get the heading a person there would expect.
+- **Activity Timeline — currency:** once the donation flow (Phase 6) defines one, add it to "You donated …".
+- **Activity Timeline — messages:** the roadmap's "interactions" appear when Communication ships (the screen already skips unknown kinds; add the sentence and a filter pill).
 
 **Credibility**
 - **A real seeded account:** sign in as one of the dev seed accounts that has a score (10–100 exist) and check the number, the date and the ring against `GET /trust-score` — none of the E2E accounts is a real seed account.

@@ -4,7 +4,7 @@ import type { SafetyConnection } from '@/api/trust'
 import { Button } from '@/components/ui/button'
 import { ConnectionRow } from './ConnectionRow'
 import { MemberIdCard } from './MemberIdCard'
-import { groupConnections } from './connections'
+import { groupConnections, otherParty } from './connections'
 import type { ConnectionAction } from './useConnectionActions'
 
 export interface SafetyGroupsPanelProps {
@@ -16,6 +16,10 @@ export interface SafetyGroupsPanelProps {
   onInvite: () => void
   /** Notices / errors from the last action, drawn between the header and the lists. */
   banner?: ReactNode
+  /** The "Share my live location" card, shown under the header (the screen decides whether there is anyone to share with). */
+  shareCard?: ReactNode
+  /** Account ids of connected members sharing their location right now — their rows get a Live badge. */
+  liveIds?: ReadonlySet<string>
   pending: { id: string; action: ConnectionAction } | null
   onAccept: (connection: SafetyConnection) => void
   onDecline: (connection: SafetyConnection) => void
@@ -36,7 +40,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
  * (or the email you typed, see `withInviteHints`), because the backend keeps the recipient's details from the person who asked.
  * Purely presentational; every action belongs to SafetyGroupsPage.
  */
-export function SafetyGroupsPanel({ connections, me, email, onInvite, banner, pending, onAccept, onDecline, onRemove }: SafetyGroupsPanelProps) {
+export function SafetyGroupsPanel({ connections, me, email, onInvite, banner, shareCard, liveIds, pending, onAccept, onDecline, onRemove }: SafetyGroupsPanelProps) {
   const groups = groupConnections(connections, me)
 
   const renderRows = (list: SafetyConnection[]) => (
@@ -51,6 +55,7 @@ export function SafetyGroupsPanel({ connections, me, email, onInvite, banner, pe
             onAccept={() => onAccept(connection)}
             onDecline={() => onDecline(connection)}
             onRemove={() => onRemove(connection)}
+            live={liveIds?.has(otherParty(connection, me).accountId) ?? false}
           />
         </li>
       ))}
@@ -73,8 +78,7 @@ export function SafetyGroupsPanel({ connections, me, email, onInvite, banner, pe
         <div className="max-w-xl min-w-0">
           <h1 className="font-heading text-h2 font-bold text-ink-900">Safety Groups</h1>
           <p className="mt-1 font-body text-body-md text-ink-500">
-            The family and trusted people you're connected to. Connected people are the ones your live location can be
-            shared with during an emergency.
+            The family and trusted people you're connected to. You can share your live location with them, and see theirs while they share it.
           </p>
         </div>
         <Button type="button" onClick={onInvite}>
@@ -101,6 +105,8 @@ export function SafetyGroupsPanel({ connections, me, email, onInvite, banner, pe
       ) : (
         <>
           {section('Requests for you', groups.incoming)}
+          {/* Under the requests (which are what needs an answer, and must stay on the first phone screen) and above the people it applies to. */}
+          {shareCard}
           {section('Connected', groups.connected)}
           {section('Waiting for a reply', groups.outgoing)}
           {section('Declined', groups.declined)}
