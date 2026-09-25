@@ -13,13 +13,13 @@ export interface RegionsStateProps {
 export function RegionsState({ kind, message, onRetry, onAdd }: RegionsStateProps) {
   if (kind === 'loading') {
     return (
-      <div className="grid gap-5 md:grid-cols-[20rem_minmax(0,1fr)]" aria-busy="true" aria-label="Loading regions">
+      <div className="grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]" aria-busy="true" aria-label="Loading regions">
         <div className="flex flex-col gap-2 rounded-md border border-surface-border bg-surface-raised p-3" aria-hidden="true">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-9 animate-pulse rounded-sm bg-surface-sunken" />
           ))}
         </div>
-        <div className="hidden h-96 animate-pulse rounded-md bg-surface-sunken md:block" aria-hidden="true" />
+        <div className="hidden h-96 animate-pulse rounded-md bg-surface-sunken lg:block" aria-hidden="true" />
       </div>
     )
   }

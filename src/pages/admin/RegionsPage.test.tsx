@@ -194,14 +194,14 @@ describe('RegionsPage — browsing', () => {
     const { container } = renderPage('/admin/regions/sindh')
     await screen.findByRole('heading', { name: 'Sindh', level: 2 })
     const tree = container.querySelector('section[aria-label="Region hierarchy"]')
-    expect(tree).toHaveClass('max-md:hidden')
+    expect(tree).toHaveClass('max-lg:hidden')
     expect(screen.getByRole('link', { name: 'All regions' })).toHaveAttribute('href', '/admin/regions')
   })
 
   it('on a phone at the list, hides the empty detail pane', async () => {
     serve()
     renderPage()
-    const empty = (await screen.findByText('Select a region')).closest('.max-md\\:hidden')
+    const empty = (await screen.findByText('Select a region')).closest('.max-lg\\:hidden')
     expect(empty).not.toBeNull()
   })
 })

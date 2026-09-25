@@ -14,6 +14,8 @@ import { EditProfilePage } from '@/pages/profile/EditProfilePage'
 import { AccountSettingsPage } from '@/pages/profile/AccountSettingsPage'
 import { MyNgoPage } from '@/pages/profile/MyNgoPage'
 import { InvitationsPage } from '@/pages/profile/InvitationsPage'
+import { NgoShelterDetailPage } from '@/pages/ngo/NgoShelterDetailPage'
+import { NgoSheltersPage } from '@/pages/ngo/NgoSheltersPage'
 import { OrganizationSettingsPage } from '@/pages/ngo/OrganizationSettingsPage'
 import { VolunteersPage } from '@/pages/ngo/VolunteersPage'
 import { UsersPage } from '@/pages/admin/UsersPage'
@@ -22,6 +24,7 @@ import { NgosPage } from '@/pages/admin/NgosPage'
 import { NgoDetailPage } from '@/pages/admin/NgoDetailPage'
 import { RegionsPage } from '@/pages/admin/RegionsPage'
 import { HazardZoneDetailPage } from '@/pages/admin/HazardZoneDetailPage'
+import { FacilitiesPage } from '@/pages/admin/FacilitiesPage'
 import { HazardZonesPage } from '@/pages/admin/HazardZonesPage'
 import { MapPage } from '@/pages/citizen/MapPage'
 import { ResourcesPage } from '@/pages/citizen/ResourcesPage'
@@ -107,8 +110,8 @@ export function AppRouter() {
             <Route path="/ngo/missing-persons" element={<PlaceholderPage title="Missing Persons" phase="Phase 6" />} />
             <Route path="/ngo/missing-persons/:id" element={<PlaceholderPage title="Missing Person Detail" phase="Phase 6" />} />
             <Route path="/ngo/tasks" element={<PlaceholderPage title="Tasks" phase="Phase 7 (mocked)" />} />
-            <Route path="/ngo/shelters" element={<PlaceholderPage title="Shelters" phase="Phase 3" />} />
-            <Route path="/ngo/shelters/:id" element={<PlaceholderPage title="Shelter Detail" phase="Phase 3" />} />
+            <Route path="/ngo/shelters" element={<NgoSheltersPage />} />
+            <Route path="/ngo/shelters/:id" element={<NgoShelterDetailPage />} />
             <Route path="/ngo/campaigns" element={<PlaceholderPage title="Campaigns" phase="Phase 6" />} />
             <Route path="/ngo/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />
             <Route path="/ngo/alerts" element={<PlaceholderPage title="Alerts & Community Updates" phase="Phase 5 / 7 (mocked)" />} />
@@ -148,7 +151,7 @@ export function AppRouter() {
             <Route path="/admin/ngos" element={<NgosPage />} />
             <Route path="/admin/ngos/:id" element={<NgoDetailPage />} />
             <Route path="/admin/regions/:id?" element={<RegionsPage />} />
-            <Route path="/admin/facilities" element={<PlaceholderPage title="Facilities" phase="Phase 3" />} />
+            <Route path="/admin/facilities" element={<FacilitiesPage />} />
             <Route path="/admin/offline-maps" element={<PlaceholderPage title="Offline Map Packages" phase="Phase 3" />} />
             <Route path="/admin/settings/account" element={<MyAccountPage />} />
           </Route>

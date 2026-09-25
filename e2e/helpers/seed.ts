@@ -169,6 +169,17 @@ export function promoteToPlatformAdmin(email: string) {
   verifyAndOnboardAccount(email, 'E2E Platform Admin')
 }
 
+/** Makes a registered `e2e-` account a `super_admin` (verified + onboarded) — the role above `admin`, for the screens that must treat both alike. */
+export function promoteToSuperAdmin(email: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET role = 'super_admin', updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!updated) throw new Error(`no account found to make a super admin: ${email}`)
+  verifyAndOnboardAccount(email, 'E2E Super Admin')
+}
+
 /** Read-only: an account's role, lifecycle status, and whether it's soft-deleted — including
  *  deleted rows, so a delete/deactivate can be asserted against the database itself. */
 export function readAccountState(email: string): { role: string; status: string; deleted: boolean } {
@@ -212,6 +223,16 @@ export function setNgoStatus(
     WHERE id = ${lit(ngoId)} AND name LIKE 'E2E %'
     RETURNING id`)
   if (!updated) throw new Error(`no E2E NGO ${ngoId} to set status on`)
+}
+
+/** Leaves an `e2e-` `ngo_admin` with no organisation (`ngo_id` NULL) — the state an account is in if its organisation link is ever cleared — so the screens that ask for "my organisation" can be shown what the real API says to it. */
+export function detachFromNgo(email: string) {
+  assertE2eEmail(email)
+  const updated = psql(`
+    UPDATE accounts SET ngo_id = NULL, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL AND role IN ('ngo_admin', 'ngo_volunteer')
+    RETURNING id`)
+  if (!updated) throw new Error(`no NGO staff account to detach: ${email}`)
 }
 
 /** Takes an `e2e-` volunteer off their roster behind an open page's back — what an admin's remove
@@ -291,13 +312,65 @@ export const squareRing = (x: number, y: number, size = 0.5): Array<[number, num
  * and cleaned up by name), for tests that need a hierarchy to already exist. Tests that are *about*
  * creating a region use the UI and the real `POST /admin/regions` instead.
  */
-export function seedRegion(name: string, level: RegionLevel, parentId?: string, ring: Array<[number, number]> = squareRing(67, 24)): string {
+export function seedRegion(name: string, level: RegionLevel, parentId?: string, ring: Array<[number, number]> = squareRing(67, 24), hole?: Array<[number, number]>): string {
+  assertE2eRegionName(name)
+  const text = hole ? `POLYGON((${ring.map(([x, y]) => `${x} ${y}`).join(',')}),(${hole.map(([x, y]) => `${x} ${y}`).join(',')}))` : polygonWkt(ring)
+  return psql(`
+    INSERT INTO regions (name, level, parent_region_id, boundary)
+    VALUES (${lit(name)}, ${lit(level)}, ${parentId ? `${lit(parentId)}::uuid` : 'NULL'}, ST_GeomFromText(${lit(text)}, 4326))
+    RETURNING id`)
+}
+
+/** A round `E2E …` region with a very detailed outline (`4 × segments + 1` vertices) — for the cost of drawing and testing a point against a real district boundary. */
+export function seedRegionCircle(name: string, level: RegionLevel, options: { lng: number; lat: number; radius: number; segments?: number; parentId?: string }): string {
   assertE2eRegionName(name)
   return psql(`
     INSERT INTO regions (name, level, parent_region_id, boundary)
-    VALUES (${lit(name)}, ${lit(level)}, ${parentId ? `${lit(parentId)}::uuid` : 'NULL'}, ST_GeomFromText(${lit(polygonWkt(ring))}, 4326))
+    VALUES (${lit(name)}, ${lit(level)}, ${options.parentId ? `${lit(options.parentId)}::uuid` : 'NULL'},
+            ST_Buffer(ST_SetSRID(ST_MakePoint(${Number(options.lng)}, ${Number(options.lat)}), 4326), ${Number(options.radius)}, ${Number(options.segments ?? 32)}))
     RETURNING id`)
 }
+
+/**
+ * Seeds `count` numbered `E2E …` regions of one level in one statement, as a grid of squares inside `parentId`'s box (or anywhere from `(lng, lat)`), each `size` degrees wide —
+ * for a platform with hundreds of districts. Guarded: an `E2E …` prefix and parent, at most 500. Returns how many were inserted.
+ */
+export function seedRegionGrid(options: { prefix: string; level: RegionLevel; count: number; lng: number; lat: number; size: number; columns?: number; parentId?: string }): number {
+  assertE2eRegionName(options.prefix)
+  if (options.parentId) assertE2eRegionId(options.parentId)
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 500) throw new Error(`seed helper refuses a count of ${options.count}`)
+  const columns = options.columns ?? 10
+  return Number(
+    psql(`
+      WITH inserted AS (
+        INSERT INTO regions (name, level, parent_region_id, boundary)
+        SELECT ${lit(options.prefix)} || ' ' || lpad(g::text, 3, '0'), ${lit(options.level)}, ${options.parentId ? `${lit(options.parentId)}::uuid` : 'NULL'},
+               ST_MakeEnvelope(x0, y0, x0 + ${Number(options.size)}, y0 + ${Number(options.size)}, 4326)
+        FROM (SELECT g, ${Number(options.lng)} + ((g - 1) % ${columns}) * ${Number(options.size) * 1.05} AS x0, ${Number(options.lat)} + ((g - 1) / ${columns}) * ${Number(options.size) * 1.05} AS y0 FROM generate_series(1, ${options.count}) g) cells
+        RETURNING id
+      ) SELECT count(*) FROM inserted`),
+  )
+}
+
+/** Gives every child region of `parentId` two `E2E …` children of its own — the left and right half of its box (`<prefix> <child name> A/B`). Returns how many were made. Guarded like the grid. */
+export function seedRegionHalves(parentId: string, options: { prefix: string; level: RegionLevel }): number {
+  assertE2eRegionName(options.prefix)
+  assertE2eRegionId(parentId)
+  return Number(
+    psql(`
+      WITH inserted AS (
+        INSERT INTO regions (name, level, parent_region_id, boundary)
+        SELECT ${lit(options.prefix)} || ' ' || right(c.name, 3) || ' ' || h.side, ${lit(options.level)}, c.id,
+               CASE WHEN h.side = 'A' THEN ST_MakeEnvelope(ST_XMin(c.boundary), ST_YMin(c.boundary), (ST_XMin(c.boundary) + ST_XMax(c.boundary)) / 2, ST_YMax(c.boundary), 4326)
+                    ELSE ST_MakeEnvelope((ST_XMin(c.boundary) + ST_XMax(c.boundary)) / 2, ST_YMin(c.boundary), ST_XMax(c.boundary), ST_YMax(c.boundary), 4326) END
+        FROM regions c CROSS JOIN (VALUES ('A'), ('B')) AS h(side)
+        WHERE c.parent_region_id = ${lit(parentId)}::uuid AND c.name LIKE 'E2E %'
+        RETURNING id
+      ) SELECT count(*) FROM inserted`),
+  )
+}
+
+
 
 export interface StoredRegion {
   id: string
@@ -401,17 +474,62 @@ export interface SeedShelter {
   status?: 'open' | 'closed'
   type?: 'shelter' | 'relief_center'
   certification?: 'certified' | 'pending' | 'uncertified'
+  /** The managing organisation — must be an `E2E …` NGO. Omitted, the shelter has none (as the map's seeded shelters don't). */
+  ngoId?: string
 }
 
 /** Seeds an `E2E …` shelter in an `E2E …` region; returns its id. */
 export function seedShelter(regionId: string, shelter: SeedShelter): string {
   assertE2eName('shelter', shelter.name)
   assertE2eRegionId(regionId)
+  if (shelter.ngoId) assertE2eNgoId(shelter.ngoId)
   return psql(`
-    INSERT INTO shelters (name, type, location, region_id, capacity_total, capacity_current, certification_status, status)
+    INSERT INTO shelters (name, type, location, region_id, capacity_total, capacity_current, certification_status, status, managed_by_ngo_id)
     VALUES (${lit(shelter.name)}, ${lit(shelter.type ?? 'shelter')}, ${point(shelter.lng, shelter.lat)}, ${lit(regionId)}::uuid,
-            ${Number(shelter.capacityTotal)}, ${Number(shelter.capacityCurrent)}, ${lit(shelter.certification ?? 'certified')}, ${lit(shelter.status ?? 'open')})
+            ${Number(shelter.capacityTotal)}, ${Number(shelter.capacityCurrent)}, ${lit(shelter.certification ?? 'certified')}, ${lit(shelter.status ?? 'open')},
+            ${shelter.ngoId ? `${lit(shelter.ngoId)}::uuid` : 'NULL'})
     RETURNING id`)
+}
+
+function assertE2eNgoId(ngoId: string) {
+  const found = psql(`SELECT id FROM ngos WHERE id = ${lit(ngoId)}::uuid AND name LIKE 'E2E %'`)
+  if (!found) throw new Error(`seed helper refuses an NGO that is not an E2E NGO: ${ngoId}`)
+}
+
+/** Makes a registered `e2e-` account the `ngo_admin` of an *existing* `E2E …` NGO (promoteToNgoAdmin creates a new one), verified and
+ *  onboarded, ready for a genuine login — so several sessions can act for the same organisation. */
+export function makeNgoAdminOf(email: string, ngoId: string) {
+  assertE2eEmail(email)
+  assertE2eNgoId(ngoId)
+  const updated = psql(`
+    UPDATE accounts SET role = 'ngo_admin', ngo_id = ${lit(ngoId)}::uuid, updated_at = now()
+    WHERE lower(email) = lower(${lit(email)}) AND deleted_at IS NULL
+    RETURNING id`)
+  if (!updated) throw new Error(`no account found to make an NGO admin: ${email}`)
+  verifyAndOnboardAccount(email, 'E2E NGO Admin')
+}
+
+/**
+ * Seeds `count` numbered `E2E …` shelters in one statement (a hundred single seeds would be a hundred `docker exec`s), on a grid from `(lng, lat)`, all managed by one `E2E …` NGO.
+ * Guarded like the single seed: an `E2E …` region, an `E2E …` name prefix, an `E2E …` NGO, at most 500 rows. The names are `<prefix> 001`, `<prefix> 002`, … so they sort as they read.
+ */
+export function seedShelters(regionId: string, options: { prefix: string; count: number; lng: number; lat: number; ngoId: string; capacityTotal?: number; step?: number }): number {
+  assertE2eName('shelter', options.prefix)
+  assertE2eRegionId(regionId)
+  assertE2eNgoId(options.ngoId)
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 500) throw new Error(`seed helper refuses a count of ${options.count}`)
+  const step = options.step ?? 0.02
+  return Number(
+    psql(`
+      WITH inserted AS (
+        INSERT INTO shelters (name, type, location, region_id, capacity_total, capacity_current, certification_status, status, managed_by_ngo_id)
+        SELECT ${lit(options.prefix)} || ' ' || lpad(g::text, 3, '0'), 'shelter',
+               ST_SetSRID(ST_MakePoint(${Number(options.lng)} + ((g - 1) % 10) * ${Number(step)}, ${Number(options.lat)} + ((g - 1) / 10) * ${Number(step)}), 4326),
+               ${lit(regionId)}::uuid, ${Number(options.capacityTotal ?? 100)}, (g % 50), 'certified', 'open', ${lit(options.ngoId)}::uuid
+        FROM generate_series(1, ${options.count}) g
+        RETURNING id
+      ) SELECT count(*) FROM inserted`),
+  )
 }
 
 export interface SeedInfrastructure {
@@ -462,6 +580,57 @@ export function seedEssentialLocation(regionId: string, place: SeedEssentialLoca
   return id
 }
 
+/**
+ * Seeds `count` numbered `E2E …` essential locations in one statement (for tests about long lists — thirty single seeds would be thirty `docker exec`s), laid out
+ * on a grid from `(lng, lat)`, all of one type, none with a status report. Guarded like the single seed: an `E2E …` region, an `E2E …` name prefix, and at most 500 rows.
+ * The names are `<prefix> 01`, `<prefix> 02`, … so they sort as they read. Returns how many were inserted.
+ */
+export function seedEssentialLocations(regionId: string, options: { prefix: string; count: number; lng: number; lat: number; type?: 'atm' | 'grocery_store' | 'pharmacy'; step?: number }): number {
+  assertE2eName('essential location', options.prefix)
+  assertE2eRegionId(regionId)
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 500) throw new Error(`seed helper refuses a count of ${options.count}`)
+  const step = options.step ?? 0.02
+  return Number(
+    psql(`
+      WITH inserted AS (
+        INSERT INTO essential_locations (name, type, location, region_id)
+        SELECT ${lit(options.prefix)} || ' ' || lpad(g::text, 2, '0'), ${lit(options.type ?? 'atm')},
+               ST_SetSRID(ST_MakePoint(${Number(options.lng)} + ((g - 1) % 10) * ${Number(step)}, ${Number(options.lat)} + ((g - 1) / 10) * ${Number(step)}), 4326),
+               ${lit(regionId)}::uuid
+        FROM generate_series(1, ${options.count}) g
+        RETURNING id
+      ) SELECT count(*) FROM inserted`),
+  )
+}
+
+/**
+ * Seeds `count` numbered `E2E …` organisations (active) in one statement — for a list that has to page through more than one hundred of them (`GET /admin/ngos` answers in pages
+ * of 100). An account can create only one organisation (a unique index on `ngos.created_by`), so each gets a throwaway `e2e-…@example.com` founder that borrows the given
+ * `e2e-` account's password hash (a NULL hash makes the backend fail to load the account). Returns the organisation ids in name order. Guarded: an `E2E …` prefix, an
+ * `e2e-…@example.com` template account, at most 500.
+ */
+export function seedNgos(templateEmail: string, options: { prefix: string; count: number }): string[] {
+  assertE2eEmail(templateEmail)
+  assertE2eName('NGO', options.prefix)
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 500) throw new Error(`seed helper refuses a count of ${options.count}`)
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+  const out = psql(`
+    WITH template AS (SELECT password_hash FROM accounts WHERE lower(email) = lower(${lit(templateEmail)}) AND deleted_at IS NULL),
+    founders AS (
+      INSERT INTO accounts (email, password_hash, role, status, email_verified)
+      SELECT 'e2e-org-founder-' || ${lit(stamp)} || '-' || g || '@example.com', template.password_hash, 'ngo_admin', 'active', true
+      FROM template, generate_series(1, ${options.count}) g
+      RETURNING id, email
+    ), numbered AS (
+      SELECT id, row_number() OVER (ORDER BY id) AS n FROM founders
+    ), inserted AS (
+      INSERT INTO ngos (name, status, created_by, approved_by, approved_at)
+      SELECT ${lit(options.prefix)} || ' ' || lpad(n::text, 3, '0'), 'active', id, id, now() FROM numbered
+      RETURNING id, name
+    ) SELECT COALESCE(json_agg(id ORDER BY name), '[]'::json) FROM inserted`)
+  return JSON.parse(out) as string[]
+}
+
 export type FloodRisk = 'low' | 'medium' | 'high'
 
 /**
@@ -469,9 +638,10 @@ export type FloodRisk = 'low' | 'medium' | 'high'
  * (`ai_prediction`, backed by a `flood_predictions` row, as the flood pipeline writes them); without, it is a
  * zone a person declared (`manual_admin`) and has no confidence — the two shapes the map has to tell apart.
  */
-export function seedHazardZone(regionId: string, options: { ring: Array<[number, number]>; risk: FloodRisk; confidence?: number; status?: 'active' | 'resolved'; modelVersion?: string }): string {
+export function seedHazardZone(regionId: string, options: { ring: Array<[number, number]>; /** A ring cut out of the zone. */ hole?: Array<[number, number]>; risk: FloodRisk; confidence?: number; status?: 'active' | 'resolved'; modelVersion?: string }): string {
   assertE2eRegionId(regionId)
-  const wkt = `ST_GeomFromText(${lit(polygonWkt(options.ring))}, 4326)`
+  const text = options.hole ? `POLYGON((${options.ring.map(([x, y]) => `${x} ${y}`).join(',')}),(${options.hole.map(([x, y]) => `${x} ${y}`).join(',')}))` : polygonWkt(options.ring)
+  const wkt = `ST_GeomFromText(${lit(text)}, 4326)`
   const status = options.status ?? 'active'
   const modelVersion = options.modelVersion ?? 'e2e-model-1'
   if (!modelVersion.startsWith('e2e-')) throw new Error(`seed helper refuses a model version that cleanup would not recognise: ${modelVersion}`)
@@ -494,6 +664,9 @@ export function seedHazardZone(regionId: string, options: { ring: Array<[number,
 }
 
 export interface StoredShelter {
+  id: string
+  /** The managing organisation, or `null` if none. */
+  ngoId: string | null
   name: string
   type: string
   status: string
@@ -512,6 +685,33 @@ export function readShelter(id: string): StoredShelter {
     FROM shelters WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'`)
   if (!row) throw new Error(`no E2E shelter ${id}`)
   return JSON.parse(row) as StoredShelter
+}
+
+/** The stored row of the `E2E …` shelter with this exact name, or `null` — how a test finds one it created through the UI. */
+export function findShelterByName(name: string): StoredShelter | null {
+  assertE2eName('shelter', name)
+  const row = psql(`
+    SELECT json_build_object('id', id, 'ngoId', managed_by_ngo_id, 'name', name, 'type', type, 'status', status, 'certification', certification_status,
+      'capacityTotal', capacity_total, 'capacityCurrent', capacity_current, 'lng', ST_X(location), 'lat', ST_Y(location))
+    FROM shelters WHERE name = ${lit(name)}`)
+  return row ? (JSON.parse(row) as StoredShelter) : null
+}
+
+/** Changes a seeded shelter's numbers *behind an open page* — a headcount someone else recorded, a capacity that no longer matches what the page holds. */
+export function setShelterNumbers(id: string, numbers: { capacityTotal?: number; capacityCurrent?: number }) {
+  const sets = [
+    numbers.capacityTotal === undefined ? '' : `capacity_total = ${Number(numbers.capacityTotal)}`,
+    numbers.capacityCurrent === undefined ? '' : `capacity_current = ${Number(numbers.capacityCurrent)}`,
+  ].filter(Boolean)
+  if (sets.length === 0) return
+  const updated = psql(`UPDATE shelters SET ${sets.join(', ')}, updated_at = now() WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %' RETURNING id`)
+  if (!updated) throw new Error(`no E2E shelter ${id} to change`)
+}
+
+/** Deletes a seeded `E2E …` shelter — for a page that is open on it (there is no delete route). */
+export function deleteShelter(id: string) {
+  const deleted = psql(`DELETE FROM shelters WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %' RETURNING id`)
+  if (!deleted) throw new Error(`no E2E shelter ${id} to delete`)
 }
 
 export interface StoredEssentialLocation {
@@ -594,4 +794,86 @@ export function resolveZoneInDb(id: string) {
     WHERE id = ${lit(id)}::uuid AND region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
     RETURNING id`)
   if (!updated) throw new Error(`no E2E zone to resolve: ${id}`)
+}
+
+export interface StoredInfrastructure {
+  id: string
+  name: string
+  type: string
+  status: string
+  /** When the status was last set — moves even when it is set to what it already was. */
+  lastStatusUpdate: string
+  lng: number
+  lat: number
+}
+
+const infrastructureSelect = `
+  SELECT json_build_object('id', id, 'name', name, 'type', type, 'status', status, 'lastStatusUpdate', last_status_update,
+    'lng', ST_X(location), 'lat', ST_Y(location))
+  FROM infrastructure`
+
+/** The stored row for an `E2E …` infrastructure item — to prove a page shows what the database holds, and what a write really changed. */
+export function readInfrastructure(id: string): StoredInfrastructure {
+  const row = psql(`${infrastructureSelect} WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %'`)
+  if (!row) throw new Error(`no E2E infrastructure ${id}`)
+  return JSON.parse(row) as StoredInfrastructure
+}
+
+/** The `E2E …` infrastructure item with this exact name, or `null` — how a test finds one it added through the UI, **including one outside every region, which no route can list**. */
+export function findInfrastructureByName(name: string): StoredInfrastructure | null {
+  assertE2eName('infrastructure', name)
+  const row = psql(`${infrastructureSelect} WHERE name = ${lit(name)}`)
+  return row ? (JSON.parse(row) as StoredInfrastructure) : null
+}
+
+/** Deletes a seeded `E2E …` infrastructure item — for a page that is open on it (there is no delete route). */
+export function deleteInfrastructure(id: string) {
+  const deleted = psql(`DELETE FROM infrastructure WHERE id = ${lit(id)}::uuid AND name LIKE 'E2E %' RETURNING id`)
+  if (!deleted) throw new Error(`no E2E infrastructure ${id} to delete`)
+}
+
+export interface StoredEssentialLocation {
+  id: string
+  name: string
+  type: string
+  lng: number
+  lat: number
+  reports: number
+}
+
+/** The `E2E …` essential location with this exact name, or `null`, with how many status reports it has. */
+export function findEssentialByName(name: string): StoredEssentialLocation | null {
+  assertE2eName('essential location', name)
+  const row = psql(`
+    SELECT json_build_object('id', l.id, 'name', l.name, 'type', l.type, 'lng', ST_X(l.location), 'lat', ST_Y(l.location),
+      'reports', (SELECT count(*) FROM essential_location_status_reports r WHERE r.essential_location_id = l.id))
+    FROM essential_locations l WHERE l.name = ${lit(name)}`)
+  return row ? (JSON.parse(row) as StoredEssentialLocation) : null
+}
+
+/**
+ * Files a *log* of reports on an `E2E …` essential location from one `e2e-` account, oldest first, each `minutesAgo` older than the next — so the order a page shows them in
+ * is known. (The API would accept the same account reporting as often as it likes; this seeds it directly.)
+ */
+export function seedEssentialReportLog(placeId: string, by: string, log: Array<{ status: 'open' | 'closed'; minutesAgo: number }>) {
+  assertE2eEmail(by)
+  const place = psql(`SELECT id FROM essential_locations WHERE id = ${lit(placeId)}::uuid AND name LIKE 'E2E %'`)
+  if (!place) throw new Error(`no E2E essential location ${placeId}`)
+  for (const entry of log) {
+    const filed = psql(`
+      INSERT INTO essential_location_status_reports (essential_location_id, reported_by_account_id, status, created_at)
+      SELECT ${lit(placeId)}::uuid, a.id, ${lit(entry.status)}, now() - (${Number(entry.minutesAgo)} * interval '1 minute')
+      FROM accounts a WHERE lower(a.email) = lower(${lit(by)}) AND a.deleted_at IS NULL
+      RETURNING id`)
+    if (!filed) throw new Error(`no account ${by} to file the status report`)
+  }
+}
+
+/** The report statuses of an `E2E …` essential location, newest first — what the log dialog must show, read from the table itself. */
+export function readEssentialReportStatuses(placeId: string): string[] {
+  const out = psql(`
+    SELECT COALESCE(json_agg(r.status ORDER BY r.created_at DESC, r.id), '[]'::json)
+    FROM essential_location_status_reports r JOIN essential_locations l ON l.id = r.essential_location_id
+    WHERE r.essential_location_id = ${lit(placeId)}::uuid AND l.name LIKE 'E2E %'`)
+  return JSON.parse(out) as string[]
 }

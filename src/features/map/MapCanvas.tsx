@@ -8,6 +8,7 @@ import { MapControls } from './MapControls'
 import { MAP_MAX_BOUNDS, PAKISTAN_BOUNDS, boundaryToLatLngs, type BoundsTuple, type LatLng, type ViewportBounds } from './mapGeo'
 import { drawOrder, type MapPlace } from './mapModel'
 import { USER_ICON, placeIcon } from './placeIcon'
+import { OSM_ATTRIBUTION, OSM_TILES } from './tiles'
 
 /** A request to move the map — a new object each time, so asking for the same place twice moves it twice. */
 export interface MapFocus {
@@ -40,9 +41,6 @@ export interface MapCanvasProps {
   /** Whether the mouse wheel zooms the map. Off when the map sits inside a scrolling page, so scrolling past it doesn't zoom it. Default on. */
   scrollWheelZoom?: boolean
 }
-
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
 /**
  * Fits the map to `bounds` on mount and whenever they improve, until the person first touches the map — after that it is theirs.
@@ -87,22 +85,38 @@ function ViewportReporter({ onChange }: { onChange: (view: ViewportBounds) => vo
   return null
 }
 
-/** Leaflet only measures its container on window resize, so a map shown again after being hidden (the phone's Map/List switch) would stay blank or misplaced. */
-function MapResizer() {
+/**
+ * Leaflet only measures its container on window resize, so a map shown again after being hidden (the phone's Map/List switch) would stay blank or misplaced.
+ * **A map that has just been hidden is left alone**: `invalidateSize` keeps the centre by panning, so measuring a 0×0 container pans the map by half its size, and
+ * measuring it again on the way back pans it back — with the markers a frame or more out of place in between. Nothing needs re-measuring until it has a size again.
+ */
+export function MapResizer() {
   const map = useMap()
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => map.invalidateSize())
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.contentRect
+      if (box && (box.width === 0 || box.height === 0)) return
+      map.invalidateSize()
+    })
     observer.observe(map.getContainer())
     return () => observer.disconnect()
   }, [map])
   return null
 }
 
+/**
+ * Flies to what the page asks it to. On a phone the map may have been **shown in the same update** as the request (choosing a zone in the list switches to
+ * the map), before its size observer has run — and Leaflet's `flyTo` divides by the map's size, so on a map still cached as 0×0 (mounted while hidden) it computes
+ * NaN and takes the whole page down with "Invalid LatLng". So it measures first, and does nothing while the map genuinely has no size.
+ */
 function FocusController({ focus }: { focus: MapFocus | null }) {
   const map = useMap()
   useEffect(() => {
     if (!focus) return
+    map.invalidateSize({ pan: false, animate: false })
+    const size = map.getSize()
+    if (!size.x || !size.y) return
     if (focus.bounds) map.flyToBounds(focus.bounds, { padding: [56, 56], maxZoom: focus.zoom ?? 13, duration: 0.6 })
     else if (focus.center) map.flyTo(focus.center, focus.zoom ?? 14, { duration: 0.6 })
   }, [map, focus])
@@ -165,7 +179,7 @@ export function MapCanvas({
   return (
     <div className="relative isolate h-full w-full">
       <MapContainer bounds={PAKISTAN_BOUNDS} zoomControl={false} scrollWheelZoom={scrollWheelZoom} minZoom={5} maxZoom={18} maxBounds={MAP_MAX_BOUNDS} maxBoundsViscosity={0.7} className="h-full w-full">
-        <TileLayer url={TILES} attribution={ATTRIBUTION} maxZoom={19} />
+        <TileLayer url={OSM_TILES} attribution={OSM_ATTRIBUTION} maxZoom={19} />
         <FitInitial bounds={initialBounds} />
         <ViewportReporter onChange={onViewportChange} />
         <MapResizer />
@@ -184,7 +198,17 @@ export function MapCanvas({
               icon={placeIcon(place, selected)}
               title={`${place.name}, ${place.typeLabel}, ${place.statusLabel}`}
               zIndexOffset={selected ? 1000 : 0}
-              eventHandlers={{ click: () => onSelectPlace(place.key) }}
+              eventHandlers={{
+                click: () => onSelectPlace(place.key),
+                // Leaflet makes a marker a focusable `role="button"` but leaves Enter and Space to the app (its docs say Enter clicks; 1.9.4 does not), so a keyboard user could Tab to
+                // a marker and nothing would happen.
+                keypress: (event) => {
+                  const key = event.originalEvent.key
+                  if (key !== 'Enter' && key !== ' ') return
+                  event.originalEvent.preventDefault()
+                  onSelectPlace(place.key)
+                },
+              }}
             >
               {selected && (
                 <Tooltip permanent direction="top" offset={[0, -22]}>

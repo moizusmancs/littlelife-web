@@ -88,7 +88,7 @@ export function RegionTreePanel({
         })}
       </div>
 
-      <div className="min-h-0 overflow-y-auto md:max-h-[65vh]">
+      <div className="min-h-0 overflow-y-auto lg:max-h-[65vh]">
         {matches ? (
           matches.length === 0 ? (
             <p className="px-2 py-6 text-center font-body text-body-md text-ink-500">No regions match.</p>

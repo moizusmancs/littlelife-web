@@ -16,7 +16,7 @@ export function NgoDetailState({ kind, message, onRetry, backTo }: NgoDetailStat
       <div className="flex max-w-5xl flex-col gap-5" aria-busy="true" aria-label="Loading organisation">
         <div className="h-4 w-56 animate-pulse rounded-sm bg-surface-sunken" aria-hidden="true" />
         <div className="h-24 animate-pulse rounded-md bg-surface-sunken" aria-hidden="true" />
-        <div className="grid gap-5 md:grid-cols-2" aria-hidden="true">
+        <div className="grid gap-5 lg:grid-cols-2" aria-hidden="true">
           <div className="h-64 animate-pulse rounded-md bg-surface-sunken" />
           <div className="h-64 animate-pulse rounded-md bg-surface-sunken" />
         </div>

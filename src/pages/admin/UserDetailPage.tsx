@@ -128,7 +128,7 @@ export function UserDetailPage() {
         </Notice>
       )}
 
-      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         <AccountSummaryCard account={account} />
         <CredibilityCard
           score={scoreQuery.data}

@@ -31,7 +31,7 @@ list) and the citizen's **home region** — the optional onboarding step, its pl
 header line — are built, tested against the real backend and visually verified. The last three came after you added
 the backend routes and the `home_region_id` field they were waiting for.
 
-**Phase 3 — Facilities, Flood Intelligence & the Map: 🚧 In progress.** The first screen, the citizen **Map** (`/app/map`), is
+**Phase 3 — Facilities, Flood Intelligence & the Map: ✅ Done** (one screen, Offline Map Packages, skipped by decision — see below). The first screen, the citizen **Map** (`/app/map`), is
 built, tested against the real backend and visually verified: the flood overlay drawn from real zone geometry, shelter /
 infrastructure / essential-location markers behind layer chips, search, a selection card for a place or a zone, "Go to my location"
 with the server's risk check, a legend, and a phone layout that switches between the map and a list. Building it on **real** data
@@ -45,7 +45,11 @@ request, and a way to tell everyone a place is open or closed (a real report, fi
 tabs (Aid requests, Campaigns, Missing persons) are Phase 6's screens and show a placeholder. The fourth, the admin **Hazard Zones &
 Predictions** (`/admin/hazard-zones` and `/:id`), is built: the paginated zone table beside a map with a confidence slider, the model's
 predictions as a second view, declaring a zone (checked before anything is sent) and resolving one (asked first), and a page per zone.
-The remaining Phase 3 screens (NGO Shelters, admin Facilities and Offline Map Packages) are not started.
+The fifth, the NGO **Shelters** (`/ngo/shelters` and `/:id`), is built for both NGO roles: every shelter the organisation manages with its totals,
+filters and search; occupancy updated inside the row (any staff); registering a shelter with a map to place it, and editing its status and
+certification (admins only, since that is all the API lets them do); and a page per shelter with the map, the flood zones around it, and whether
+citizens can see it at all. The sixth, the admin **Facilities** (`/admin/facilities`), is built: three tabs — **Shelters** (read-only oversight, with the organisation that runs each), **Infrastructure**
+(add one, update its status) and **Essential locations** (add one, read its report log) — over a region scope, with a per-place map that says whether it sits inside an active hazard zone. The seventh and last, Offline Map Packages, is **skipped for now by decision (2026-09-25)**: the backend only stores a pointer to a bundle it does not generate and none exists yet (the five rows in the database are placeholders), the mockup is a build dashboard with no backing routes, and there is no list route. The thin version — register dialog, per-region lookup — is written up under *Offline Map Packages (skipped)* below and can be built once real packages exist. **The phase-end pass ran on 2026-09-25:** every deferred test that can be run against the real backend was written and run (81 new E2E tests in seven spec files, plus the unit tests each finding needed), the full E2E suite was run spec by spec with the guarded cleanup between files, and the pass found and fixed **nine real bugs** that no earlier test could have — four that stopped a keyboard user or took a phone page down, and a set of admin and NGO tables that were unusable at 768–1024px. Details under *Testing done so far (Phase-end pass)* and *Real bugs*. **Still waiting on decisions or on the backend:** the citizen floor on `POST /hazard-zones/risk-check` (deferred tests 6 and 13), what to call the score the model produces (see *Backend gaps*), and the four small product questions listed at the end of the phase-end section.
 
 **Phases 4–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
@@ -455,9 +459,9 @@ short version.
   and over hazard risk/basis. *(4) Wider:* a pane list of "Active hazards in view" (a keyboard user can't focus an SVG polygon),
   the Essentials layer, and a legend that explains the colours in the map's own terms. **Flood rendering follows §2.3:** each zone
   is its real polygon, outlined by risk (low amber, medium orange, high red) and filled on a near-white → green → yellow → red ramp
-  by `confidence_score`. Probing showed that score is the **model's confidence in the zone's risk level** (real data: high zones
-  ~0.8, medium ~0.5–0.6, low near 0), not the flooded fraction — the card and legend say "model confidence", and a zone an admin
-  declared by hand has none and is one flat colour. The overlay is asked for by the visible box, rounded outwards to 0.1° so a
+  by `confidence_score`. The phase-end pass **settled what that score is** (it had first been read as "the model's confidence in the zone's risk level"): compared cell by cell with `map-preview`'s manifest, the stored `confidence_score` values of **all 197 cells**
+are exactly that cell's `mean_prob` values above the ingest floor of 0.01, and **none** are its `peak_prob` — so it is the model's *mean flood probability* over the ~64 km box (about the share of it expected to flood), the honest value §2.3 asked for, and the
+colour ramp is right. The card and legend still say "model confidence", which is the API's word for it and slightly overstates what it means (see *Backend gaps*); a zone an admin declared by hand has none and is one flat colour. The overlay is asked for by the visible box, rounded outwards to 0.1° so a
   small pan reuses the cached response, with the previous zones kept on screen while the next box loads. **Real data changed
   three decisions:** (a) the pipeline leaves every old zone active, so one grid cell arrives up to ~32 times with an identical
   boundary — the map keeps **one zone per distinct boundary** (worst risk, then most confident, then newest) in the map *and* the
@@ -573,6 +577,95 @@ short version.
   generic over the entry type (so the admin overlay's `source` survives them), and `parseBoundary` takes the noun for its two messages that say "region" — the
   Regions and Shelter Detail and citizen-map specs were re-run and pass.
 
+- **NGO Shelters (Phase 3, fifth screen) — the mockup's list, plus a register drawer and an edit drawer that can only change two things, plus a detail page
+  with a map; what each NGO role is offered follows what the API lets it do.** Pixel reference for the list: Batch 2 §2e (four figures, the table, the
+  occupancy editor opened inside a row); the detail has no mockup, so it follows the citizen shelter page. **One read feeds the list:**
+  `GET /ngo/shelters`, a direct filter on the managing organisation — unordered, unpaginated, no `region_id` on the rows (though the doc says it is the
+  public shape) — so the order (by name), the four KPI figures (total capacity, occupied with its share, how many are at capacity, how many await
+  certification), five filters (All · Open · Closed · At capacity · Pending certification, each counted *within the current search* so a pill never promises rows the
+  search has hidden) and the search (name, kind, open/closed, certification wording) are all worked out in the browser; the view lives in the URL
+  (`?show=&q=`), mirrored from state, and Back from a shelter returns to it. **Rows** carry a ring-tinted icon (the occupancy tone; grey when closed), the name, the
+  kind and coordinates (the mockup's address line — the API has no street address), Open/Closed, certification, an occupancy bar, how long ago it changed, and
+  **View / Update occupancy / Edit**. **Occupancy is edited inside the row** (one editor at a time; a stepper, and "of 450 · was 380 · 92% after save", or why a
+  number is refused — empty, fractional, negative, over the capacity — *before* any request; Enter saves, Escape cancels, and the keyboard returns to the row's
+  button when it closes, which a drawer would do for itself but an inline editor doesn't), and the same editor sits in the detail page's card. **The role split is the API's,
+  verified:** occupancy is open to admin and volunteer alike; **registering and editing are `ngo_admin` only** (a volunteer gets `403 "insufficient permissions"`), so
+  a volunteer is simply not offered those — the sidebar link is not admin-only, unlike Volunteers'. **Register drawer:** name, kind (shelter or relief center), capacity
+  and the location — a small map (`LocationPicker`, new, in `src/features/map/`) where a click places a pin and dragging it adjusts, **or** the latitude and longitude typed
+  (the fields are the source of truth; the pin follows them after a short pause and a click or drag writes them; the pin is deliberately not a tab stop, since it can't be
+  moved from the keyboard), and **Use my location**, which asks the browser only when pressed. **The API checks almost none of it, so the form does:** longitude 200, latitude
+  95 and a swapped pair are all `201`, and a Polygon, a three-number point and a capacity over 2,147,483,647 are bare `500`s (all verified) — the form names every problem
+  at once, says when a "latitude" is beyond 90 but would be a fine longitude (they are probably the wrong way round), and accepts a capacity of 1 to 2,147,483,647. **It says up front what
+  can't be undone:** a shelter's name, kind, capacity and place *can never be changed* afterwards (see *Backend gaps*). **And it says whether citizens will ever see the
+  point:** the facility reads are per region, so a point outside every region is never returned to a citizen; the drawer (and the detail page) works out, in the browser with a
+  point-in-polygon over the shared `GET /regions` list — fetched only while the drawer or page is open — either "In <region path> — citizens looking at that region will see it" or —
+  for a point in no region — a note (the drawer: red, "can't be saved"; the detail page: the warning that citizens won't see it), and says nothing if the regions couldn't be loaded rather than saying
+  "outside" wrongly. **The drawer goes further than that since real use — see *Location picker: shows the regions and refuses a point outside them*.** **Edit drawer:** `PATCH /shelters/{id}` takes exactly
+  two fields — open/closed and certification — so those are the only controls; the name, kind, capacity and location are shown read-only with the reason; **only what changed is sent**
+  (an empty patch is a `400`, and Save is off until something differs). **Detail page:** there is no NGO-side read by id, so it reads the public `GET /shelters/{id}` (same entry and same
+  not-found rules as the citizen's page) and `GET /ngo/me` to tell whether the shelter is theirs; another organisation's shelter is shown read-only with a notice (the API would `403`
+  every write to it), a shelter with no managing organisation counts as not theirs, and if the organisation lookup fails the controls are shown and the server keeps the final say. It
+  reuses the citizen page's map section — the shelter's marker with the flood zones around it — now a shared component, and adds the region note and a "Managed by" row. **Not built:** the
+  mockup's region chip ("Dadu · Jamshoro · Sehwan" — this list is by organisation, not region), an address, pagination (the API has none; fine for tens of shelters), a delete (there
+  is none), and Navigate Here (it is the citizen's). **Shared code touched:** the citizen shelter page's map section became `ShelterLocation` (used by both pages), the capacity meter's tone
+  maps moved to `capacityTones.ts`, `ShelterLocationCard` takes `children`, `ShelterFactsCard` takes extra rows, `ShelterDetailState` takes its back link, `MapCanvas` exports `MapResizer`
+  and the tile URL moved to `tiles.ts` (the one file to change for the production tile provider the *Map* bullet says is needed), and a global rule now wraps the selected-marker tooltip — the
+  citizen-map and Shelter Detail specs were re-run and pass.
+
+- **Facilities (Phase 3, sixth screen) — three tabs over region-scoped reads: shelters as oversight, infrastructure you can add to and re-status, essential locations you can add to and audit; nothing can
+  be edited or deleted, because the API has no route to.** Pixel reference: Batch 5 §5g (search, type pills, a table with uppercase labels and ring-tinted icons, an Add drawer with a pin); the spec is the
+  button table (three tabs, Add Infrastructure, Update Status, Add Essential Location). **There is no system-wide read** — the spec's "`GET /shelters` (system-wide)" isn't real: every list needs a
+  `region_id` (verified again, for all three) — so **"everywhere" is one request per top-level region** (as the citizen map does) and a chosen region is one request. The scope control (mockup's "Sindh ▾") is a button
+  that opens the shared region picker at any level, with an × back to everywhere; it lives in the URL (`?region=`), and an id in the URL that isn't a region is treated as everywhere, with a notice, **rather than sent**
+  (a malformed one would be a `400`). Nothing is asked until the region list has loaded; only the **tab that is showing** is read; the reads use the citizen map's own cache keys, so a region read anywhere is not read again;
+  and if some regions' requests fail the rest are still shown, with a notice that the list **may be missing places** and a retry — a partial list that looked complete would be worse than none. Search, two pill
+  groups (type, status, each counted within the search and the other group), paging (20 / 50 / 100) and a natural sort by name ("Pharmacy 2" before "Pharmacy 12") are all done in the browser, and the view (tab, region,
+  search, filters, page) lives in the URL, mirrored from state. **Shelters — oversight, not management:** name, kind and coordinates (no address), **the organisation, as a name** (a shelter carries only
+  `managed_by_ngo_id`, but an admin can read `GET /admin/ngos`, so it is looked up — linking to that organisation's page; "No organisation" for a shelter nobody manages; "An organisation" if the names can't be loaded,
+  with a notice), open/closed, certification, occupancy, when it changed — and the search reaches the organisation's name. There is no Add and no edit: shelters belong to the organisation that runs them. **Infrastructure:**
+  the kind, coordinates, a status badge, when the status was last set, when it was added; **Update status** opens a dialog (safe / at risk / damaged, the current one marked, any status may follow any other) and **saving
+  the status it already has is a real `200` that moves "last updated"** (verified) — so it is offered, as **Confirm status**, with a line saying that is all it does — and a `404` (someone removed it) closes the dialog
+  with "no longer exists … the list has been refreshed". **Add infrastructure** takes a name, a type and a point, and says up front that it **starts as Safe** and that its name, type and position can't be changed and it
+  can't be removed. **Essential locations:** the latest reported status — **"Status unknown", never open, for a place nobody has reported on** — when it was reported, when it was added; **Status reports** opens the place's
+  whole report log, newest first, with the one citizens see marked (this is the only screen that reads `GET …/status-reports`; the reporter is never returned, and the dialog says any account can report as often as it
+  likes); **Add essential location** says it is the manual fallback (these are meant to be bulk-imported) and that it starts with no status, since only a citizen's report gives it one. **The Location dialog replaces the
+  mockup's "Hazard" column and "41 in flood zones" count**, which need a hazard check per place and the API only checks one point at a time: each row's map-pin opens a map of the place with the active zones (**the admin
+  overlay — every active zone, low-confidence model output included, which citizens are never shown**), its coordinates, which region it is in (or the warning that it is in none), and whether it lies **inside an active hazard
+  zone** — worked out by a point-in-polygon against a small fixed box around the point rather than whatever is in view, so panning can't change the answer, and never "clear" when the zones couldn't be loaded — with a link to
+  that zone's page. **What the API lets an admin do to a bad point is nothing:** verified for infrastructure and essential locations exactly as for shelters — longitude 200, latitude 95, a swapped pair and a point outside
+  every region are all `201`, a Polygon or a three-number point is a bare `500`, duplicate names are allowed — and **a place outside every region is created but no route can ever list, edit or delete it** (the first version's E2E added
+  one and proved no region query returns it; the UI no longer lets one be added). So both Add drawers use the coordinate rules and location fields that were **extracted from the shelter register form** (`pointForm`, `PointFields`, `usePointPicker`,
+  `CoverageNote`) — every problem named at once, the swapped-coordinates hint, a click or drag on the map writing the fields, "Use my location" on demand — *first* warned before saving that a point in no
+  region "can't be found, corrected or removed later" and said so in the notice after; **they now refuse such a point** (see *Location picker: shows the regions and refuses a point outside them*), and the
+  notice after saving says which region it is in ("It is in Sindh › Sukkur"), worked out from the values submitted. **Not built, because nothing backs it:** the mockup's kinds (depot, helipad, water point, command post — the API has hospital, bridge and utility), its Contact fields, "Capacity / stock", the Hazard column and
+  count, an initial status on Add (the route can't set one), editing a name or position, any delete, and a shelter detail (admins have none). **Roles:** the Admin route group; an `ngo_admin` and a citizen are bounced from
+  the page and refused `403 "insufficient permissions"` by every admin write (verified). **Shared code touched:** a generic `TabBar` (extracted from the Resources tab list, which now uses it), the coordinate rules,
+  location fields and picker hook (extracted from the NGO's Register Shelter drawer, which now uses them), `CoverageNote` (moved to `src/features/regions/`, with an optional extra sentence) and a pure `coverageFor` — the
+  NGO shelters and citizen Resources specs were re-run and pass.
+- **Location picker: shows the regions and refuses a point outside them (a follow-up, after real use of NGO Shelters and Facilities).** Found by using it: an NGO admin registered
+  two shelters (“me moiz ho” at 67.37°E 30.37°N and “test” at 69.83°E 31.02°N — Balochistan / Khyber Pakhtunkhwa, north of every region the platform has) and they showed in the
+  NGO's own list but in no admin list, no citizen map and no Resources tab. Nothing was wrong with the filter: every facility read is per region by a spatial join, the NGO's list
+  is by organisation, and the API accepts a point in no region (`201`), so the shelter exists and is unreachable. The warning the drawer already showed was easy to miss, and
+  asking people to know what regions exist is the wrong demand. **What changed, for the NGO's Register Shelter drawer and the admin's two Add drawers (all three share the
+  picker):** (1) the map draws **every region as a shaded shape** (`GET /regions` boundaries — already fetched for the coverage note — widest level first so a district sits over
+  its province; hovering names the area; a click on a shape still places the pin) with a line saying places can only be added inside the shaded areas; (2) it **opens framed on
+  all the shaded areas** (once, when they arrive, and only if there is no pin yet) instead of on the whole country; (3) a **“Jump to an area…” menu** lists every region by its
+  whole path (`Sindh › Sukkur`, tree order, native `<select>` so a phone gets its own picker) and brings the map to the one chosen; (4) a point typed or found by “Use my
+  location” that is in no region is shown **together with the shaded areas**, not zoomed into a blank map; (5) the note under the map — moved up to sit right under it, where a
+  click's result is seen — is now red and plain: “This spot is outside the shaded areas, so it can't be saved — nobody would ever see a place here. Click inside a shaded area, or
+  check the coordinates”, plus what to do (the NGO: ask an administrator to add the area; the admin: add a region under Regions first); (6) **saving is refused**: the submit
+  handler works out coverage from the values being submitted (not from the 300 ms-settled display), sets an error on the latitude (“Pick a spot inside a shaded area of the
+  map.”), focuses it and scrolls it into view, and sends nothing. **Decisions worth knowing:** it blocks rather than warns because a place outside every region is one no one can
+  ever see, list, correct or remove (there is no delete); it **fails open** — if the regions couldn't be loaded, or there are none, coverage is “can't tell” and the API decides,
+  so a failed request can never stop someone registering; and the consequence for real use is that **places outside the regions that exist can't be added until an admin adds a
+  region** (today the platform has Sindh and a few test areas), which the message says. The two shelters already saved outside remain (no delete route; the NGO detail page still
+  says citizens won't see them) — a new region over them makes them appear at once, as regions are matched live. **Not built:** a place-name search on the picker, drawing regions
+  lighter or by level (all are one shade; nested ones read darker where they overlap), an NGO-list badge for a shelter that is in no region (nothing new can be created that way
+  now). **Code:** `regions/coverageAreas.ts` (which regions can be drawn, the box around them, the menu's entries), `useRegionList`, `usePointPicker` returning `areas` and
+  `coverageAt`, `CoverageNote` with a `blocking` mode (a place that already exists keeps the old wording), `OUTSIDE_AREAS_MESSAGE`, and a one-line CSS rule removing the focus
+  ring a click leaves on a shaded shape.
+
+
 - **A second onboarding gate, not just email verification.** Your framing ("onboarding... they
   can't skip this... patch the profile accordingly") made profile-completion (`name`) an equally
   mandatory second gate, chained after verification. `RequireRole` (`src/routes/guards.tsx`) now
@@ -669,7 +762,7 @@ fully responsive down to 320px), `Checkbox` (real native input, `group-has-check
 styling), `Dialog` (wraps `@radix-ui/react-dialog` — overlay, centered content, title/description,
 close button), `Drawer` (the same Radix dialog as a full-height side sheet, full width on a phone, for forms
 too structured for a small dialog), `Badge`, `Label`, `Select` (a native select with a chevron), `Textarea`, `Notice`
-(a page-level `role="status"` banner), and `ListPagination` (rows-per-page and previous/next, shared by
+(a page-level `role="status"` banner), `TabBar` (a proper tablist over one panel — arrow keys, Home and End — used by Resources and Facilities), and `ListPagination` (rows-per-page and previous/next, shared by
 the admin lists); `button-variants.ts` exports `buttonVariants` for links styled as buttons. **Not built via shadcn's CLI** — every component is hand-built
 directly against the verified design tokens (§2.4); shadcn's generated components assume a
 different, Material-adjacent visual language that would need a full rewrite to match this design
@@ -866,6 +959,66 @@ without its generated code.
   Resources and Hazard Zones specs already put their world at a random spot each run; the citizen-map and Shelter Detail specs used fixed coordinates and asserted exact
   counts, so any leftover E2E zone at that spot made them fail (three worlds' worth of zones were drawn where two were expected). All four now use a random 0.6° square
   at 16–21°N, 70–78°E — south of the flood pipeline's grid — and the two older ones passed on a dirty database straight after.
+- **The shelters table crushed its name column to a few letters on a tablet (found by the screenshot).** The six-column grid started at `lg` (1024px), but the console's
+  240px sidebar leaves a 1024px window about 735px, and the four fixed columns take 480px of it — the name wrapped one or two characters per line. It now starts at `xl`; below it each row is a
+  card, on a tablet with the actions at its top right and the occupancy bar capped at a readable width, on a phone stacked under the name. (A viewport breakpoint alone can't know how wide the
+  content is under a sidebar; the NGO and Admin screens built earlier use `md` for their tables and are worth a look at 768–1024 in the phase-end visual pass.)
+- **A focus ring that only half showed (found by the screenshot).** The occupancy stepper clipped its buttons and field with `overflow-hidden`, and the design system's global
+  `:focus-visible` rule is *unlayered*, so it beats every Tailwind utility — a `focus:outline-none` or `focus-visible:-outline-offset-2` on a component can't change it — which left a focused
+  field showing two vertical bars where the ring was clipped. The group no longer clips (the end buttons are rounded instead), so the ring draws in full. Worth remembering: restyling the
+  focus ring on a component needs an unlayered rule, not a utility class.
+- **A long shelter name ran the map's tooltip across the whole map (found by the screenshot; the citizen map and shelter page had the same fault).** Leaflet draws the label on a selected marker
+  with `white-space: nowrap`. Letting it wrap with `overflow-wrap: anywhere` was worse — the box shrank to one character wide (a shrink-to-fit box takes the smallest content width) — and
+  `width: max-content; max-width: 16rem` is what works. It is a global rule with a more specific selector, because leaflet.css loads after the app's stylesheet.
+- **Leftover E2E rows made the citizen-map spec fail again (found by re-running it after this screen).** It drew 3 zones where 2 are expected: every spec seeds a flood zone somewhere in the
+  same 8°×5° area and none is cleaned until the phase ends, so after this screen's runs (the spec five times and the visual pass five times, each seeding its own world) one of them overlapped the map's view. Random
+  placement lowers the odds per leftover row but every run adds rows; it passed 6 of 6 straight after the guarded cleanup. That is why the cleanup is part of each screen's routine — **if a
+  map or zone spec fails on a count, clean first.**
+- **Adding a place said nothing about its region if it was saved right after typing (found by the real-backend E2E).** The "added" notice read the region note's state, which follows the typed coordinates after a
+  300 ms pause, so a fast save got "was added." with no "It is in …". The notice is now worked out from the values actually being submitted (a pure `coverageFor` over the cached region list), and a unit
+  test saves straight after typing.- **Shelters registered from a real NGO account vanished from the admin list (found by using the screens — no test could have).** They were saved at points no region covers, so
+  every region-scoped list, including the admin's and the citizens', omitted them while the NGO's own list (by organisation) showed them. The screens had warned; the warning was
+  not enough and the demand behind it — know which regions exist — was wrong. Fixed by drawing the regions on the picker and refusing a point outside them (see *Location
+  picker*). A reminder that the E2E's “a point in no region is accepted by the API” test had proved the trap but not that a person would notice it.
+
+- **A status label was read as "At risk(current)" (found by a unit test).** The gap before "(current)" was a CSS margin, which a screen reader doesn't hear; it is now a real space.
+- **Names sorted "…12, …17, …2, …22" (found by the screenshot).** Plain string collation; essential locations are meant to be bulk-imported and their names are full of numbers, so the list now sorts numbers as numbers.
+- **Leftover rows from the visual pass made Resources' "Everywhere" test fail (found by re-running it after this screen).** "Everywhere" lists every region's places by name, 25 at a time; the visual world's 26
+  essential locations sorted ahead of that test's row, so it fell onto the second page. Not a code fault — it passed 6 of 6 after the cleanup — but a reminder that **the visual pass leaves the most rows of anything,
+  so clean up after it and before re-running the older specs.** (A test-only slip too: one test's PATCH handler mutated a fixture shared with the next.)
+- **The phase-end pass found nine real bugs — the deferred tests earned their keep.** Each was found by a test written from the deferred list, fixed once in shared code, and
+  pinned with a unit test that was checked to fail without the fix.
+- **Enter and Space did nothing on a focused map marker (found by the keyboard E2E).** Leaflet 1.9.4 makes a marker a focusable `role="button"` and its docs say Enter clicks it,
+  but the code never does: a keyboard user could Tab to a marker and nothing happened. `MapCanvas` now selects on Enter and on Space.
+- **On a phone the map jumped half a screen and back when switching Map → List → Map (found by the phone E2E).** `MapResizer` re-measured the map whenever its container changed,
+  including when it was hidden (0×0), and Leaflet keeps the centre by *panning* — so hiding panned the map by half its size and showing panned it back, with the markers a frame
+  or more out of place in between. It now leaves a hidden map alone.
+- **On a phone, "Show on map" in the Hazard Zones list took the whole page down to a white screen (found by the phone E2E).** The page mounts the map hidden and, in the same
+  update, asks it to fly to the zone; Leaflet's `flyTo` divides by the map's size, so on a map still cached as 0×0 it computes NaN ("Invalid LatLng"). The citizen map was exposed
+  the same way (choosing a zone from the list). `FocusController` now re-measures first and does nothing while the map genuinely has no size.
+- **Fast arrow keys on a tab list went to the wrong tab (found by the keyboard E2E).** `TabBar` measured each arrow from the page's `active` tab, which lags a keypress (the tab
+  lives in the URL), so a second arrow pressed before it caught up — a held key — was measured from where the first had started. It now measures from the tab that has focus. (An
+  existing unit test had encoded the stale behaviour and was corrected.)
+- **Every dialog and drawer opened from a row's button lost keyboard focus when it closed (found by the keyboard E2E).** Radix returns focus to a dialog's own `Trigger`; these
+  are opened from page state, so there is none, and focus fell to the top of the page. `Dialog` and `Drawer` now remember what had focus when `open` turned true — noticed while
+  rendering, because the register drawer's autofocused Name field takes focus before Radix reports the dialog open (the first version missed that; the NGO keyboard E2E caught it)
+  — and return to it, unless it has gone or the caller chose otherwise.
+- **"Is this place inside an active hazard zone?" could repeat a thirty-second-old answer (found by the cross-role E2E).** The admin's Location dialog shared the overlay cache
+  (30 s), so a zone resolved a moment ago was still reported. The check now keeps nothing after it closes and asks afresh each opening.
+- **The two ways of testing a point against a boundary disagree, and the browser had to learn which is which (found by the border and hazard E2Es).** The API's region join counts
+  a point exactly on the shared edge of two regions as inside **both**; the server's own risk check counts a point exactly on a hazard zone's edge as **outside**. The browser's
+  ray casting counted two of a square's four edges and not the others. `regionContains` is now explicit — boundary included by default (regions), `includeBoundary: false` for
+  zones (agreeing with the risk check, which the E2E now compares against for an edge, a hole, the ring around it and three stacked zones). A unit-test fixture that had put a
+  shelter exactly on a zone's edge only "worked" by that inconsistency.
+- **A save could be refused on a region list up to thirty seconds old, and the notice could name no region (found by the picker E2E).** The reason the register and Add drawers
+  refuse a save is "outside every region", and an administrator may have added the region since the list was fetched. The submit now asks for a fresh list before refusing
+  (failing open if it can't), and the notice names the region from that list.
+- **Users, NGOs, Volunteers, Regions and several detail pages were unusable at 768–1024px (found by the tablet check).** The NGO shelters table had taught this lesson once (the
+  console's 240px sidebar leaves a 768px window ~480px and a 1024px one ~735px), but the earlier lists still switched to their column grid at `md`: at 768 the Users and NGOs name
+  columns were a character wide, and the Regions detail beside its tree was 140px. The tables now start at `xl` (cards below it), the Regions tree beside its detail and the
+  two-column detail pages start at `lg`/`xl`, the Hazard Zones table-beside-map split starts at 1280 (below it: List | Map), and the three-column detail pages at `xl`. A new
+  check loads each list at 768 and 1024, fails on anything clipped or sticking out, and keeps a screenshot to look at.
+
 
 ---
 
@@ -987,7 +1140,7 @@ each carrying a continuous flood probability, not a hand-drawn hazard shape.
   red) — `mean_prob` (fraction of the box actually flooded) is the honest value to drive fill
   color/opacity. The backend's `hazardZoneDetailResponse`/`mapOverlayEntryResponse` carry
   `confidence_score` from `flood_predictions` — confirm at integration time whether that maps to
-  peak or mean semantics on the Go side (check `internal/floodintel/domain` before assuming), and
+  peak or mean semantics on the Go side (**confirmed on 2026-09-25 against the real ingested zones: it is `mean_prob`, exactly — see the Map bullet under *Real deviations*, and `map-preview`'s colour stops are the app's, stop for stop**) (check `internal/floodintel/domain` before assuming), and
   prefer whichever is closer to `mean_prob`'s meaning.
   - **Test with real backend-shaped data before assuming any of this transfers 1:1** — the backend
     computes `risk_level` server-side from `confidence_score` via fixed thresholds (<0.34 low,
@@ -1503,7 +1656,7 @@ and a citizen can choose, change and remove a home region. The real regions here
 
 ---
 
-## Phase 3 — Facilities, Flood Intelligence & the Map 🚧 In progress
+## Phase 3 — Facilities, Flood Intelligence & the Map ✅ Done (Offline Map Packages skipped by decision)
 
 The first big visual phase. Establishes the shared `<MapView>` component every later map-using
 screen reuses. **Read §2.1 and §2.3 above before starting this phase** — map library and flood
@@ -1516,16 +1669,20 @@ rendering are both corrected from what the design mockups show.
 | Map | `/app/map` | Citizen | W-Map-Split | ✅ Built — flood zones from real geometry, shelter / infrastructure / essential-location layers, search, place and zone cards, "my location" with the risk check, legend, phone Map ⇄ List. See the *Map* bullet under *Real deviations* |
 | Shelter Detail | `/app/map/shelters/:id` | Citizen | W-Detail | ✅ Built — identity, capacity, details, an embedded map with the flood zones around it, distance on request, Navigate Here (pinned on a phone). See the *Shelter Detail* bullet under *Real deviations*. **Navigate Here** links to `/app/navigate?destination_shelter_id=` (Phase 7), still a placeholder |
 | Resources hub — Local Resources tab | `/app/resources` (`?tab=local`) | Citizen | W-List | ✅ Built — the tab shell (Local live; Aid, Campaigns, Missing persons are Phase 6 placeholders) and the Local tab: shelters and shops of the home region, chips with counts, nearest first on request, Navigate, and Mark as open / closed. See the *Resources › Local* bullet under *Real deviations* |
-| Shelters (+ detail) | `/ngo/shelters`, `/ngo/shelters/:id` | NGO | W-List / W-Detail | ⬜ |
+| Shelters (+ detail) | `/ngo/shelters`, `/ngo/shelters/:id` | NGO | W-List / W-Detail | ✅ Built — the organisation's shelters with KPI figures, filters, search and a per-row occupancy editor (any staff); Register (a map to place it) and Edit — status and certification only — for `ngo_admin`; a detail page with the map, the flood zones around the shelter, and whether citizens can see it. See the *NGO Shelters* bullet under *Real deviations*. Name, kind, capacity and location can't be changed after registering (the API can't) |
 | Hazard Zones & Predictions (+ detail) | `/admin/hazard-zones`, `/admin/hazard-zones/:id` | Admin | W-Map-Split | ✅ Built — the paginated zone table beside a map (`GET /admin/map/flood-overlay` with the `min_confidence` slider), Predictions as a second view, Declare (validated client-side) and Resolve (confirmed), and a page per zone. Reuses `MapCanvas`. See the *Hazard Zones & Predictions* bullet under *Real deviations*. No linked incident reports (no route) |
-| Facilities (tabs: Shelters/Infrastructure/Essential Locations) | `/admin/facilities` | Admin | W-List | ⬜ |
-| Offline Map Packages | `/admin/offline-maps` | Admin | W-List | ⬜ |
+| Facilities (tabs: Shelters/Infrastructure/Essential Locations) | `/admin/facilities` | Admin | W-List | ✅ Built — three tabs over a region scope (every top-level region, or one chosen in the shared picker): Shelters read-only with the organisation named; Infrastructure with Add and Update status; Essential locations with Add and the report log; search, filters and paging; a per-place map that says whether it is inside an active hazard zone. See the *Facilities* bullet under *Real deviations*. No edit, no delete (the API has none) |
+| Offline Map Packages | `/admin/offline-maps` | Admin | W-List | ⏸ Skipped by decision (2026-09-25) — see *Offline Map Packages (skipped)* below |
 
 **The shared map component is `MapCanvas`** (`src/features/map/MapCanvas.tsx`), not a component called `<MapView>`: it takes hazards,
 places, the selection, a focus request and an `overlays` slot as props and reports the viewport and clicks by callback, so any
 container can drive it. The Map's own container is `src/pages/citizen/MapPage.tsx`; the rest of `src/features/map/` is the
 pane (search, chips, list, cards, location note), the control stack and legend, and the model / geo / colour helpers
-(`mapModel`, `mapGeo`, `floodColor`); data hooks are in `useMapData.ts`; the API is `src/api/floodIntel.ts` and `facilities.ts`.
+(`mapModel`, `mapGeo`, `floodColor`); data hooks are in `useMapData.ts`; the API is `src/api/floodIntel.ts` and `facilities.ts`. Also shared now: `LocationPicker`
+(a small click-and-drag map for choosing one point, used by the NGO's Register Shelter drawer and Admin Facilities' Add drawers; it shades the platform's regions, opens on them and has a “Jump to an area” menu — see *Location picker*), `tiles.ts` (the one place the tile provider
+is named), and — in `src/features/shelters/` — `ShelterLocation` (the shelter page's map, flood zones and "distance from me", used by both the citizen's page and the organisation's). The coordinate rules and location fields a form
+that places something on the map needs are shared too: `pointForm` (the rules, the GeoJSON point, the writer), `PointFields` (the section: map slot, "Use my location", latitude and longitude, the region note) and `usePointPicker`
+(the settled point, the regions to draw, its region, `coverageAt` for a submit, the browser's position) in `src/features/map/`, used by the NGO's Register Shelter drawer and the admin's two Add drawers. The phase-end pass also changed what several primitives do: `TabBar` moves from the focused tab; `Dialog` and `Drawer` return focus to what opened them (`ReturnFocusRoot` in `src/lib/`); `MapCanvas` selects a marker on Enter/Space, leaves a hidden map alone and re-measures before flying; `regionContains` takes `includeBoundary`; `useAdminOverlay` takes `fresh`; and `usePointPicker` returns `coverageForSave`.
 
 ### Backend routes (all ✅ built)
 
@@ -1538,11 +1695,11 @@ pane (search, chips, list, cards, location note), the control stack and legend, 
 | `GET /flood-predictions?region_id=` | `03-flood-intelligence.md` | Map/region prediction data |
 | `GET /admin/hazard-zones?from=&to=&status=&limit=&offset=`, `GET /admin/flood-predictions?from=&to=&limit=&offset=` | `03-flood-intelligence.md` | Admin Hazard Zones & Predictions' tables — **paginated envelopes** `{zones,total,limit,offset}` / `{predictions,total,limit,offset}` (default 20, max 100, newest first), no longer bare arrays; not for drawing a map |
 | `POST /admin/hazard-zones`, `PATCH /admin/hazard-zones/{id}/resolve` | `03-flood-intelligence.md` | Admin Hazard Zones (declare/resolve); NGO Dashboard "Declare Hazard Zone" (Phase 8) reuses the same call, `ngo_admin` permitted |
-| `GET /infrastructure?region_id=`, `POST /admin/infrastructure`, `PATCH /admin/infrastructure/{id}/status` | `04-facilities.md` | Admin Facilities (Infrastructure tab), Map overlay |
+| `GET /infrastructure?region_id=`, `POST /admin/infrastructure`, `PATCH /admin/infrastructure/{id}/status` | `04-facilities.md` | Admin Facilities (Infrastructure tab — all three wired), Map overlay |
 | `GET /shelters?region_id=`, `GET /shelters/{id}` | `04-facilities.md` | Citizen Map, Shelter Detail |
-| `GET /essential-locations?region_id=`, `POST /admin/essential-locations`, `POST /essential-locations/{id}/status-reports`, `POST /shelters/{id}/status-reports`, `GET /essential-locations/{id}/status-reports` | `04-facilities.md` | Resources›Local, Admin Facilities |
+| `GET /essential-locations?region_id=`, `POST /admin/essential-locations`, `POST /essential-locations/{id}/status-reports`, `POST /shelters/{id}/status-reports`, `GET /essential-locations/{id}/status-reports` | `04-facilities.md` | Resources›Local (list, report), Admin Facilities (list, add, and the report log — the only reader of `GET …/status-reports`) |
 | `GET /regions/{id}/offline-map`, `POST /admin/offline-map-packages` | `04-facilities.md` | Offline Map Packages |
-| `GET /ngo/shelters`, `POST /ngo/shelters`, `PATCH /shelters/{id}/occupancy`, `PATCH /shelters/{id}` | `04-facilities.md` | NGO Shelters |
+| `GET /ngo/shelters`, `POST /ngo/shelters`, `PATCH /shelters/{id}/occupancy`, `PATCH /shelters/{id}` | `04-facilities.md` | NGO Shelters — all four wired (roles: the list and occupancy are any NGO staff; register and `PATCH /shelters/{id}` are `ngo_admin` only). Behaviour verified against the real server is in the gaps table below |
 
 ### Backend gaps found building the Map (none block the frontend)
 
@@ -1565,6 +1722,30 @@ pane (search, chips, list, cards, location note), the control stack and legend, 
 | `POST /essential-locations/{id}/status-reports` on an unknown place is a `404 "essential location not found"`, though its doc says there is no existence check | Harmless — the screen handles it — but the doc is wrong | Correct the doc |
 | `GET /essential-locations?region_id=` is unpaginated and has no search | Fine for eight places; a region with thousands returns them all, and the screen shows 25 at a time in the browser | `limit`/`offset` (and a `type` filter) |
 | `POST /hazard-zones/risk-check` with `lat`/`lng` omitted quietly checks `(0, 0)` | The client always sends real numbers and refuses non-finite ones, so it is safe, but another client would get a meaningless "no hazard" | Require both fields (`400` when absent) |
+| `PATCH /shelters/{id}` changes only `status` and `certification_status`; anything else in the body (a new name, capacity, location) is ignored with a `200`, and there is no delete | A shelter's name, kind, capacity and location can never be corrected after registration — a typo, or a capacity that changes, is permanent, and a shelter registered by mistake can't be removed. The register drawer says so before saving and the edit drawer shows those fields read-only | Let the managing organisation's admin edit name, capacity and location (a partial patch), and add a delete or deactivate that refuses while other rows refer to the shelter |
+| `PATCH /shelters/{id}/occupancy` bounds `capacity_current` to `[0, capacity_total]`, and its doc says the field is required but an **empty body is a `200` that sets it to `0`** (verified) | A shelter can't record being over-full — over-capacity is exactly what a flood shelter reports, and the citizen UI can show it but nothing can produce it — and a client that leaves the field out would silently zero a headcount (this one always sends a number, and refuses anything over the capacity before asking) | Allow more than the total (or an explicit overflow figure), and make the field truly required (`400` when absent) |
+| `POST /ngo/shelters` checks none of the point, and `500`s on some shapes | Longitude 200 / latitude 95 and a swapped latitude/longitude are all `201`; a Polygon, a three-number point and a capacity over 2,147,483,647 are bare `500`s (all verified). The register form checks all of it, so this screen can't cause them, but another client could store a shelter nobody can find | Validate in the domain (ranges, a `Point` of two numbers, a 32-bit capacity) and answer `400` with a message |
+| A shelter outside every region registers fine but is never returned to citizens (the public reads are per region, as for infrastructure) | An organisation could register a shelter no citizen would ever see (it happened in real use). The register drawer now shades the regions on its map and **refuses** a point outside them; the detail page still says so for one that exists, by a point-in-polygon over `GET /regions` in the browser | Return the resolved region (or a warning) from the register call, and/or accept a bbox or `near` on the public reads |
+| **Certification is self-declared.** The managing organisation's own admin can set `certified` through `PATCH /shelters/{id}`, and no route lets anyone review it | The doc says registration is "explicitly not self-certification", but the same admin can certify a moment later; the admin's Facilities tab is oversight only. Citizens see "Certified" as though someone had checked | An admin-only route to certify (and stop the organisation setting `certified` itself), or record who certified and when |
+| No organisation-status guard on shelters: a **deactivated** organisation can still register shelters, update occupancy and close them (verified) | Staff of an organisation an admin has switched off keep changing what citizens see. The UI doesn't restrict it either (the Volunteers page pre-empts a `409` for invitations; there is none to pre-empt here) | Decide the policy, then refuse when the organisation isn't `active` |
+| `GET /ngo/shelters` is unordered and unpaginated, carries no `region_id` though the doc says it is the public shape, and there is no NGO-side read by id | The screen sorts, searches and pages in the browser; the detail page reads the public `GET /shelters/{id}` plus `GET /ngo/me` to tell whether a shelter is the organisation's | `limit`/`offset` and an order, `region_id` on the row, and a by-id route (or the managing organisation's name on the public shelter) |
+| `POST /admin/infrastructure` and `POST /admin/essential-locations` check none of the point, and `500` on some shapes | Longitude 200 / latitude 95, a swapped pair and a point outside every region are all `201`; a Polygon or a three-number point is a bare `500`; duplicate names are allowed (all verified). **A place outside every region is created but no route can list, edit or delete it** (the E2E adds one and shows no region query returns it), so a typo'd coordinate is a phantom, permanently. The Add drawers check every coordinate and **refuse** a point outside every region (the first version only warned) | Validate in the domain (ranges, a `Point` of two numbers) and answer `400`; return the resolved region (or a warning) from the create call |
+| No way to edit or delete infrastructure or an essential location — infrastructure has only its status, an essential location nothing | A wrong name, type or position, and a duplicate, are permanent; the Add drawers say so before saving | A partial-patch edit for name and position, and a delete that refuses while other rows refer to the place |
+| There is **no admin list**: the only reads are the public per-region ones, whose rows also carry no `region_id` although the docs say they do | "Everywhere" is one request per top-level region, so an admin can't list a place outside every region, count the platform's facilities in one call, page or search on the server, or see which region a row is in without a browser point-in-polygon; an essential location list may be thousands of rows fetched whole | An admin `GET /admin/facilities?kind=&region_id=&q=&limit=&offset=` (regionless places included), and `region_id` on every row |
+| **An essential location's status can't be corrected by an admin.** Its only writer is the crowd (`POST …/status-reports`, any signed-in account, no limit); an admin can file a report like anyone (verified) but the next citizen's report replaces it, and the log names no reporter | Nothing in the console can lock a false status, or tell whether a run of flip-flopping reports is one person; the log dialog says who *isn't* shown | An admin override or lock on a place's status, and the reporter's id (or trust score) visible to admins in the log |
+| `confidence_score` is the model's **mean flood probability** over the box (`mean_prob`), not a confidence in the prediction (verified against all 197 real cells; `peak_prob` matches none) | The web says "model confidence" (the API's word), which a citizen may read as "this is 87% likely to flood" when it is nearer "about 87% of this area is expected to flood". The colour ramp and the 0.34 / 0.67 risk thresholds are on the right value | Decide the wording (e.g. "modelled flood probability") — the field could keep its name — or expose both `mean_prob` and `peak_prob` |
+| The two spatial rules differ at a boundary: a *region* join counts a point on a shared edge as inside **both** regions, while `POST /hazard-zones/risk-check` counts a point exactly on a *zone's* edge as **outside** | Harmless in practice (a coordinate is rarely exactly on an edge) but it is why the browser has two containment modes; a client that assumes one rule for both will disagree with the server | Document it, or use one rule (`ST_Covers`) for both |
+| An infrastructure item has no status **history** — only `last_status_update`, and re-setting the same status moves it | After the fact an admin can't tell "confirmed still at risk" from "changed to at risk", who set it, or what it was before | Record each change (who, from, to, when) — the Reporting & Audit phase's job — and return it |
+
+### Offline Map Packages (skipped)
+
+Not built, on purpose, on 2026-09-25. **What the routes are:** `GET /regions/{id}/offline-map` (public; the latest package for a region, `404` when none) and `POST /admin/offline-map-packages`
+(`admin`/`super_admin`; body `region_id`, `package_url`, `version`, optional `size_bytes`; always inserts a new row, so a region accumulates a version history of which only the latest is ever returned). The backend
+**does not generate or host the bundle** — it stores a pointer to a file made out of band — and no such file exists yet: the five rows in `offline_map_packages` (Test Province ×3, Sukkur, Larkana) point at
+`storage.example.com` placeholders. Citizen web never downloads one (offline packs are mobile-only, `WEB_DESIGN_PLAN.md` §6.4). **Why it waits:** there is nothing real to register, the mockup (Batch 5 §5h — build status,
+zoom levels, "includes", downloads, stale count, "Rebuild all stale", an auto-rebuild toggle, CDN size) has **no backing routes at all**, and there is **no list route**, so an honest list would be one lookup per region
+(a `404` meaning none). **The thin version, when wanted:** a register dialog (region from the shared picker, package URL required and http(s), version required, size a whole number ≥ 0 or blank; the API's `404 "region not
+found"` and its `400`s shown as its words), a list of the regions that have a package (per-region lookups over the cached region tree), and a latest-package detail. Nothing else in Phase 3 depends on it.
 
 ### Build steps
 1. ✅ (built as `MapCanvas`) Base `<MapView>` component: Leaflet `MapContainer`, OSM tile layer, bbox-aware data fetching on
@@ -1575,9 +1756,9 @@ pane (search, chips, list, cards, location note), the control stack and legend, 
    probability color, not the mockup's blob styling.
 3. ✅ Shelter/infrastructure/essential-location marker layers, layer-toggle chips.
 4. ✅ Shelter Detail, ✅ Resources›Local.
-5. Admin: ✅ Hazard Zones & Predictions (reuses `MapCanvas` in split-view); Facilities tabs and Offline
-   Map Packages still to do.
-6. NGO Shelters (registration, occupancy editor, certification patch).
+5. Admin: ✅ Hazard Zones & Predictions (reuses `MapCanvas` in split-view); ✅ Facilities (three tabs, the shared
+   `LocationPicker`/`PointFields` in its Add drawers); Offline Map Packages skipped for now (see below).
+6. ✅ NGO Shelters (registration, occupancy editor, certification patch — the last is the status/certification edit; see the *NGO Shelters* bullet).
 
 ### Testing
 - Component: probability→color mapping (unit test the exact color-stop function against known
@@ -1718,9 +1899,155 @@ pane (search, chips, list, cards, location note), the control stack and legend, 
   re-run (Regions' one failure — a `.geojson` upload — passed alone straight after, a parallel-load flake).
 - **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first.
 
+### Testing done so far (NGO Shelters)
+- **Unit (Vitest + RTL + MSW), 1,041 tests in the whole suite (+136 for this screen):** the model (the filters, search across name, kind, status and certification, sort by name with a
+  stable tie-break, counts per filter *within the search*, the KPI totals, the occupancy check at its edges — `0`, exactly the capacity, over it, empty, fractional, negative, `1e3` — and the
+  stepper's bounds); the register form's rules (every empty field named, capacity `0`/negative/fractional/over 32 bits with the largest accepted, coordinates off the globe, the "may be the
+  wrong way round" hint, the extremes accepted) and the request built in GeoJSON order; the changed-fields-only patch; the point-in-polygon (inside, outside, a hole, a MultiPolygon, an unreadable
+  boundary; the most specific region named with its parents; nothing outside every region); the four new API calls (field names, the id encoded into the path, a number always sent); the parts —
+  the occupancy bar, the editor (its preview, "nothing to save", the stepper, every refusal, Enter and Escape, the server's error, the saving lock), the KPI cards, toolbar, list states, the table
+  (rows, links, actions per role, the editor opening in the right row and passing its events up) and the region note; the register drawer (every gap named, submitted values, the two kinds as
+  one radio group, the swapped hint, the map slot, a refusal, the location button and its blocked/locating states, Cancel) and the edit drawer (exactly the two controls, the read-only facts
+  and their reason, Save off until something differs); `LocationPicker` on **real Leaflet in jsdom** (no pin until there is a point; a click reports a rounded point; the map is brought to a
+  point set from outside but **not** to one just placed — mutation-checked: removing that guard fails it; it opens on a given point); and both pages over MSW with an in-memory
+  organisation — the list (order, totals, no region asked, empty for an admin and for a volunteer, a failed load with a retry, filters and search and their counts, the URL read and written,
+  an unknown filter ignored), occupancy (save, one editor at a time, cancel and nothing sent, the server's `400` kept in the editor, a `404` closing it with a notice, a volunteer, focus
+  returning to the row's button), editing (only what changed, a refusal, a clean drawer for the next shelter) and registering (every gap named, the request in GeoJSON order, a click filling
+  both fields and the pin following what is typed, the region note inside / outside / unavailable, a refusal, a clean reopen, from the empty state) — and the detail page (reads by id, Back keeps
+  the view, the region note, occupancy, edit, a volunteer, another organisation's shelter, one with no organisation, a failed organisation lookup, `404` and `400`, a retry).
+- **E2E (Playwright, real backend, real Postgres) — `e2e/ngo-shelters.spec.ts`, 18 tests when the screen was built (19 after the location-picker follow-up), run alone, all passing (three runs, the last after the layout changes).** The world is `E2E …` rows at a
+  random spot per run: two organisations, a province, and eight shelters (seven managed by the first, one by the second) with a forecast flood zone around one. Covered: **the list** showing exactly
+  the organisation's shelters by name — never the other organisation's — with the header total, the four figures, each row's status, coordinates and occupancy compared with the stored rows, and **no
+  `region_id` in any request**; the pills and search, the view in the URL and surviving a reload; a **citizen** turned away from the page and refused `403` by the real API. **Occupancy:** saved in
+  the row and read back from Postgres, the request body `{capacity_current}` and nothing else, the **public route a citizen uses** returning the same number, a reload agreeing, and the keyboard
+  back on the row's button; a number over the capacity, a fraction and an empty field refused in the browser with **no request**, the stepper, Cancel changing nothing; a **volunteer** saving
+  occupancy and offered no Register or Edit, then refused `403 "insufficient permissions"` by the real API for both; **a stale page** (the capacity shrunk in Postgres behind it) getting the real
+  `400`, then the list refetching so the editor says the new capacity before another try; **a shelter deleted behind the page** getting the real `404` and leaving the list. **Editing:** an admin closing
+  and certifying — the body carrying only the two changed fields, Postgres and the public route agreeing — then changing one thing and sending one thing; **another organisation's admin** refused `403
+  "this shelter is not managed by your ngo"` for both writes with nothing changed. **Registering:** every empty field and every out-of-range value named with **no POST sent**; the map and the
+  fields as one value (a click fills them; typing moves the pin; **dragging the pin** with a real mouse edits them) with the region note naming the seeded province and then, for a point in the sea,
+  saying it can't be saved; and a real registration read back from Postgres (`managed_by_ngo_id` the caller's organisation though the request never says so, relief center, open, pending, empty, the typed
+  coordinates) that the **region query citizens' map uses then returns**; "Use my location" filling the point from the browser's (granted) position only when pressed. **Detail:** opened from the list
+  with the stored values, the marker and the real flood zone on the map, the region note, occupancy updated from the card, and Back returning to `?show=open`; editing from the page; another
+  organisation's shelter read-only; an unknown and a malformed id both "not found". **Mutation-checked:** removing the refetch after a refused occupancy save fails the stale-page test, and
+  making Edit send both fields every time fails the changed-only test. Seed helpers added (a shelter managed by an E2E organisation, making an account the admin of an existing E2E organisation,
+  finding a shelter by name, changing a shelter's numbers or deleting it behind an open page), all guarded to `E2E …` rows.
+- **Visual:** 1440×900, **1024×768** and 390×844 — the list, its editor open and refusing, a filter, the register drawer (with a pin and region note, with the outside-every-region warning, with its errors),
+  the edit drawer, the detail page (editing, another organisation's, a very long name); **zero horizontal overflow** in all 39 captures. They caught the table crushing at 1024, the half-clipped focus ring, the
+  editor's buttons on their own line, and the long tooltip (see *Real bugs*).
+- **Shared code touched** (the citizen shelter page's map section, `CapacityMeter`, `MapCanvas`, the tooltip rule): the citizen-map (6) and Shelter Detail (5) specs were re-run and pass — the map spec once failed
+  on leftover rows (see *Real bugs*) and passed straight after the cleanup.
+- **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first, twice — once mid-way (this screen's runs, its probes and its visual worlds: 85 accounts, 20 NGOs, 15 regions, 80 shelters, 26 zones, 14 forecasts; every guard 0) and once at the end.
+
+### Testing done so far (Admin Facilities)
+- **Unit (Vitest + RTL + MSW), 1,154 tests in the whole suite (+113 for this screen and the shared pieces it extracted):** the model (the three tabs and their parsing; per-kind filter specs; both pill groups counted
+  within the search and each other; search by name, kind, status wording and — for shelters — the organisation's name; the natural sort; de-duplicating a place returned for two regions; tab-specific type and status values
+  so a stale URL reads as "no filter"); the Add form's rules for each kind (every gap named, the types that belong to each kind — no fuel, no water — the swapped-coordinates hint, the request in GeoJSON order with no
+  status); the shared point rules, `pointWriter` and the pure `coverageFor`; the four new API calls; every part — pills, region scope, toolbar, list states (including the partial-failure notice), the three tables (rows,
+  the organisation as a link, "Status unknown" and "No reports yet" for an unreported place and never "Open", the actions each kind offers and no others), the Add drawer for both kinds (its copy, every gap, the submitted
+  values, the outside-every-region warning, the refusal and the saving lock), the status dialog (three options with the current marked, "Confirm status" for the current one and what it does, the refusal), the report
+  dialog (newest first, "shown now", empty, loading, failed) and the location dialog (kind and status, region, "not inside any active hazard zone", checking, failed, inside a zone with its basis and a link); and the
+  page over MSW with an in-memory platform — which top-level regions are asked and never a district (**mutation-checked**: asking for every region fails three tests), every place shown once, organisation names from
+  the NGO list and a notice when they can't load, only the showing tab read and nothing read twice within the freshness window, the tab and view in the URL, arrow keys, choosing a district in the real picker and
+  clearing it, an unknown region ignored and never sent, nothing asked until the regions load, filters, no-match, paging that steps back to the last real page, an empty state per tab, a failed read with a retry that
+  recovers, one region's failure with the rest still shown, shelters offering no Add or edit, adding (empty, in a region, in none, saved straight after typing, refused, clean reopen, an essential location), the status
+  change (success, "confirmed", refusal, `404`, opens on the item's own status each time), the report log, and the location dialog (no overlay until a place is chosen, worst zone first, never "clear" on a failed check).
+- **E2E (Playwright, real backend, real Postgres) — `e2e/admin-facilities.spec.ts`, 16 tests, run alone, all passing.** The world is `E2E …` rows at a random spot per run: a province, two organisations with shelters,
+  three infrastructure items (one inside a forecast zone, one inside a *low-confidence* zone, one in neither) and three essential locations (one with a log of three reports); lists are read through the province so
+  leftovers elsewhere can't change a count. Covered: **Shelters** — read-only, each row compared with its stored row, the organisation named and linked to its page, "No organisation", no Add and only a location action;
+  the status pills and a search by organisation name, surviving a reload; the region scope chosen in the real picker (the requests narrow to it and clearing goes back to every top-level region — the seeded province
+  among them), and an unknown region never sent. **Infrastructure** — the list from the database, the type and status pills and the search; **updating a status** (the request is `{status}` and nothing else; Postgres and the
+  public route a citizen uses agree) and **confirming the same status really moving `last_status_update`** (read from Postgres); an item deleted from under the open page giving the **real `404`**, reported as gone;
+  **adding** — every gap and bad coordinate named with **no POST sent**, then a real row (`safe`, the typed point, GeoJSON order) that the public region route returns and the list shows; and **a point in no region refused** —
+  the note before saving, the latitude's message on trying, no POST and nothing in Postgres (the first version of this test added the row and proved no region's list has it; the UI no longer allows that). **Essential locations** — the list with "Status unknown" and "No reports yet", the pills; **the report log equal to the
+  table's own rows, newest first, no reporter shown**; adding one (no status, no reports, absent `current_status` on the public route). **Location** — a bridge inside a forecast zone says so with 87% and links to
+  that zone's page; a hospital inside a **20% zone the public overlay does not return** is told so, with every overlay request going to the admin route; a utility in no zone and a shelter say "not inside any active
+  hazard zone". **Who may** — a citizen and an `ngo_admin` are each bounced from the page and refused `403 "insufficient permissions"` by the real API for adding infrastructure, adding an essential location and
+  updating a status, with nothing written. **Mutation-checked:** asking the citizen overlay instead of the admin's fails the low-confidence test. Seed helpers added (read an item and find one by name — including one no
+  route can list — delete one behind an open page, a report log with known ages, the report statuses of a place), all guarded to `E2E …` rows.
+- **Visual:** 1440×900, **1024×768** and 390×844 — each tab, a filtered list and the no-match state, the report log, the status dialog, the location dialog, the Add drawer (with a pin and region note, with the
+  outside-every-region warning, with its errors), the region picker and the all-regions view; **zero horizontal overflow** in every capture. The tables start at `xl` (the lesson from the NGO shelters table) with cards
+  below, and the pass caught the unsorted-numbers order (see *Real bugs*).
+- **Shared code touched** (the tab bar, the point fields and rules, the coverage note, the shelter register drawer): the NGO shelters (18 then; 19 now) and citizen Resources (6) specs were re-run and pass — Resources failed once on
+  the visual pass's leftover rows and passed straight after the cleanup (see *Real bugs*).
+- **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first (80 accounts, 13 NGOs, 10 regions, 26 shelters, 30 infrastructure items, 48 essential locations, 35 reports, 11 zones; every guard 0), and again at the end.
+
+### Testing done so far (Location picker follow-up)
+
+**Unit (Vitest, 26 new tests; the whole suite is now 1,180 in 127 files, all passing):** `coverageAreas` (widest level first and stable within a level; boundaries as Leaflet
+positions with their box; an undrawable boundary left out; the box around several; the menu's entries in tree order by whole path, skipping an undrawable region but keeping what
+is inside it); `LocationPicker` on **real Leaflet in jsdom** (one shape per region; nothing extra with no regions, still loading or failed; an undrawable region left out; a click
+on a shape still places the pin; opening on the shaded areas once they arrive and never again; not moving when there is already a pin; a typed point in none of the areas shown
+together with them, one inside zoomed to as before; the menu's entries; choosing an area fits to it and choosing the same one again after moving away does too); `CoverageNote`'s
+blocking wording and that a place that exists keeps the old one; both drawers' wording; and the two pages — the regions handed to the map, a point outside every region refused
+with nothing sent, focus on the latitude, saved once moved inside, refused for an essential location too, **fail-open when regions can't be loaded**, and a save straight after
+typing (before the note settles) refused. **Mutation-checked:** removing the guard from both hooks fails exactly the three refusal tests.
+
+**E2E (Playwright, real backend, run alone):** `ngo-shelters` now **19** tests (one added: every region drawn — the count equals `GET /regions` — the legend, the menu listing the
+seeded province by name, choosing it and a click in the middle landing inside it with the note naming it, then a point in the sea refused with the latitude focused, no POST and
+nothing in Postgres) and `admin-facilities` **16** (its “point in no region” test rewritten from “accepted, never listed” to “refused, nothing created”); both pass. The first
+`admin-facilities` run failed on `3 shelters in` because its random province overlapped the `ngo-shelters` rows left by the run just before — the leftover-data lesson again, not
+a code fault; after the guarded cleanup it passed.
+
+**Visual:** 1440×900 and 390×844, the NGO's register drawer and the admin's infrastructure drawer — opened, jumped to an area, a click inside an area (the green note beside the
+map), and a point in the sea (the map showing the pin and the shaded areas together, the red note under the map, the latitude's message scrolled into view); **zero horizontal
+overflow**. It caught the note sitting below the fold (moved under the map), the refusal's message hidden under the fold (scrolled into view), a blank map for a typed point
+outside the areas (now framed with them), the pin's head clipped at the top edge (head-room), and a heavy focus ring on the clicked shape (removed). Leftover `E2E` rows from the
+passes were cleaned with the guarded script (dry run, then commit; real regions, shelters and infrastructure intact).
+
+### Testing done so far (Phase-end pass)
+
+**What was run (2026-09-25).** Every item on the deferred list that a real browser and the real backend can answer was written as a spec — **81 new E2E tests in seven files** —
+and run alone (`citizen-map-deferred` 13, `citizen-shelter-resources-deferred` 17, `admin-hazard-zones-deferred` 9, `ngo-shelters-deferred` 18, `admin-facilities-deferred` 15,
+`location-picker-deferred` 5, `tablet-tables-deferred` 4), against the real backend with no stubbed responses (two routes are *delayed* or *failed*, never replaced: the flood
+overlay, to see the previous zones stay drawn, and `GET /admin/ngos`, to see the organisation names fall back). Phone runs use real touch (`hasTouch`, `isMobile`, real touch
+events for a pin drag). Seed helpers added, all guarded to `E2E …` rows: bulk shelters, essential locations, organisations (each with its own founder — an account can create only
+one organisation) and regions; a region with a hole and a round one with 2,001 vertices; a zone with a hole; a super admin; an organisation-less admin.
+
+**Unit tests: 1,202 in 129 files, all passing** (from 1,154 before the phase-end pass and its follow-ups): the marker keys, the hidden-map resize and the fly-to-a-hidden-map
+crash on real Leaflet in jsdom with a container whose size the test controls, the tab bar from the focused tab, dialog and drawer focus return (a state-opened dialog, a
+conditionally mounted one, an autofocused first field, a drawer, a real `Trigger`, an opener that has gone, a caller that objects), the location check asking afresh,
+boundary-inclusive and strict containment (edges, corners, a hole's rim, the neighbouring region), and the fresh-list retry on both pages. **Every fix was mutation-checked** —
+the test fails with the fix removed.
+
+**Full E2E suite, run spec by spec:** **all 30 spec files pass — 268 tests, 0 failed, 0 flaky, 0 skipped, about 25 minutes of test time** (the 187 that existed plus the 81
+above). Each file was run alone with one worker, with the guarded cleanup (dry run, then commit) before it — the leftover rows of one file can join another's random 0.6° world
+and fail a count (it happened three times during this pass), so a single uninterrupted run is not the safest way to run a suite that seeds spatial data. `page.goto` load-stalls
+did not return after the 2026-09-24 reboot.
+
+**The `map-preview` comparison (item 8), done at the data level.** The manifest holds ~30 samples per grid cell (19,964 in all); the backend's 3,975 `manifest-2022-epoch7` zones
+cover 197 cells. For every one of the 197, the set of stored `confidence_score` values equals the set of that cell's manifest `mean_prob` values ≥ 0.01 (the ingest floor), and
+for none does it equal the `peak_prob` values. `map-preview`'s colour stops and interpolation are the app's, stop for stop. What it does not settle is wording: see the
+*confidence* row under *Backend gaps*.
+
+**Visual:** 390×844, 768×1024 and 1024×768 for the NGO and Admin lists (users, organisations, regions with a region open, hazard zones, facilities, volunteers with a volunteer,
+shelters, organisation settings), the drawers and dialogs on a phone, and the picker over 313 nested regions (nested regions read darker where they overlap, and it stays legible
+— no lighter shading or level filter needed at this size). Cleanup after each pass with the guarded script; the real regions, shelters and infrastructure were intact throughout.
+
+**Recorded, not changed — small product questions for you:** (1) Escape closes a half-filled Register or Add drawer and the form is empty next time (outside clicks are already
+ignored) — should Escape ask first? (2) The header still offers *Register shelter* to an NGO admin whose account has no organisation; the API refuses it in words. (3) Pagination
+reads "1–20 of 4003" with no thousands separator (the facilities list has one). (4) Everything outside the shaded areas is refused by the drawers, so a shelter in Balochistan
+needs an administrator to add its region first — as the drawer says.
+
+**Not run, and why:** items 6 (second half) and 13 wait for the backend to apply the citizen floor to `risk-check`; 20 for Phase 6; 27, 35 and 43 for backend changes that do not
+exist; the two cases and the MultiPolygon zone that the real database cannot hold are covered by unit tests or are impossible. A real phone (as opposed to Chromium's touch
+emulation) and a screen reader were not used — the roles, names, focus order and live regions are asserted, not heard.
+
 ### Deferred tests (run before closing the phase)
 
-Written down for the Map, **not yet run** — implement and run them all before the phase closes, then run the full suite, fix what
+**Status of every item below — all run in the phase-end pass on 2026-09-25 unless marked.** ✅ run against the real backend (a new spec file, or a unit test where the real database cannot hold the case); ⏸ waiting on the backend or a later phase; ✗ not possible against the real database.
+
+| Items | Spec (all in `e2e/`) | Result |
+|---|---|---|
+| 1–8 Map | `citizen-map-deferred.spec.ts` (13) | ✅ 1–5, 7; ✅ 6 (the real pipeline: repeated boundaries collapse, the list equals the map, the whole country loads in seconds and under 2 MB) except its risk-check half ⏸; ✅ 8 (`map-preview` compared at the data level — see the Map bullet). ✗ two cases the real database cannot hold, covered by unit tests: "no active hazard anywhere" (the pipeline's zones cover the country) and "no regions at all". Found: markers ignored Enter/Space; the map jumped on Map ⇄ List; a phone crash on choosing a zone from the list |
+| 9–13 Shelter Detail | `citizen-shelter-resources-deferred.spec.ts` (7 of its 17) | ✅ 9–12; ⏸ 13 (the citizen floor on `risk-check`) |
+| 14–20 Resources | the same spec (10 of its 17) | ✅ 14–19; ⏸ 20 (Phase 6). Found: fast arrow keys on the tab list |
+| 21–27 Hazard Zones | `admin-hazard-zones-deferred.spec.ts` (9) | ✅ 21–26 (paging is checked against `SELECT count(*)` on the ~4,000-row real table); ⏸ 27 (backend). Found: the phone crash on Show on map; dialog focus was lost on close |
+| 28–35 NGO Shelters | `ngo-shelters-deferred.spec.ts` (18) and `tablet-tables-deferred.spec.ts` (4) | ✅ 28–34; ⏸ 35 (backend). Found: the autofocus gap in the focus fix; nine tables and panes broken at 768–1024 (see *Real bugs*) |
+| 36–43 Facilities | `admin-facilities-deferred.spec.ts` (15) | ✅ 36–42 (150 organisations across two pages, 2,000 essential locations); ⏸ 43 (backend); ✗ "a MultiPolygon zone" — `hazard_zones.boundary` is a `Polygon` column. Found: the location check's cache; the zone-edge rule |
+| 44 Location picker | `location-picker-deferred.spec.ts` (5) | ✅ a region with a hole, a 2,001-vertex outline, a region added while a drawer is open, the keyboard route, a finger panning over shaded shapes, 313 nested regions (173 KB; every shape drawn, the menu lists them all). Found: the stale region list at save |
+
+Written down for the Map (**run — see the status table above**) — implement and run them all before the phase closes, then run the full suite, fix what
 fails, re-run load-stall timeouts alone (after a reboot they should be gone), and clean the `E2E …` test data:
 
 1. **Phone run** of the same spec at 390×844 with touch: Map ⇄ List & filters keeps the map where it was; the chips scroll under the
@@ -1790,6 +2117,49 @@ Written down for **Admin Hazard Zones & Predictions**, not yet run:
 26. **Keyboard and screen reader:** the icon buttons' names (title, id, "on the map" / "Resolve"), the pills' `aria-pressed`, the slider's `aria-valuetext`, focus returning to the
     row's button after the resolve dialog closes.
 27. **When the backend adds an admin by-id route or a `source` filter:** show who declared a zone and its region on the zone page, and a Declared / Model filter on the table.
+
+Written down for **NGO Shelters**, not yet run:
+
+28. **Phone and tablet runs** of the E2E at 390×844 with touch and at 768 and 1024: rows are cards (actions top right on a tablet, stacked on a phone); the occupancy editor and its buttons fit; the register drawer
+    scrolls with the map inside it and a **touch drag of the pin** moves it (the mouse drag is covered); "Use my location" works; the edit drawer and the detail page have no overflow. Also give the earlier NGO and Admin
+    tables the same look at 768–1024, since the sidebar leaves them less room than their `md` breakpoint assumes (see *Real bugs*).
+29. **Register edge cases against the real API:** a capacity of exactly 2,147,483,647 is a real `201` and 2,147,483,648 is never sent; a very long name; the same name registered twice (the API allows it — both listed); a point on the
+    border between two regions; a comma decimal (`24,86`) refused as "has to be a number"; **a point outside every region — now refused by the drawer** (E2E-covered: nothing is sent or stored); to prove the API side once more, POST one
+    directly with the organisation's token and confirm it is listed for the organisation but returned by no region query and absent from the citizen map; registering from the empty state.
+30. **Roles and organisations:** an organisation with no shelters (the empty state, for an admin and a volunteer, against the real API); a shelter with **no managing organisation** (seed one) opened by an admin — read-only; staff of a
+    **deactivated organisation** registering and updating (the API allows it — decide the policy, see *Backend gaps*); an account with no organisation reaching the page (the real `403`).
+31. **Concurrency:** two admins editing the same shelter (the last write wins; the "was N" figure is stale until the refetch); occupancy changed in another tab while the editor is open (the refetch on window focus must not
+    lose what is typed); an edit refused after the shelter was deleted (the drawer's `404` path, with the real API).
+32. **Cross-role, both UIs:** the organisation updates occupancy and closes a shelter, and a citizen's open map card and Shelter Detail then show the new number and status after their next refetch (this spec proves it through the
+    public route, not through the citizen's screen).
+33. **Keyboard and screen reader:** the icon buttons' names ("View …", "Update occupancy for …", "Edit …"), the occupancy button's `aria-expanded`, the pills' `aria-pressed`, the editor's `aria-describedby` hint and `aria-invalid`,
+    tabbing through the register drawer (the map is skipped; the coordinate fields are the way), Escape closing a drawer without losing a half-filled form by accident (outside clicks are already ignored).
+34. **Scale:** a hundred shelters (there is no pagination): the list stays responsive, search and the pills are instant, the rows with an editor open don't jump; a thousand is a backend conversation (see *Backend gaps*).
+35. **When the backend changes:** the name, capacity and location become editable (extend the edit drawer and drop the "can't be changed" warnings), a delete exists, occupancy may exceed the capacity, the row carries its `region_id`
+    (drop the browser's point-in-polygon for listed rows) and certification is reviewed by someone else (say who certified).
+
+Written down for **Admin Facilities**, not yet run:
+
+36. **Phone and tablet runs** of the E2E at 390×844 with touch and at 768 and 1024: rows are cards (actions top right on a tablet, stacked on a phone); the tab bar scrolls sideways; the location dialog's map can be panned and zoomed
+    with touch; the Add drawer scrolls with its map and a **touch drag of the pin** moves it; the region picker, status and report dialogs fit; no overflow anywhere.
+37. **Add edge cases against the real API:** the same name added twice (both listed, indistinguishable, neither removable); a very long name; a point exactly on the border between two regions; a comma decimal (`24,86`); "Use my location" with
+    the browser's position granted (the shelter spec covers it once; this is the admin's own drawer); adding as a `super_admin`; a place added and then found under the region that contains it and under its parent province.
+38. **Scale:** "every region" with thousands of essential locations (the whole list is fetched, filtered and paged in the browser — measure the requests, the payload and the time to interact, and 25-row paging with filters); a few
+    hundred organisations for the shelters' names (`GET /admin/ngos` pages of 100); a region that is a tehsil, a district and a province each as the scope. One region's request failing can only be forced with a stub — it is
+    covered over MSW, not against the real server.
+39. **Roles and edges:** a `super_admin` sees the screen; an `ngo_volunteer` is bounced; `PATCH …/status` on an unknown and on a malformed id against the real API (`404` and `400`); a shelter with **no managing organisation** (the API omits
+    `managed_by_ngo_id`) and one whose organisation was rejected or deactivated (its name still shows); an organisation list that fails while the shelters load.
+40. **Cross-role, both UIs:** the admin sets an item to at risk and a citizen's open map card / marker colour shows it after the next refetch; the admin adds an essential location and the citizen's Local resources lists it; a citizen files a report
+    and the admin's open report log shows it after a refetch; the admin's Location dialog against a zone that is then resolved in another tab (the answer follows).
+41. **Keyboard and screen reader:** the tablist by arrow keys (unit-tested, not driven in a browser), the pills' `aria-pressed`, the status dialog's radio group and its "(current)" label, focus returning to the row's button after any dialog or
+    drawer closes, the icon buttons' names ("Location of …", "Update status of …", "Status reports for …"), the location dialog's trap and its map controls.
+42. **Hazard-check accuracy:** a point exactly on a zone's edge; a zone with a hole the point is in; a MultiPolygon zone; several stacked zones of different risk (the worst is named — unit-tested with two, not against the real pipeline's copies).
+43. **When the backend changes:** an admin list route (drop the per-root fan-out, list regionless places, page and search on the server), edit and delete for infrastructure and essential locations (add them to the rows and the drawers, drop the
+    "can't be changed" warnings), an override or lock on an essential location's status with the reporter visible to admins (add both to the report log), and a status history for infrastructure.
+44. **Location picker at scale and on devices:** the platform with hundreds of districts and tehsils — the size of `GET /regions` (every boundary), the time to draw them all on
+    the small map, the menu with hundreds of entries, and whether nested regions need lighter shading or a level filter; a region added while a drawer is open (the region list is
+    cached for 30 s — the new area appears after a refetch); regions with holes, a MultiPolygon and very complex outlines; a real phone — tap to place, drag the pin, pinch, and
+    that the shaded shapes never get in the way of panning; the keyboard route (the menu, then the coordinate fields) and a screen reader hearing the note and the refusal.
 
 
 **Exit criteria:** the shared map component is real, correct per §2.3, and reused (not
@@ -2148,7 +2518,7 @@ single spec run alone is 1–2 minutes. So from Phase 3 the work is split:
 | | The visual check | Screenshots at 1440×900 and 390×844, zero horizontal overflow |
 | | Update this plan | As-built record: deviations, bugs, and the screen's **deferred tests** |
 | **Written down, not run** | The rest of the E2E scenarios — the edge-case matrix, phone runs, cross-role flows | Listed under the phase's *Deferred tests*, in enough detail to implement later without re-deriving them |
-| **Phase end** | Implement and run the deferred list; run the **full** E2E suite | Fix what fails; re-run load-stall timeouts (`page.goto: net::ERR_ABORTED`) alone before suspecting code; then the guarded, dry-run-first cleanup of `e2e-…` accounts and `E2E …` rows |
+| **Phase end** | Implement and run the deferred list; run the **full** E2E suite — **spec by spec**, each file alone with the guarded cleanup before it (`e2e/cleanup-test-data.sql`, dry run first), because leftover spatial rows from one file can fail another's counts | Fix what fails; re-run load-stall timeouts (`page.goto: net::ERR_ABORTED`) alone before suspecting code; then the guarded, dry-run-first cleanup of `e2e-…` accounts and `E2E …` rows |
 
 **Why not all E2E at the end:** real-backend E2E found things unit tests structurally cannot — Phase 2's onboarding step
 landed on the wrong page because a route guard's redirect beat the page's own `navigate()` (only visible with the real

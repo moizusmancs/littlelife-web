@@ -2,6 +2,8 @@ import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { ReturnFocusRoot } from '@/lib/returnFocus'
+import { useReturnFocus } from '@/lib/useReturnFocus'
 
 /**
  * A modal side sheet — the same Radix dialog as `Dialog` (focus trap, Escape, scroll lock,
@@ -9,11 +11,12 @@ import { cn } from '@/lib/utils'
  * forms too long or too structured for a small confirm box. Full width on a phone. Compose it as
  * `DrawerContent > DrawerHeader + (DrawerBody + DrawerFooter inside a <form>)`.
  */
-export const Drawer = DialogPrimitive.Root
+export const Drawer = ReturnFocusRoot
 export const DrawerTrigger = DialogPrimitive.Trigger
 export const DrawerClose = DialogPrimitive.Close
 
-export function DrawerContent({ className, children, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+export function DrawerContent({ className, children, onCloseAutoFocus, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+  const returnFocus = useReturnFocus(onCloseAutoFocus)
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink-900/50" />
@@ -23,6 +26,7 @@ export function DrawerContent({ className, children, ...props }: React.Component
           className,
         )}
         {...props}
+        onCloseAutoFocus={returnFocus}
       >
         {children}
         <DialogPrimitive.Close

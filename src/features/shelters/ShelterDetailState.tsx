@@ -6,10 +6,12 @@ export interface ShelterDetailStateProps {
   /** For `error`: the message to show. */
   message?: string
   onRetry: () => void
+  /** Where "back" goes — the map by default; the organisation's page points it at its own list. */
+  back?: { to: string; label: string }
 }
 
 /** The shelter page before it has a shelter: skeleton, "no such shelter", or a failed load. Purely presentational. */
-export function ShelterDetailState({ kind, message, onRetry }: ShelterDetailStateProps) {
+export function ShelterDetailState({ kind, message, onRetry, back = { to: '/app/map', label: 'Back to map' } }: ShelterDetailStateProps) {
   if (kind === 'loading') {
     return (
       <div className="mx-auto flex max-w-5xl flex-col gap-5" aria-busy="true" aria-label="Loading shelter">
@@ -44,8 +46,8 @@ export function ShelterDetailState({ kind, message, onRetry }: ShelterDetailStat
             Try again
           </Button>
         )}
-        <Link to="/app/map" className="inline-flex h-11 items-center font-body text-label font-semibold text-primary-700 hover:underline">
-          Back to map
+        <Link to={back.to} className="inline-flex h-11 items-center font-body text-label font-semibold text-primary-700 hover:underline">
+          {back.label}
         </Link>
       </div>
     </div>

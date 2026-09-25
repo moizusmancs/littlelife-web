@@ -69,8 +69,8 @@ function ZoneDetail({ zone }: { zone: HazardZoneDetail }) {
           {notice.text}
         </Notice>
       )}
-      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-        <section aria-label="Where the zone is" className="h-80 overflow-hidden rounded-md border border-surface-border lg:col-span-2 lg:h-[26rem]">
+      <div className="grid gap-5 xl:grid-cols-3 xl:items-start">
+        <section aria-label="Where the zone is" className="h-80 overflow-hidden rounded-md border border-surface-border xl:col-span-2 xl:h-[26rem]">
           <MapCanvas
             initialBounds={bounds}
             hazards={hazards}

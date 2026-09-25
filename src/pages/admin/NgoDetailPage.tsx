@@ -67,7 +67,7 @@ export function NgoDetailPage() {
         </Notice>
       )}
 
-      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         <NgoProfileCard ngo={ngo} />
         <NgoVolunteersCard
           volunteers={volunteersQuery.data}

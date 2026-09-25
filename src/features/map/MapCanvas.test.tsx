@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { MapCanvasProps } from './MapCanvas'
 import { essentialPlace, infrastructurePlace, shelterPlace } from './mapModel'
 import { makeEssential, makeHazard, makeInfrastructure, makeShelter } from './testMap'
@@ -10,9 +10,11 @@ import { makeEssential, makeHazard, makeInfrastructure, makeShelter } from './te
 // emulation, which jsdom (it claims touch support) would otherwise run on two quick clicks with coordinates it doesn't have.
 let MapCanvas: typeof import('./MapCanvas').MapCanvas
 let LeafletMap: typeof import('leaflet').Map
+/** What every element measures — mutable, so a test can hide the map (0×0) and show it again. */
+const containerSize = { width: 800, height: 600 }
 beforeAll(async () => {
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 })
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 600 })
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => containerSize.width })
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => containerSize.height })
   ;(SVGSVGElement.prototype as unknown as { createSVGRect: () => object }).createSVGRect = () => ({})
   ;(window as unknown as { L_NO_TOUCH: boolean }).L_NO_TOUCH = true
   ;({ MapCanvas } = await import('./MapCanvas'))
@@ -42,6 +44,68 @@ function props(overrides: Partial<MapCanvasProps> = {}): MapCanvasProps {
   }
 }
 
+describe('MapCanvas — flying to a focus', () => {
+  const focus = () => ({ bounds: [[27, 68], [28, 69]] as [[number, number], [number, number]] }) // a new object each time, as the page makes one per request
+
+  it('does nothing while the map has no size, and once it is shown flies without taking the page down (flyTo divides by the size: on a map cached as 0×0 it is NaN)', async () => {
+    const errors: unknown[] = []
+    const onError = (event: ErrorEvent) => errors.push(event.error)
+    window.addEventListener('error', onError)
+    try {
+      // Mounted while hidden — the phone's list view — so Leaflet has cached 0×0.
+      containerSize.width = 0
+      containerSize.height = 0
+      const { rerender } = render(<MapCanvas {...props()} />)
+      const fly = vi.spyOn(LeafletMap.prototype, 'flyToBounds')
+      rerender(<MapCanvas {...props({ focus: focus() })} />)
+      expect(fly).not.toHaveBeenCalled() // still hidden: nothing to fly across
+
+      // Shown in the same update as a request to fly (choosing a zone in the list) — before any size observer could have run.
+      containerSize.width = 390
+      containerSize.height = 722
+      rerender(<MapCanvas {...props({ focus: focus() })} />)
+      expect(fly).toHaveBeenCalledTimes(1)
+      await new Promise((resolve) => setTimeout(resolve, 120)) // a few animation frames
+      expect(errors).toEqual([])
+      fly.mockRestore()
+    } finally {
+      window.removeEventListener('error', onError)
+      containerSize.width = 800
+      containerSize.height = 600
+    }
+  })
+})
+
+describe('MapCanvas — resizing', () => {
+  // jsdom has no ResizeObserver: a stand-in that hands the test the callback, so it can say what the container measured.
+  const observed: Array<(entries: Array<{ contentRect: { width: number; height: number } }>) => void> = []
+  beforeAll(() => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: (entries: Array<{ contentRect: { width: number; height: number } }>) => void) {
+          observed.push(callback)
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+  })
+  afterAll(() => vi.unstubAllGlobals())
+
+  it('re-measures when the container changes size, but not when it has been hidden (0×0) — measuring a hidden map pans it by half its size, and back again on the way in', () => {
+    render(<MapCanvas {...props()} />)
+    const invalidate = vi.spyOn(LeafletMap.prototype, 'invalidateSize')
+    const callback = observed[observed.length - 1]
+    callback([{ contentRect: { width: 0, height: 0 } }])
+    callback([{ contentRect: { width: 390, height: 0 } }])
+    expect(invalidate).not.toHaveBeenCalled()
+    callback([{ contentRect: { width: 390, height: 722 } }])
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    invalidate.mockRestore()
+  })
+})
+
 describe('MapCanvas — places', () => {
   it('draws each place as a focusable marker named by its name, type and status', () => {
     render(<MapCanvas {...props()} />)
@@ -55,6 +119,21 @@ describe('MapCanvas — places', () => {
     render(<MapCanvas {...props({ onSelectPlace })} />)
     await userEvent.click(screen.getByRole('button', { name: 'General Hospital, Hospital, At risk' }))
     expect(onSelectPlace).toHaveBeenCalledWith('infrastructure:i1')
+  })
+
+  it('chooses the focused marker on Enter and on Space — and on nothing else — since Leaflet leaves those to the app', async () => {
+    const onSelectPlace = vi.fn()
+    render(<MapCanvas {...props({ onSelectPlace })} />)
+    const marker = screen.getByRole('button', { name: 'General Hospital, Hospital, At risk' })
+    marker.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(onSelectPlace).toHaveBeenCalledTimes(1)
+    expect(onSelectPlace).toHaveBeenLastCalledWith('infrastructure:i1')
+    await userEvent.keyboard(' ')
+    expect(onSelectPlace).toHaveBeenCalledTimes(2)
+    await userEvent.keyboard('a')
+    await userEvent.keyboard('{Shift}')
+    expect(onSelectPlace).toHaveBeenCalledTimes(2)
   })
 
   it('labels only the selected place, with its capacity for a shelter', () => {

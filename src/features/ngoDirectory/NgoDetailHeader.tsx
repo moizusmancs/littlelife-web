@@ -32,7 +32,7 @@ export function NgoDetailHeader({ ngo, onDecide, backTo }: NgoDetailHeaderProps)
         </span>
       </nav>
 
-      <div className="flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <div
             className="flex size-14 flex-none items-center justify-center rounded-xl bg-status-trust-tint font-heading text-h3 font-bold text-status-trust"
@@ -55,7 +55,7 @@ export function NgoDetailHeader({ ngo, onDecide, backTo }: NgoDetailHeaderProps)
         </div>
 
         {canDecide(ngo) && (
-          <div className="flex flex-wrap items-center gap-3 md:flex-none">
+          <div className="flex flex-wrap items-center gap-3 lg:flex-none">
             <Button type="button" variant="dangerOutline" onClick={() => onDecide('reject')}>
               <XIcon size={16} weight="bold" aria-hidden="true" />
               Reject

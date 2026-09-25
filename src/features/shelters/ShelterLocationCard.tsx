@@ -15,13 +15,15 @@ export interface ShelterLocationCardProps {
   onLocate: () => void
   /** Something the map couldn't do (its flood zones failing to load), said under it rather than left silent. */
   mapNotice?: string
+  /** Anything else to say about the place, under the coordinates. */
+  children?: ReactNode
 }
 
 /**
  * Where the shelter is: the map, its coordinates (the API has no street address), and — only when the visitor asks — how far it is
  * from them. Nothing asks for the position on load; the button does, and a refusal is said plainly. Purely presentational.
  */
-export function ShelterLocationCard({ map, position, distanceMeters, locationStatus, onLocate, mapNotice }: ShelterLocationCardProps) {
+export function ShelterLocationCard({ map, position, distanceMeters, locationStatus, onLocate, mapNotice, children }: ShelterLocationCardProps) {
   const locating = locationStatus === 'locating'
   return (
     <section aria-labelledby="location-heading" className="flex flex-col gap-3 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm">
@@ -47,6 +49,7 @@ export function ShelterLocationCard({ map, position, distanceMeters, locationSta
           </div>
         )}
       </dl>
+      {children}
 
       {distanceMeters === null && (
         <Button type="button" variant="secondary" size="sm" className="self-start" onClick={onLocate} disabled={locating}>

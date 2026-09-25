@@ -176,3 +176,18 @@ h3 {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
+
+/* The label on a selected map marker (its name and headcount). Leaflet draws it on one line; a long shelter name would run across the
+   whole map, so let it wrap at a readable width. (The extra selector is to win over leaflet.css, which loads after this file.) */
+.leaflet-container .leaflet-tooltip {
+  width: max-content;
+  max-width: 16rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+/* A shaded region on a location picker takes the click that places the pin, and the browser gives the clicked shape a focus ring. It isn't a tab stop and does nothing from the
+   keyboard (the coordinate fields are the keyboard way), so no ring. (Extra specificity to beat the global :focus-visible above.) */
+.leaflet-container path.leaflet-interactive:focus {
+  outline: none;
+}

@@ -1,7 +1,24 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '@/mocks/server'
-import { getEssentialLocations, getInfrastructure, getShelter, getShelters, reportEssentialLocationStatus, shelterQueryKey } from './facilities'
+import {
+  MY_SHELTERS_QUERY_KEY,
+  addEssentialLocation,
+  addInfrastructure,
+  essentialReportsQueryKey,
+  getEssentialLocations,
+  getEssentialReports,
+  getInfrastructure,
+  getMyShelters,
+  getShelter,
+  getShelters,
+  registerShelter,
+  reportEssentialLocationStatus,
+  shelterQueryKey,
+  updateInfrastructureStatus,
+  updateShelter,
+  updateShelterOccupancy,
+} from './facilities'
 import { checkRisk, declareHazardZone, getAdminFloodOverlay, getAdminFloodPredictions, getAdminHazardZones, getFloodOverlay, getHazardZone, resolveHazardZone } from './floodIntel'
 
 describe('flood intelligence API', () => {
@@ -142,5 +159,82 @@ describe('admin hazard zones', () => {
   it('rejects with the status when a zone is already resolved', async () => {
     server.use(http.patch('*/admin/hazard-zones/:id/resolve', () => HttpResponse.json({ error: 'hazard zone is not active' }, { status: 400 })))
     await expect(resolveHazardZone('z1')).rejects.toMatchObject({ response: { status: 400 } })
+  })
+})
+
+describe('NGO shelter API', () => {
+  it('reads the organisation\'s shelters from /ngo/shelters — no region, and the cache key is its own', async () => {
+    let seen: { path: string; search: string } | null = null
+    server.use(http.get('*/ngo/shelters', ({ request }) => ((seen = { path: new URL(request.url).pathname, search: new URL(request.url).search }), HttpResponse.json([{ id: 'a' }]))))
+    expect(await getMyShelters()).toEqual([{ id: 'a' }])
+    expect(seen).toEqual({ path: expect.stringMatching(/\/ngo\/shelters$/), search: '' })
+    expect(MY_SHELTERS_QUERY_KEY).toEqual(['ngo', 'shelters'])
+  })
+
+  it('registers with the API\'s field names — capacity_total, a GeoJSON point — and never sends the managing organisation', async () => {
+    let body: Record<string, unknown> = {}
+    server.use(http.post('*/ngo/shelters', async ({ request }) => ((body = (await request.json()) as Record<string, unknown>), HttpResponse.json({ id: 'new' }, { status: 201 }))))
+    await registerShelter({ name: 'Community Center', type: 'relief_center', location: { type: 'Point', coordinates: [67.1, 24.9] }, capacityTotal: 200 })
+    expect(body).toEqual({ name: 'Community Center', type: 'relief_center', location: { type: 'Point', coordinates: [67.1, 24.9] }, capacity_total: 200 })
+    expect(body).not.toHaveProperty('managed_by_ngo_id')
+  })
+
+  it('PATCHes occupancy with capacity_current, always a number in the body, and encodes the id into the path', async () => {
+    let seen: { path: string; body: unknown } | null = null
+    server.use(http.patch('*/shelters/:id/occupancy', async ({ request }) => ((seen = { path: new URL(request.url).pathname, body: await request.json() }), HttpResponse.json({ id: 'a' }))))
+    await updateShelterOccupancy('a/b', 0)
+    expect(seen).toEqual({ path: expect.stringMatching(/\/shelters\/a%2Fb\/occupancy$/), body: { capacity_current: 0 } })
+  })
+
+  it('PATCHes status and certification as a partial — only the fields it is given', async () => {
+    const bodies: unknown[] = []
+    server.use(http.patch('*/shelters/:id', async ({ request }) => (bodies.push(await request.json()), HttpResponse.json({ id: 'a' }))))
+    await updateShelter('a', { status: 'closed' })
+    await updateShelter('a', { certification_status: 'certified' })
+    expect(bodies).toEqual([{ status: 'closed' }, { certification_status: 'certified' }])
+  })
+
+  it('surfaces the server\'s refusal as a rejected call with its status', async () => {
+    server.use(http.patch('*/shelters/:id/occupancy', () => HttpResponse.json({ error: 'capacity_current must be between 0 and capacity_total' }, { status: 400 })))
+    await expect(updateShelterOccupancy('a', 999)).rejects.toMatchObject({ response: { status: 400 } })
+  })
+})
+
+describe('admin facility API', () => {
+  const location = { type: 'Point' as const, coordinates: [67.05, 24.86] as [number, number] }
+
+  it('adds infrastructure with a GeoJSON point and no status — the route always starts it safe', async () => {
+    let body: Record<string, unknown> = {}
+    server.use(http.post('*/admin/infrastructure', async ({ request }) => ((body = (await request.json()) as Record<string, unknown>), HttpResponse.json({ id: 'i1' }, { status: 201 }))))
+    await addInfrastructure({ name: 'General Hospital', type: 'hospital', location })
+    expect(body).toEqual({ name: 'General Hospital', type: 'hospital', location })
+    expect(body).not.toHaveProperty('status')
+  })
+
+  it('sets an infrastructure status by PATCH with only the status, the id encoded into the path', async () => {
+    let seen: { path: string; body: unknown } | null = null
+    server.use(http.patch('*/admin/infrastructure/:id/status', async ({ request }) => ((seen = { path: new URL(request.url).pathname, body: await request.json() }), HttpResponse.json({ id: 'a' }))))
+    await updateInfrastructureStatus('a/b', 'at_risk')
+    expect(seen).toEqual({ path: expect.stringMatching(/\/admin\/infrastructure\/a%2Fb\/status$/), body: { status: 'at_risk' } })
+  })
+
+  it('adds an essential location with a point and no status — only a report ever gives it one', async () => {
+    let body: Record<string, unknown> = {}
+    server.use(http.post('*/admin/essential-locations', async ({ request }) => ((body = (await request.json()) as Record<string, unknown>), HttpResponse.json({ id: 'e1' }, { status: 201 }))))
+    await addEssentialLocation({ name: 'Corner Pharmacy', type: 'pharmacy', location })
+    expect(body).toEqual({ name: 'Corner Pharmacy', type: 'pharmacy', location })
+  })
+
+  it("reads a place's report log from its own path, keyed by id", async () => {
+    let path = ''
+    server.use(http.get('*/essential-locations/:id/status-reports', ({ request }) => ((path = new URL(request.url).pathname), HttpResponse.json([{ id: 'r1', status: 'open', created_at: '2026-09-25T00:00:00Z' }]))))
+    expect(await getEssentialReports('abc')).toEqual([{ id: 'r1', status: 'open', created_at: '2026-09-25T00:00:00Z' }])
+    expect(path).toMatch(/\/essential-locations\/abc\/status-reports$/)
+    expect(essentialReportsQueryKey('abc')).toEqual(['essential-reports', 'abc'])
+  })
+
+  it('surfaces a refusal as a rejected call with its status', async () => {
+    server.use(http.post('*/admin/infrastructure', () => HttpResponse.json({ error: 'insufficient permissions' }, { status: 403 })))
+    await expect(addInfrastructure({ name: 'X', type: 'bridge', location })).rejects.toMatchObject({ response: { status: 403 } })
   })
 })

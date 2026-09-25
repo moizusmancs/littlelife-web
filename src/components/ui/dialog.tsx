@@ -2,6 +2,8 @@ import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { ReturnFocusRoot } from '@/lib/returnFocus'
+import { useReturnFocus } from '@/lib/useReturnFocus'
 
 /**
  * Generic modal primitive — shadcn's pattern, not its generated code (same approach as every
@@ -10,11 +12,12 @@ import { cn } from '@/lib/utils'
  * built generically since "opens confirm dialog" / "opens password-confirmation dialog" recurs
  * across nearly every later NGO/Admin screen's own button spec.
  */
-export const Dialog = DialogPrimitive.Root
+export const Dialog = ReturnFocusRoot
 export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogClose = DialogPrimitive.Close
 
-export function DialogContent({ className, children, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+export function DialogContent({ className, children, onCloseAutoFocus, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>) {
+  const returnFocus = useReturnFocus(onCloseAutoFocus)
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink-900/50" />
@@ -24,6 +27,7 @@ export function DialogContent({ className, children, ...props }: React.Component
           className,
         )}
         {...props}
+        onCloseAutoFocus={returnFocus}
       >
         {children}
         <DialogPrimitive.Close

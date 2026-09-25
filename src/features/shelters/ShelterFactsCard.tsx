@@ -3,12 +3,13 @@ import type { Shelter } from '@/api/facilities'
 import { CERTIFICATION_LABEL, shelterPlace } from '@/features/map/mapModel'
 
 /** The shelter's plain facts from the API: kind, certification, when it was registered and last changed. Purely presentational. */
-export function ShelterFactsCard({ shelter }: { shelter: Shelter }) {
+export function ShelterFactsCard({ shelter, extraRows = [] }: { shelter: Shelter; /** More facts for a page that knows more (the organisation's: who manages it). */ extraRows?: Array<[string, string]> }) {
   const rows: Array<[string, string]> = [
     ['Type', shelterPlace(shelter).typeLabel],
     ['Certification', CERTIFICATION_LABEL[shelter.certification_status]],
     ['Registered', format(parseISO(shelter.created_at), 'd MMM yyyy')],
     ['Last updated', format(parseISO(shelter.updated_at), 'd MMM yyyy, HH:mm')],
+    ...extraRows,
   ]
   return (
     <section aria-labelledby="details-heading" className="flex flex-col gap-3 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm">

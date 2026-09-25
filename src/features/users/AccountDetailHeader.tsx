@@ -34,7 +34,7 @@ export function AccountDetailHeader({ account, isSelf, actions, onStatusAction, 
         </span>
       </nav>
 
-      <div className="flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <div
             className="flex size-14 flex-none items-center justify-center rounded-full bg-primary-100 font-heading text-h3 font-bold text-primary-700"
@@ -68,7 +68,7 @@ export function AccountDetailHeader({ account, isSelf, actions, onStatusAction, 
             </Button>
           )}
           {isSelf && (
-            <p className="font-body text-body-sm text-ink-500 md:max-w-64">
+            <p className="font-body text-body-sm text-ink-500 lg:max-w-64">
               This is your own account, so its status can't be changed or moderated here.
             </p>
           )}

@@ -32,17 +32,21 @@ describe('ResourceTabs', () => {
   })
 
   it('moves with the arrow keys (wrapping), Home and End', async () => {
+    // Each key is measured from the tab that has focus — `active` here never changes, as it would not for a moment when the page chooses the tab through the URL.
     const onChange = vi.fn()
-    const { rerender } = render(<ResourceTabs active="local" onChange={onChange} />)
+    render(<ResourceTabs active="local" onChange={onChange} />)
     screen.getByRole('tab', { name: 'Local resources' }).focus()
     await userEvent.keyboard('{ArrowRight}')
     expect(onChange).toHaveBeenLastCalledWith('aid')
     await userEvent.keyboard('{ArrowLeft}')
+    expect(onChange).toHaveBeenLastCalledWith('local')
+    await userEvent.keyboard('{ArrowLeft}') // wraps to the last
     expect(onChange).toHaveBeenLastCalledWith('missing')
+    await userEvent.keyboard('{Home}')
+    expect(onChange).toHaveBeenLastCalledWith('local')
     await userEvent.keyboard('{End}')
     expect(onChange).toHaveBeenLastCalledWith('missing')
-    rerender(<ResourceTabs active="missing" onChange={onChange} />)
-    await userEvent.keyboard('{Home}')
+    await userEvent.keyboard('{ArrowRight}') // wraps to the first
     expect(onChange).toHaveBeenLastCalledWith('local')
   })
 })

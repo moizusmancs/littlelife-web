@@ -104,7 +104,7 @@ export function RegionsPage() {
   }
 
   const backLink = (
-    <Link to={{ pathname: '/admin/regions', search: linkSearch }} className="inline-flex items-center gap-1.5 font-body text-label font-semibold text-primary-700 hover:underline md:hidden">
+    <Link to={{ pathname: '/admin/regions', search: linkSearch }} className="inline-flex items-center gap-1.5 font-body text-label font-semibold text-primary-700 hover:underline lg:hidden">
       <ArrowLeftIcon size={14} weight="bold" aria-hidden="true" />
       All regions
     </Link>
@@ -120,9 +120,9 @@ export function RegionsPage() {
   } else {
     const all = query.data
     content = (
-      <div className="grid gap-5 md:grid-cols-[20rem_minmax(0,1fr)] md:items-start">
+      <div className="grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start">
         <RegionTreePanel
-          className={cn(id && 'max-md:hidden')}
+          className={cn(id && 'max-lg:hidden')}
           rows={rows}
           matches={matches}
           parentPathOf={(region) => (region.parent_region_id ? pathLabel(all, region.parent_region_id) : '')}
@@ -135,7 +135,7 @@ export function RegionsPage() {
           linkSearch={linkSearch}
         />
 
-        <div className={cn('min-w-0', !id && 'max-md:hidden')}>
+        <div className={cn('min-w-0', !id && 'max-lg:hidden')}>
           {selected ? (
             <RegionDetailPanel
               region={selected}

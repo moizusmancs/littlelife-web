@@ -1,8 +1,6 @@
 import { cn } from '@/lib/utils'
-import type { CapacityInfo, Tone } from '@/features/map/mapModel'
-
-const BAR: Record<Tone, string> = { safe: 'from-status-safe to-[#7cc57f]', caution: 'from-status-caution to-[#f0c24a]', critical: 'from-status-critical to-[#ef7b7b]', neutral: 'from-ink-500 to-ink-300' }
-const PERCENT_TEXT: Record<Tone, string> = { safe: 'text-status-safe', caution: 'text-status-caution', critical: 'text-status-critical', neutral: 'text-ink-500' }
+import type { CapacityInfo } from '@/features/map/mapModel'
+import { CAPACITY_BAR, CAPACITY_PERCENT_TEXT } from './capacityTones'
 
 /**
  * A shelter's occupancy: "Capacity 210 / 400", the percentage, and a bar whose colour rises with how full it is. Over-capacity is
@@ -15,10 +13,10 @@ export function CapacityMeter({ info }: { info: CapacityInfo }) {
         <span>
           Capacity <span className="font-bold">{info.current}</span> / {info.total}
         </span>
-        <span className={cn('font-semibold', PERCENT_TEXT[info.tone])}>{info.percent}%</span>
+        <span className={cn('font-semibold', CAPACITY_PERCENT_TEXT[info.tone])}>{info.percent}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" role="progressbar" aria-label="Shelter occupancy" aria-valuemin={0} aria-valuemax={100} aria-valuenow={info.barPercent}>
-        <div className={cn('h-full rounded-full bg-linear-to-r', BAR[info.tone])} style={{ width: `${info.barPercent}%` }} />
+        <div className={cn('h-full rounded-full bg-linear-to-r', CAPACITY_BAR[info.tone])} style={{ width: `${info.barPercent}%` }} />
       </div>
       {info.over && <p className="font-body text-body-sm font-semibold text-status-critical">Over capacity — {info.current - info.total} more than it holds.</p>}
     </div>

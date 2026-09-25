@@ -77,7 +77,8 @@ const noop = () => undefined
  */
 export function HazardZonesPage() {
   const navigate = useNavigate()
-  const split = useMediaQuery('(min-width: 1024px)')
+  // The table beside the map needs ~34rem for the table *and* room for a map: the console's sidebar leaves a 1024px window only ~735px, so below 1280px it is List | Map, one at a time.
+  const split = useMediaQuery('(min-width: 1280px)')
   const [params, setParams] = useSearchParams()
   const [state, setState] = useState<ViewState>(() => readState(params))
   const [notice, setNotice] = useState<PageNotice | null>(null)
@@ -239,7 +240,7 @@ export function HazardZonesPage() {
             </div>
           )}
           <div className="flex min-h-0 flex-1 gap-4">
-            {(split || mobilePane === 'list') && <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:w-[34rem] lg:flex-none">{pane}</div>}
+            {(split || mobilePane === 'list') && <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:w-[34rem] xl:flex-none">{pane}</div>}
             <div className={cn('relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-md border border-surface-border', !split && mobilePane === 'list' && 'hidden')}>
               <MapCanvas
                 initialBounds={PAKISTAN_BOUNDS}

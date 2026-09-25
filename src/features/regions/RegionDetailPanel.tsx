@@ -69,7 +69,7 @@ export function RegionDetailPanel({ region, path, subRegions, onEdit, onAddSubRe
     <div className="flex min-w-0 flex-col gap-5">
       {backLink}
 
-      <div className={cn(card, 'flex flex-col gap-4 md:flex-row md:items-start md:justify-between')}>
+      <div className={cn(card, 'flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between')}>
         <div className="min-w-0">
           {path.length > 1 && (
             <nav aria-label="Region path" className="mb-1.5 flex flex-wrap items-center gap-1 font-body text-body-sm text-ink-500">
@@ -95,7 +95,7 @@ export function RegionDetailPanel({ region, path, subRegions, onEdit, onAddSubRe
         </Button>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 md:items-start">
+      <div className="grid gap-5 xl:grid-cols-2 xl:items-start">
         <section className={card} aria-labelledby="region-boundary-heading">
           <div className="flex items-center justify-between gap-3">
             <h3 id="region-boundary-heading" className="font-heading text-h3 font-bold text-ink-900">
