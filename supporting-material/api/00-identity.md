@@ -557,11 +557,13 @@ field in the login response / `GET /auth/me` (`"admin"` or `"super_admin"`), and
 
 ## FE-7 — NGO self-registration + admin approval/rejection
 
-**What it covers:** a verified citizen submits an NGO registration for admin review; an admin
-approves or rejects it. There is **no route for an admin to directly create an NGO** — every NGO
-in this system starts as a citizen's own submission.
+**What it covers:** a verified citizen submits an NGO registration for admin review, can check
+what became of it, and an admin lists/opens NGOs and approves or rejects them. There is **no
+route for an admin to directly create an NGO** — every NGO in this system starts as a citizen's
+own submission.
 
-**Routes:** `POST /ngos/register`, `POST /admin/ngos/{ngoID}/approve`,
+**Routes:** `POST /ngos/register`, `GET /ngos/mine`, `GET /admin/ngos`, `GET /admin/ngos/{ngoID}`,
+`GET /admin/ngos/{ngoID}/volunteers`, `POST /admin/ngos/{ngoID}/approve`,
 `POST /admin/ngos/{ngoID}/reject`.
 
 ### `POST /ngos/register`
@@ -585,7 +587,10 @@ Always creates a `status: "pending_approval"` NGO with `created_by` set to the c
 this is the account that will be promoted to `ngo_admin` *if and only if* an admin later approves
 it. A citizen can have **at most one** pending-or-active NGO registration credited to them at a
 time, enforced at the database level (a partial unique index) — attempting a second submission
-while one is still pending, or after one was already approved, fails with a `409`.
+while one is still pending, or after one was already approved, fails with a `409`. **A
+`rejected` submission does not block a new one** — the index only covers `pending_approval` and
+`active`, so a rejected applicant can simply submit again (see `GET /ngos/mine` below for how they
+find out they were rejected).
 
 **Responses**
 
@@ -598,11 +603,231 @@ while one is still pending, or after one was already approved, fails with a `409
 
 ---
 
+### `GET /ngos/mine`
+
+**Auth required:** Yes, **and** email must be verified (`RequireAuth` + `RequireVerified`) — same
+group as `POST /ngos/register`, since anyone with a submission to look up necessarily had to be
+verified to make it. No request body, no query parameters, no path parameter.
+
+**Why this exists, and how it differs from `GET /ngo/me`:** `GET /ngo/me`
+([documented below](#get-ngome)) resolves "which NGO" from the caller's `accounts.ngo_id`, which is
+only written when an admin **approves** the submission — so for a citizen whose submission is still
+pending, or was rejected, `GET /ngo/me` returns `403 {"error":"account is not affiliated with an
+ngo"}`. It's for an NGO's own staff managing an already-approved organization. **This** route is
+the one for a citizen checking on the thing they submitted, at any status.
+
+**Behavior**
+
+Returns the caller's **own most recent** NGO submission, any status (`pending_approval`, `active`,
+`rejected`, `deactivated`), looked up by who *created* it — not by NGO membership. "Most recent"
+matters because a citizen can accumulate more than one over time (a rejected submission doesn't
+block a resubmit); this always returns the latest, never an older rejected one. Scoped entirely by
+the caller's JWT — there is no way to look up anyone else's submission through this route.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success (any status) | `200 OK` | same shape as `GET /ngo/me` — see below |
+| Caller has never submitted an NGO registration | `404` | `{"error":"ngo not found"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Email not verified | `403` | `{"error":"email verification required"}` |
+
+```json
+{
+  "id": "e4122409-...",
+  "name": "Flood Relief Karachi",
+  "status": "pending_approval",
+  "contact_email": "contact@org.example",
+  "created_at": "2026-09-24T06:12:22Z",
+  "updated_at": "2026-09-24T06:12:22Z"
+}
+```
+`contact_email`/`contact_phone` are omitted entirely when unset, same as `GET /ngo/me`.
+
+**Frontend handling:**
+- **A `404` here is a normal empty state, not an error** — it just means "this account has never
+  submitted an NGO registration" (show the registration form). It is also what a plain
+  `ngo_volunteer` who never submitted anything gets.
+- Branch UI on `status`: `pending_approval` → "under review"; `rejected` → show that it was
+  rejected and offer the form again (resubmitting is allowed); `active` → approved.
+- **Only the status is available — there is no rejection reason.** The schema doesn't store one,
+  so the UI can say "rejected" but not why.
+- After approval, the applicant's **refresh tokens are revoked** (see
+  [`POST /admin/ngos/{ngoID}/approve`](#post-adminngosngoidapprove)), but an access token they
+  already hold keeps working until it expires — so this route can return `active` on an old token,
+  while `ngo_admin`-gated routes still reject that same token (it carries the old role). On seeing
+  `active`, prompt the user to **log in again** to pick up the new role, after which `GET /ngo/me`
+  works too.
+- Only the **latest** submission is returned; there is no route for a full submission history.
+
+---
+
+### `GET /admin/ngos?status=&limit=&offset=`
+
+**Auth required:** Yes, role `admin` or `super_admin` (`RequireRole`). A citizen or NGO staff
+token gets `403`.
+
+**Why this exists:** approve and reject take an `ngoID`, and before this route an admin had no way
+to discover one — the only holder of a pending NGO's id was the applicant themselves (via
+[`GET /ngos/mine`](#get-ngosmine)). This is the admin's inbox: every NGO on the platform, any
+status, with enough about who submitted it to decide.
+
+**Query parameters:** all optional.
+- `status` — one of `pending_approval`, `active`, `suspended`, `rejected`, `deactivated`. Omit (or
+  send empty) for every status. **Any other value is a `400`**, not silently ignored — ignoring it
+  would quietly show the wrong tab's data.
+- `limit` — default `20`, max `100`. **A value outside `1..100` (including `0`, negative, or
+  non-numeric) is silently replaced with `20`, not rejected** — identical to
+  [`GET /admin/accounts`](#get-adminaccountslimitoffset).
+- `offset` — default `0`. A negative or non-numeric value is silently reset to `0`.
+
+**Behavior**
+
+Plain offset pagination, **newest submission first** (`created_at` descending; ties broken by id so
+paging is stable). Not configurable, and there is no server-side text search — search by name or
+email client-side over the pages you've loaded.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success (any filter, including one that matches nothing) | `200 OK` | see shape below |
+| `status` present but not one of the five values | `400` | `{"error":"status must be one of: pending_approval, active, suspended, rejected, deactivated"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+```json
+{
+  "ngos": [
+    {
+      "id": "e4122409-...",
+      "name": "Flood Relief Karachi",
+      "status": "active",
+      "contact_email": "contact@org.example",
+      "contact_phone": "+92...",
+      "created_by_id": "48434d1b-...",
+      "created_by_email": "founder@example.com",
+      "approved_by_email": "admin@example.com",
+      "approved_at": "2026-09-20T06:44:36Z",
+      "created_at": "2026-09-19T11:02:10Z",
+      "updated_at": "2026-09-20T06:44:36Z",
+      "volunteer_count": 4,
+      "region_count": 2
+    }
+  ],
+  "total": 16,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**Field notes**
+
+- `created_by_id` / `created_by_email` — the citizen who submitted the registration, i.e. the
+  account that gets promoted to `ngo_admin` if it's approved. This is what an admin needs to judge
+  an application. It is still returned if that account was later soft-deleted. For everything else
+  about that person, call [`GET /admin/accounts/{id}`](#get-adminaccountsid) with `created_by_id`.
+- `approved_by_email` / `approved_at` — **the admin's decision, whichever way it went.** The schema
+  has no separate "rejected by", so rejecting an NGO fills these same fields. Read them as
+  "decided by / decided at", and use `status` (`active` vs `rejected`) for the outcome. **Both keys
+  are omitted entirely while the NGO is still `pending_approval`.**
+- `contact_email` / `contact_phone` — omitted entirely (not `""`) when unset, same as
+  [`GET /ngo/me`](#get-ngome).
+- `volunteer_count` — live accounts with role `ngo_volunteer` under this NGO; always equal to the
+  length of the array [`GET /admin/ngos/{ngoID}/volunteers`](#get-adminngosngoidvolunteers)
+  returns for it. `0` for a pending or rejected NGO.
+- `region_count` — how many regions are assigned to this NGO; always equal to the length of the
+  array [`GET /admin/ngos/{ngoID}/regions`](01-geo.md#get-adminngosngoidregions) returns for it. It
+  exists so a "Regions" column needs no request per row; call that route when you need the actual
+  regions. `0` for an NGO nobody has assigned regions to (e.g. one still pending).
+- `total` — the number of NGOs matching the current `status` filter, **not** just this page (and
+  not the whole table, when a filter is set).
+
+**Frontend handling:**
+- **Drive tabs with `?status=`, not by filtering one loaded page.** The list is paginated (max 100
+  per page), so filtering client-side only sees what you've loaded, and counts computed that way
+  are wrong once there are more NGOs than one page.
+- **Tab counts:** request `?status=<tab>&limit=1` per tab and read `total`; the sum across all five
+  statuses equals the unfiltered `total`.
+- **A `suspended` tab will always be empty in practice** — the status exists, but no route sets an
+  NGO to it. `deactivated` is reached only by an NGO deactivating itself
+  ([`POST /ngo/me/deactivate`](#post-ngomedeactivate)).
+- **No rejection reason.** Neither route takes a body and the schema has nowhere to store one, so a
+  reject dialog can only be a confirmation.
+- After [approve](#post-adminngosngoidapprove) or [reject](#post-adminngosngoidreject), the row's
+  `status`, `approved_by_email` and `approved_at` change — refetch rather than patching locally.
+
+---
+
+### `GET /admin/ngos/{ngoID}`
+
+**Auth required:** Yes, role `admin` or `super_admin`.
+
+**Path parameter:** `ngoID` — the NGO's UUID.
+
+**Behavior**
+
+One NGO, any status. The body is **exactly one item of the `ngos` array above** — same fields,
+same omission rules — so a detail page can be built from a list row it already has and refreshed
+from here.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | one NGO object (shape above) |
+| `ngoID` not a valid UUID | `400` | `{"error":"invalid ngo id"}` |
+| No NGO with that ID | `404` | `{"error":"ngo not found"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+---
+
+### `GET /admin/ngos/{ngoID}/volunteers`
+
+**Auth required:** Yes, role `admin` or `super_admin`.
+
+**Path parameter:** `ngoID` — the NGO's UUID.
+
+**Behavior**
+
+The volunteer roster of **any** NGO, read-only — the admin-side counterpart of
+[`GET /ngo/volunteers`](#get-ngovolunteers), which an NGO's own admin uses for their own NGO. Same
+set of accounts, same response shape: a bare array (not wrapped in an object, not paginated).
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | array of `{"id","email","status","created_at"}` |
+| NGO exists but has no volunteers (e.g. still pending) | `200 OK` | `[]` |
+| `ngoID` not a valid UUID | `400` | `{"error":"invalid ngo id"}` |
+| No NGO with that ID | `404` | `{"error":"ngo not found"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+```json
+[
+  {
+    "id": "9b7a0f52-...",
+    "email": "volunteer@example.com",
+    "status": "active",
+    "created_at": "2026-08-14T09:30:00Z"
+  }
+]
+```
+
+**Frontend handling:** an unknown NGO id is a `404`, **not** an empty list — so `[]` reliably means
+"this NGO has no volunteers", never "wrong id".
+
+---
+
 ### `POST /admin/ngos/{ngoID}/approve`
 
 **Auth required:** Yes, role `admin` or `super_admin` (`RequireRole`). No request body.
 
-**Path parameter:** `ngoID` — the NGO's UUID.
+**Path parameter:** `ngoID` — the NGO's UUID. Get it from [`GET /admin/ngos`](#get-adminngosstatuslimitoffset).
 
 **Behavior**
 
@@ -666,12 +891,17 @@ path parameter, and no way to view or edit an NGO you don't belong to through th
 **Auth required:** Yes. Open to **any** NGO staff — both `ngo_admin` and `ngo_volunteer` (no
 `RequireRole` on this specific route, unlike the two below).
 
+**Note — this is not the route for checking on a submission that's still pending.** It resolves
+through NGO *membership*, which only exists after an admin approves. A citizen whose NGO
+registration is pending or rejected gets the `403` below; they want
+[`GET /ngos/mine`](#get-ngosmine) instead.
+
 **Responses**
 
 | Condition | Status | Body |
 |---|---|---|
 | Success | `200 OK` | see shape below |
-| Caller has no NGO affiliation (plain citizen, or admin/super_admin) | `403` | `{"error":"account is not affiliated with an ngo"}` |
+| Caller has no NGO affiliation (plain citizen, admin/super_admin, **or a citizen whose NGO registration is still pending/rejected**) | `403` | `{"error":"account is not affiliated with an ngo"}` |
 
 ```json
 {

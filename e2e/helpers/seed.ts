@@ -1074,3 +1074,59 @@ export function readEssentialReportStatuses(placeId: string): string[] {
     WHERE r.essential_location_id = ${lit(placeId)}::uuid AND l.name LIKE 'E2E %'`)
   return JSON.parse(out) as string[]
 }
+
+export interface SeedFeedReport {
+  category: 'flooding' | 'blocked_road' | 'other_hazard'
+  /** Omit for a report with no description (the column is nullable). */
+  description?: string
+  lng: number
+  lat: number
+  status?: 'reported' | 'verified' | 'in_progress' | 'resolved' | 'rejected'
+  autoVerified?: boolean
+  upvotes?: number
+  downvotes?: number
+  minutesAgo: number
+}
+
+/** One incident report filed by an `e2e-` account, with the vote totals given (the counters only — no vote rows), for the Community Feed. Returns its id. */
+export function seedFeedReport(email: string, report: SeedFeedReport): string {
+  assertE2eEmail(email)
+  return psql(`
+    INSERT INTO incident_reports (reporter_account_id, category, description, location, status, auto_verified, upvote_count, downvote_count, verified_at, created_at, updated_at)
+    SELECT a.id, ${lit(report.category)}::incident_category, ${report.description === undefined ? 'NULL' : lit(report.description)}, ${point(report.lng, report.lat)},
+           ${lit(report.status ?? 'reported')}::incident_status, ${report.autoVerified ? 'true' : 'false'}, ${Math.trunc(report.upvotes ?? 0)}, ${Math.trunc(report.downvotes ?? 0)},
+           ${report.status === 'verified' ? 'now()' : 'NULL'}, now() - interval '${Math.trunc(report.minutesAgo)} minutes', now() - interval '${Math.trunc(report.minutesAgo)} minutes'
+    FROM accounts a WHERE lower(a.email) = lower(${lit(email)}) AND a.deleted_at IS NULL
+    RETURNING id`)
+}
+
+/** A media row on a report an `e2e-` account filed — the URL is stored as given (no file is uploaded anywhere), so nothing is left behind on disk. */
+export function seedReportMedia(reportId: string, mediaUrl: string, mediaType: 'photo' | 'video' = 'photo') {
+  psql(`
+    INSERT INTO incident_report_media (incident_report_id, media_type, media_url)
+    SELECT r.id, ${lit(mediaType)}::media_type, ${lit(mediaUrl)} FROM incident_reports r
+    JOIN accounts a ON a.id = r.reporter_account_id
+    WHERE r.id = ${lit(reportId)} AND a.email LIKE 'e2e-%'`)
+}
+
+/** Read-only: the votes stored on a report an `e2e-` account filed, as `email:vote_type`, sorted — to check a vote really landed. */
+export function readReportVotes(reportId: string): string[] {
+  const out = psql(`
+    SELECT a.email || ':' || v.vote_type FROM incident_report_votes v JOIN accounts a ON a.id = v.account_id
+    WHERE v.incident_report_id = ${lit(reportId)} ORDER BY 1`)
+  return out === '' ? [] : out.split('\n')
+}
+
+/** Read-only: a report's stored counters as `up/down`. */
+export function readReportCounts(reportId: string): string {
+  return psql(`SELECT upvote_count || '/' || downvote_count FROM incident_reports WHERE id = ${lit(reportId)}`)
+}
+
+/** Deletes a report an `e2e-` account filed (its votes and media first) — to make a page's copy stale behind its back. */
+export function deleteFeedReport(reportId: string) {
+  psql(`
+    WITH r AS (SELECT r.id FROM incident_reports r JOIN accounts a ON a.id = r.reporter_account_id WHERE r.id = ${lit(reportId)} AND a.email LIKE 'e2e-%'),
+         v AS (DELETE FROM incident_report_votes WHERE incident_report_id IN (SELECT id FROM r)),
+         m AS (DELETE FROM incident_report_media WHERE incident_report_id IN (SELECT id FROM r))
+    DELETE FROM incident_reports WHERE id IN (SELECT id FROM r)`)
+}

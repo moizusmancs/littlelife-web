@@ -36,7 +36,8 @@ export function CitizenLayout({ fullBleed = false }: { fullBleed?: boolean }) {
   return (
     <div className={cn('flex flex-col bg-surface-base', fullBleed ? 'h-dvh overflow-hidden' : 'min-h-screen')}>
       <header className="sticky top-0 z-20 border-b border-surface-border bg-surface-raised">
-        <div className="mx-auto flex h-16 max-w-360 items-center gap-4 px-4 md:px-6">
+        {/* Tighter gaps below `sm`: at 320px the logo and the four round buttons overran the screen by 5px with the wider ones. */}
+        <div className="mx-auto flex h-16 max-w-360 items-center gap-2 px-4 sm:gap-4 md:px-6">
           <NavLink to="/app/home" className="flex flex-none items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-md bg-linear-to-br from-primary-500 to-peach-400">
               <LifebuoyIcon weight="fill" className="text-white" size={20} />
@@ -62,7 +63,7 @@ export function CitizenLayout({ fullBleed = false }: { fullBleed?: boolean }) {
             ))}
           </nav>
 
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               className="flex size-10 items-center justify-center rounded-full text-ink-700 hover:bg-surface-sunken"

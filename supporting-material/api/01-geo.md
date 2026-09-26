@@ -161,8 +161,9 @@ treats an invalid parent as a validation failure of the request, not a missing-r
 All four fields (`name`, `level`, `parent_region_id`, `boundary`) are optional/nilable — omit
 anything you don't want to change. `parent_region_id` has three distinct states on this route: omit
 it (unchanged), send `""` (clear to "no parent" — makes this region top-level), or send a real UUID
-(set/change the parent). A region **cannot be set as its own parent** — sending this region's own
-`id` as `parent_region_id` fails.
+(set/change the parent). A region **cannot be set as its own parent, nor under one of its own
+descendants** (its child, grandchild, …) — either would turn the hierarchy into a loop, so both
+fail.
 
 **Responses**
 
@@ -177,6 +178,7 @@ it (unchanged), send `""` (clear to "no parent" — makes this region top-level)
 | `boundary` present but empty/blank | `400` | `{"error":"boundary is required"}` |
 | `parent_region_id` present, non-empty, not a valid UUID | `400` | `{"error":"parent_region_id is not a valid uuid"}` |
 | `parent_region_id` set to this region's own `id` | `400` | `{"error":"region cannot be its own parent"}` |
+| `parent_region_id` set to one of this region's own descendants (would create a loop) | `400` | `{"error":"parent_region_id would create a loop: that region is a descendant of this one"}` |
 | `parent_region_id` well-formed but references a nonexistent region | `400` | `{"error":"parent region not found"}` |
 
 **Frontend handling:** because this is a real partial patch, if your admin UI shows a full "edit
@@ -184,6 +186,14 @@ region" form, only include fields the user actually changed in the PATCH body �
 every field on every save (harmless for `name`/`level`/`boundary` since re-sending the current
 value is a no-op, but re-sending `parent_region_id: ""` when the user didn't touch that field would
 incorrectly detach the region from its real parent).
+
+**Parent picker:** when the admin re-parents a region, leave that region **and all of its
+descendants** out of the picker — the server rejects them (see the loop row above), so offering them
+only produces an error. The loop check runs only when the parent is actually **changing**:
+re-sending the current `parent_region_id`, clearing it with `""`, or editing any other field never
+triggers it. If two admins make opposite changes at the same moment (A under B and B under A), the
+backend serialises them, so exactly one succeeds and the other gets the `400` above — treat it as a
+normal "someone changed this, reload" case.
 
 ---
 
@@ -195,6 +205,8 @@ donate to, or an admin evaluating NGO coverage, ultimately reads this; the route
 [documented there](00-identity.md#fe-8-partial--ngo-organization-profile).)
 
 **Routes:** `GET /ngo/me/regions`, `POST /ngo/me/regions`, `DELETE /ngo/me/regions/{regionID}`.
+(The read-only **admin** side of this — which NGOs cover a region, and which regions an NGO
+covers — is [documented below](#fe-8-admin-side--ngo-and-region-coverage-read-only).)
 
 All three resolve "which NGO" from the caller's **own account**, the same way Identity's
 `GET /ngo/me` does — there is no path parameter for the NGO itself, and no way to view or edit
@@ -275,6 +287,163 @@ an empty body** — do not attempt to parse a JSON response on success for this 
 Note the last row: unlike `POST`, this route does **not** distinguish "region doesn't exist" from
 "region exists but isn't assigned to your NGO" — both produce the identical `404`, since the
 `DELETE` just matches zero rows either way and there's no separate existence check first.
+
+---
+
+## FE-8 (admin side) — NGO and region coverage, read-only
+
+**What it covers:** the two questions an admin has about NGO coverage that the self-service routes
+above can't answer — *which NGOs cover this region?* (an "NGOs covering this region" card on the
+admin region page) and *which regions does this NGO cover?* (a regions card on the admin NGO detail
+page). Both are read-only, admin-only, and need nothing beyond the existing `ngo_regions` data.
+
+**Routes:** `GET /admin/regions/{regionID}/ngos`, `GET /admin/ngos/{ngoID}/regions`.
+
+Both are served by Geo but return NGO data that Identity owns, which is why the NGO fields below
+match [`GET /admin/ngos`](00-identity.md#get-adminngosstatuslimitoffset) exactly.
+
+### `GET /admin/regions/{regionID}/ngos?status=`
+
+**Auth required:** Yes, role `admin` or `super_admin` (`RequireRole`). A citizen or NGO staff token
+gets `403`.
+
+**Path parameter:** `regionID` — the region's UUID.
+
+**Query parameters:** optional.
+- `status` — one of `pending_approval`, `active`, `suspended`, `rejected`, `deactivated`. Omit (or
+  send empty) for every status. **Any other value is a `400`**, not silently ignored.
+
+**Behavior**
+
+The NGOs **assigned to this region**, alphabetical by name (case-insensitive), as a **bare array —
+not paginated** (the number of NGOs per region is small). Every status is included unless
+`?status=` narrows it, so the UI can show the status badge per row.
+
+**Direct assignments only.** An NGO assigned to a *parent* region (an NGO on "Sindh") is **not**
+listed under its child ("Sukkur"), and vice versa. This is "who explicitly claims this region", not
+"everything an NGO can act on": elsewhere in the API, an NGO posting a community update needs an
+exact region match, while incident-report access is decided by the report's *location* falling
+inside any of the NGO's regions — so a province-level NGO can act on district incidents without
+appearing in the district's list here.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success (including a region nobody covers, or a filter that matches nothing) | `200 OK` | array, possibly empty |
+| `regionID` not a valid UUID | `400` | `{"error":"regionID must be a valid uuid"}` |
+| `status` present but not one of the five values | `400` | `{"error":"status must be one of: pending_approval, active, suspended, rejected, deactivated"}` |
+| No region with that ID | `404` | `{"error":"region not found"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+```json
+[
+  {
+    "id": "e4122409-...",
+    "name": "Flood Relief Karachi",
+    "status": "active",
+    "contact_email": "contact@org.example",
+    "contact_phone": "+92...",
+    "created_by_id": "48434d1b-...",
+    "created_by_email": "founder@example.com",
+    "approved_by_email": "admin@example.com",
+    "approved_at": "2026-09-20T06:44:36Z",
+    "created_at": "2026-09-19T11:02:10Z",
+    "updated_at": "2026-09-20T06:44:36Z",
+    "volunteer_count": 4,
+    "region_count": 2,
+    "assigned_at": "2026-09-21T08:15:00Z"
+  }
+]
+```
+
+**Field notes**
+
+- Every field except `assigned_at` is **identical** to one item of
+  [`GET /admin/ngos`](00-identity.md#get-adminngosstatuslimitoffset), including which keys are
+  omitted (`contact_*` when unset; `approved_by_email` / `approved_at` while `pending_approval`) and
+  what `approved_by_email` / `approved_at` mean (the admin's decision, approve *or* reject). Reuse
+  the same NGO type and status badge.
+- `assigned_at` — when **this region** was assigned to the NGO (`ngo_regions.created_at`), not when
+  the NGO was created.
+- `region_count` — how many regions the NGO covers **in total**, not just this one.
+
+**Frontend handling:** an unknown region id is a `404`, **not** an empty list — so `[]` reliably
+means "no NGO covers this region", never "wrong id".
+
+---
+
+### `GET /admin/ngos/{ngoID}/regions`
+
+**Auth required:** Yes, role `admin` or `super_admin`.
+
+**Path parameter:** `ngoID` — the NGO's UUID.
+
+**Behavior**
+
+The regions assigned to **any** NGO — the admin counterpart of
+[`GET /ngo/me/regions`](#get-ngomeregions), which an NGO's own staff use for their own NGO. Bare
+array, alphabetical by region name (case-insensitive), not paginated.
+
+**Unlike `GET /ngo/me/regions`, `boundary` is not included.** It is the heavy field, and the admin
+NGO page only needs names — so this is not that route with a different caller.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | array, possibly empty |
+| NGO exists but covers no regions (e.g. still pending) | `200 OK` | `[]` |
+| `ngoID` not a valid UUID | `400` | `{"error":"ngoID must be a valid uuid"}` |
+| No NGO with that ID | `404` | `{"error":"ngo not found"}` |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+```json
+[
+  {
+    "id": "3fb9eb2f-...",
+    "name": "Sukkur",
+    "level": "district",
+    "parent_region_id": "83754148-...",
+    "path": "Sindh › Sukkur",
+    "assigned_at": "2026-08-06T07:19:47Z"
+  },
+  {
+    "id": "a17c22d0-...",
+    "name": "Sukkur City",
+    "level": "tehsil",
+    "parent_region_id": "3fb9eb2f-...",
+    "path": "Sindh › Sukkur › Sukkur City",
+    "assigned_at": "2026-08-06T07:19:47Z"
+  }
+]
+```
+
+**Field notes**
+
+- `parent_region_id` — omitted entirely (not `""`) for a region with no parent, same as
+  [`GET /regions`](#get-regionslevelparent_region_id).
+- `path` — the region's ancestors from the top down, then the region itself, joined with ` › `
+  (a space, U+203A, a space). A region with no parent has `path` equal to its own `name`. It is
+  there so the page can show "Sindh › Sukkur" without loading the whole region list just to look
+  up parents.
+- `assigned_at` — when the region was assigned to this NGO (`ngo_regions.created_at`).
+
+**Frontend handling:**
+- **Naming of the `400`:** this route is served by Geo, so its bad-id message follows Geo's
+  `<param> must be a valid uuid` convention, while Identity's sibling routes under the same
+  `/admin/ngos/{ngoID}/…` prefix say `invalid ngo id`. Branch on the status code, not the text.
+- `[]` means the NGO exists and covers nothing; an unknown NGO is a `404`.
+- To fill a "Regions" column on the NGO list without a request per row, use `region_count` from
+  [`GET /admin/ngos`](00-identity.md#get-adminngosstatuslimitoffset) — it always equals the length
+  of this array.
+- `path` is computed by walking parent links with a depth limit of 10 (real hierarchies are three
+  levels). [`PATCH /admin/regions/{id}`](#patch-adminregionsid) rejects any change that would create
+  a parent loop, so one can no longer be created through the API; the limit stays as a safeguard
+  for data that predates that check, where a looped region returns a repetitive `path` instead of
+  hanging the request.
 
 ---
 

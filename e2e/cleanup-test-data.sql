@@ -29,6 +29,9 @@ UNION ALL SELECT 'safety connections of test accounts', count(*) FROM safety_con
 UNION ALL SELECT 'safety connections with a REAL account on the other side (must be 0)', count(*) FROM safety_connections
   WHERE (requester_account_id IN (SELECT id FROM t_accounts)) <> (recipient_account_id IN (SELECT id FROM t_accounts))
 UNION ALL SELECT 'incident reports by test accounts', count(*) FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'community updates by test accounts', count(*) FROM community_updates WHERE author_account_id IN (SELECT id FROM t_accounts)
+UNION ALL SELECT 'community updates by REAL accounts aimed at E2E regions (must be 0)', count(*) FROM community_updates
+  WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %') AND author_account_id NOT IN (SELECT id FROM t_accounts)
 UNION ALL SELECT 'aid requests by test accounts', count(*) FROM aid_requests WHERE requester_account_id IN (SELECT id FROM t_accounts)
 UNION ALL SELECT 'missing persons by test accounts', count(*) FROM missing_persons WHERE reported_by_account_id IN (SELECT id FROM t_accounts)
 UNION ALL SELECT 'donation campaigns by test accounts', count(*) FROM donation_campaigns WHERE organizer_account_id IN (SELECT id FROM t_accounts)
@@ -60,6 +63,11 @@ BEGIN
      OR EXISTS (SELECT 1 FROM essential_locations WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %') AND name NOT LIKE 'E2E %') THEN
     RAISE EXCEPTION 'a non-test place sits in an E2E region; not touching it';
   END IF;
+  -- A real account's official update aimed at a test region is theirs; deleting the region would fail on it anyway.
+  IF EXISTS (SELECT 1 FROM community_updates WHERE region_id IN (SELECT id FROM regions WHERE name LIKE 'E2E %')
+             AND author_account_id NOT IN (SELECT id FROM t_accounts)) THEN
+    RAISE EXCEPTION 'a real account posted a community update to an E2E region; not touching it';
+  END IF;
 END $$;
 
 \echo == deleting (in dependency order)
@@ -80,6 +88,8 @@ DELETE FROM location_trail        WHERE account_id IN (SELECT id FROM t_accounts
 DELETE FROM incident_report_votes  WHERE account_id IN (SELECT id FROM t_accounts) OR incident_report_id IN (SELECT id FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts));
 DELETE FROM incident_report_media  WHERE incident_report_id IN (SELECT id FROM incident_reports WHERE reporter_account_id IN (SELECT id FROM t_accounts));
 DELETE FROM incident_reports       WHERE reporter_account_id IN (SELECT id FROM t_accounts);
+-- Official updates posted by a test admin (they point at the author and, when not platform-wide, at a region).
+DELETE FROM community_updates      WHERE author_account_id IN (SELECT id FROM t_accounts);
 DELETE FROM missing_person_sightings WHERE reported_by_account_id IN (SELECT id FROM t_accounts) OR missing_person_id IN (SELECT id FROM missing_persons WHERE reported_by_account_id IN (SELECT id FROM t_accounts));
 DELETE FROM missing_persons        WHERE reported_by_account_id IN (SELECT id FROM t_accounts);
 DELETE FROM donations              WHERE donor_account_id IN (SELECT id FROM t_accounts) OR campaign_id IN (SELECT id FROM donation_campaigns WHERE organizer_account_id IN (SELECT id FROM t_accounts)) OR allocated_to_aid_request_id IN (SELECT id FROM aid_requests WHERE requester_account_id IN (SELECT id FROM t_accounts));
@@ -121,6 +131,7 @@ SELECT 'status reports left', count(*) FROM essential_location_status_reports UN
 SELECT 'safety_connections left', count(*) FROM safety_connections UNION ALL
 SELECT 'location_trail left', count(*) FROM location_trail UNION ALL
 SELECT 'incident_reports left', count(*) FROM incident_reports UNION ALL
+SELECT 'community_updates left', count(*) FROM community_updates UNION ALL
 SELECT 'aid_requests left', count(*) FROM aid_requests UNION ALL
 SELECT 'missing_persons left', count(*) FROM missing_persons UNION ALL
 SELECT 'donation_campaigns left', count(*) FROM donation_campaigns UNION ALL

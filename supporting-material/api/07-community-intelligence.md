@@ -5,13 +5,13 @@ Read [README.md](README.md) first for base URL, auth header, error shape, and `P
 Community Intelligence owns citizen-submitted **incident reports** (with photo/video evidence,
 crowdsourced upvote/downvote credibility, AI-assisted classification, and a full admin/NGO review
 lifecycle) and **community updates** (short official announcements posted by admins or NGOs). This
-is the largest phase documented so far — 16 routes — and the first one with genuine
+is the largest phase documented so far — 17 routes — and the first one with genuine
 `multipart/form-data` uploads instead of JSON bodies.
 
 | Group | Base path | Middleware |
 |---|---|---|
 | incident report submission/media | `/incident-reports`, `/incident-reports/{id}/media` | `RequireAuth` on `POST`; the two `GET`s are public |
-| votes | `/incident-reports/{id}/votes` | `RequireAuth` |
+| votes | `/incident-reports/{id}/votes`, `/incident-reports/my-votes` | `RequireAuth` |
 | status (citizen-facing route) | `/incident-reports/{id}/status` | `RequireAuth`, `RequireRole("admin", "super_admin")` |
 | community updates | `/community-updates` | `RequireAuth` + `RequireRole("admin","super_admin","ngo_admin")` on `POST`; `GET` is public |
 | AI ingestion | `/internal/incident-reports/{id}/ai-classification` | `X-Internal-Service-Key` header — **not** a user credential |
@@ -183,7 +183,7 @@ throughout this API; just returns `[]`.
 
 ## FE-3 (M10) — Upvote/downvote
 
-**Routes:** `POST /incident-reports/{id}/votes`, `DELETE /incident-reports/{id}/votes`.
+**Routes:** `POST /incident-reports/{id}/votes`, `DELETE /incident-reports/{id}/votes`, `GET /incident-reports/my-votes`.
 
 ### `POST /incident-reports/{id}/votes`
 
@@ -235,6 +235,40 @@ you have no vote to remove still succeeds.
 |---|---|---|
 | Always (well-formed `id`, authenticated) | **`204 No Content`** | *(empty)* — whether or not a vote actually existed |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
+
+---
+
+### `GET /incident-reports/my-votes?ids=`
+
+**Auth required:** Yes — any authenticated account (whoever can vote can read their own votes).
+
+**Behavior**
+
+Returns **only the caller's own** votes, so a client can draw which way they voted (a pressed
+button) after a reload or on another device. `GET /incident-reports` stays public and carries only
+the totals.
+
+- `ids` (optional) — comma-separated report ids (spaces around each are tolerated), at most 100.
+  Absent = every vote the caller has cast. Present but empty (`?ids=`) matches nothing → `[]`.
+- One entry per report the caller has voted on (at most one each). A report the caller hasn't
+  voted on, or an unknown id in `ids`, is simply **absent** — never a `404`.
+- Newest first. `vote_type` uses the same values `POST …/votes` takes.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success (including no votes) | `200 OK` | array below, `[]` when none |
+| No/invalid token | `401` | the usual auth error |
+| `ids` present but not comma-separated UUIDs | `400` | `{"error":"ids must be comma-separated uuids"}` |
+| More than 100 ids | `400` | `{"error":"at most 100 ids"}` |
+
+```json
+[
+  { "incident_report_id": "032a2312-...", "vote_type": "upvote",   "created_at": "2026-09-26T11:00:31Z" },
+  { "incident_report_id": "d0acfd23-...", "vote_type": "downvote", "created_at": "2026-09-25T08:14:02Z" }
+]
+```
 
 ---
 
@@ -416,7 +450,7 @@ incident half (the credibility half is Trust's `GET /accounts/{id}/trust-score`,
 | Both provided | `400` | `{"error":"region_id and bbox are mutually exclusive"}` |
 | Neither provided | `400` | `{"error":"region_id or bbox is required"}` |
 | `region_id` provided, not a valid UUID | `400` | `{"error":"region_id must be a valid uuid"}` |
-| `bbox` provided, malformed (not exactly 4 comma-separated numbers, or fails range/order checks) | `400` | same family of messages as Flood Intelligence's own `GET /map/flood-overlay?bbox=` — see [that route's own table](03-flood-intelligence.md#get-mapflood-overlaybboxwestsoutheastnorth) for the exact per-case wording |
+| `bbox` provided, malformed (not exactly 4 comma-separated numbers, or fails range/order checks) | `400` | same family of messages as Flood Intelligence's own `GET /map/flood-overlay?bbox=` — see [that route's own table](03-flood-intelligence.md#get-mapflood-overlaybboxwestsoutheastnorthmin_risk) for the exact per-case wording |
 | Success (either filter) | `200 OK` | array, possibly empty, the shared `incidentReportResponse` shape |
 
 There is **no unscoped "every report in the country" mode** on this route — one of the two spatial

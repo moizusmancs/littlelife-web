@@ -28,7 +28,7 @@ is missing here.
 | 6 | Trust (safety connections + live GPS WS, trust scores, moderation actions) | [06-trust.md](06-trust.md) | Complete |
 | 7 | Community Intelligence (incident reports, votes, AI classification, community updates) | [07-community-intelligence.md](07-community-intelligence.md) | Complete |
 | 8 | Trust, follow-up: `credibility_events` | — | **Not built.** No migration, no route, no code exists for this phase yet — confirmed by checking the repo directly, not an oversight in this index. Skip it; there is nothing to document. |
-| 9 | Relief Operations, core (aid requests, donation campaigns + lifecycle, missing persons) | [09-relief-operations.md](09-relief-operations.md) | Complete |
+| 9 | Relief Operations, core (aid requests, donation campaigns + lifecycle, missing persons, NGO region-scoped lists, aid-quality feedback) | [09-relief-operations.md](09-relief-operations.md) | Complete |
 
 Phase numbers follow `IMPLEMENTATION_ROADMAP.md`'s own numbering, not a sequential count — **Phase
 2** ("Identity NGO support") is covered entirely within Phase 0's file (it's the same

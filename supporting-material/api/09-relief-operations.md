@@ -5,7 +5,7 @@ Read [README.md](README.md) first for base URL, auth header, error shape, and `P
 Relief Operations owns **aid requests** (a citizen asking for help, tracked through a role-scoped
 lifecycle), **donation campaigns** and the **donation lifecycle** that funds them
 (collection → allocation → delivery), and **missing person reports** with crowdsourced
-**sightings**. This is the newest bounded context in the backend — 21 routes across four
+**sightings**, plus **feedback** on aid quality. This is the newest bounded context in the backend — 25 routes across five
 aggregates, all built in one continuous phase, so the design patterns are the most consistent of
 any phase documented so far (the same three-way role split, the same `uuid.Nil`-as-sentinel guard,
 and the same "existence checked before authorization" ordering repeat across nearly every write
@@ -17,7 +17,38 @@ route below).
 | donation campaigns | `/donation-campaigns*` | `RequireAuth` on write routes; both `GET`s are public ("full transparency") |
 | donations | `/donation-campaigns/{id}/donations`, `/donations/{id}/*` | `RequireAuth` on every route (including the `GET`, unlike campaigns themselves) |
 | missing persons + sightings | `/missing-persons*` | `RequireAuth` on `POST`s and the status `PATCH`; both `GET`s are public |
+| `ngo` | `/ngo/aid-requests`, `/ngo/missing-persons`, `/ngo/feedback` | `RequireAuth` only — no `RequireRole`; open to any NGO staff member, authorization comes from the NGO-region / NGO-ownership check inside the route |
+| feedback | `POST /feedback` | `RequireAuth`; what the caller may rate depends on the target, resolved inside the use case |
 | `admin` | `/admin/missing-persons`, `/admin/donation-campaigns`, `/admin/aid-requests` | `RequireAuth`, `RequireRole("admin", "super_admin")` |
+
+### Who filed it: `requester_name` and `reported_by_name`
+
+Every aid request carries `requester_account_id`, and every missing-person report carries
+`reported_by_account_id`. Wherever a record is returned to someone **other than the person who
+filed it** — NGO staff and admins — the response also carries that person's **display name**:
+`requester_name` on aid requests, `reported_by_name` on missing-person reports (the latter is the
+*reporter's* name; the missing person's own name is the report's `name`).
+
+| Route | Name included? |
+|---|---|
+| `GET /ngo/aid-requests`, `GET /ngo/missing-persons` | yes |
+| `GET /admin/aid-requests`, `GET /admin/missing-persons` | yes |
+| `GET /aid-requests/{id}` | yes for NGO staff and admins; **no** for the requester |
+| `PATCH /aid-requests/{id}/status`, `PATCH /missing-persons/{id}/status` | yes in the response to NGO staff and admins; **no** in the response to the requester / reporter |
+| `POST /aid-requests`, `GET /aid-requests?mine=true`, `POST /missing-persons` | no — these are the caller's own records |
+| `GET /missing-persons?region_id=` (public) | **never** — the public list does not reveal who reported someone missing |
+
+- **A name, nothing more.** No email, phone or other contact detail is returned anywhere; NGO
+  staff have no route that turns an account id into one.
+- **The key is omitted, not `""`,** when there is no name to show: the person never set one (an
+  account starts with a blank name) or their account no longer exists. Treat "absent" as "name not
+  provided" and pick your own fallback text; it is not an error.
+- **A deleted account is never named.** Its requests and reports stay in the lists (with the
+  account id), but the name is no longer returned.
+- **Names are read at request time,** not stored on the record. If the person renames themselves,
+  the next fetch shows the new name — so don't cache names beyond the screen that displays them.
+- On the `PATCH` routes the name is included in the response so a client that replaces a list row
+  with the response does not lose the name it was showing.
 
 ---
 
@@ -100,7 +131,7 @@ misleading `403`, for all three caller types.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | the request, same shape as `POST`'s response |
+| Success | `200 OK` | the request, same shape as `POST`'s response; NGO staff and admins additionally get [`requester_name`](#who-filed-it-requester_name-and-reported_by_name) |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
 | No request with that ID | `404` | `{"error":"aid request not found"}` |
 | Requester viewing someone else's request | `403` | `{"error":"this aid request does not belong to you"}` |
@@ -119,8 +150,10 @@ variant of this route.
 **Behavior**
 
 Returns every request the **caller themselves** submitted, newest first — this is always
-self-scoped; there is no way to list someone else's requests through this route (NGO/admin
-oversight uses `GET /admin/aid-requests` instead, [documented below](#fe-8-m15--admin-monitoring)).
+self-scoped; there is no way to list someone else's requests through this route. NGO staff list
+the requests inside their own regions with
+[`GET /ngo/aid-requests?region_id=`](#get-ngoaid-requestsregion_id), and admins list everything with
+`GET /admin/aid-requests` ([documented below](#fe-8-m15--admin-monitoring)).
 
 **Responses**
 
@@ -157,7 +190,7 @@ Existence is checked before authorization, same as `GET`.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | the updated request |
+| Success | `200 OK` | the updated request; the response to NGO staff and admins includes [`requester_name`](#who-filed-it-requester_name-and-reported_by_name), the requester's own does not |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
 | `status` missing | `400` | bind-failure shape |
 | No request with that ID | `404` | `{"error":"aid request not found"}` (checked before any of the role-specific checks below) |
@@ -528,6 +561,11 @@ both `GET`s here are public.
 
 **Query parameter:** `region_id` — required.
 
+NGO staff have their own variant of this list,
+[`GET /ngo/missing-persons?region_id=`](#get-ngomissing-personsregion_id), which returns the same
+rows but only for regions the caller's NGO operates in, and adds the reporter's name. **This public
+list never includes `reported_by_name`.**
+
 **Responses**
 
 | Condition | Status | Body |
@@ -555,7 +593,7 @@ Existence is checked before authorization for all three caller types.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | the updated report |
+| Success | `200 OK` | the updated report; the response to NGO staff and admins includes [`reported_by_name`](#who-filed-it-requester_name-and-reported_by_name), the reporter's own does not |
 | `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
 | `status` missing | `400` | bind-failure shape |
 | No report with that ID | `404` | `{"error":"missing person not found"}` |
@@ -646,13 +684,15 @@ on the public/self-scoped routes above.
 
 All three follow an identical shape: `RequireRole("admin", "super_admin")`, an **optional**
 `status` query parameter (omitted = every status, no region/ownership scoping of any kind), and
-reuse the exact same response shape as their non-admin counterparts documented above.
+reuse the same response shape as their non-admin counterparts documented above — with one addition:
+the aid-request and missing-person lists also carry
+[the name of whoever filed each record](#who-filed-it-requester_name-and-reported_by_name).
 
 ### `GET /admin/aid-requests?status=`
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | array, possibly empty, same shape as `POST /aid-requests`'s response |
+| Success | `200 OK` | array, possibly empty, same shape as `POST /aid-requests`'s response plus `requester_name` |
 | `status` present but not one of `pending`/`in_progress`/`fulfilled`/`cancelled` | `400` | `{"error":"status must be one of: pending, in_progress, fulfilled, cancelled"}` |
 
 Unlike `GET /aid-requests?mine=true`, this is genuinely unscoped — aid requests have no other
@@ -676,8 +716,362 @@ admin sees every campaign, any region, any status, in one call.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | array, possibly empty, same shape as `POST /missing-persons`'s response |
+| Success | `200 OK` | array, possibly empty, same shape as `POST /missing-persons`'s response plus `reported_by_name` |
 | `status` present but not `missing`/`found`/`deceased` | `400` | `{"error":"status must be one of: missing, found, deceased"}` |
 
 Unlike `GET /missing-persons?region_id=`, this has no `region_id` requirement — admin sees every
 report, any region, any status.
+
+---
+
+## FE-2 (M16) — NGO region-scoped tracking (aid requests + missing persons)
+
+**What it covers:** NGO staff seeing every aid request and every missing-person report located
+inside a region their NGO operates in — the "what needs doing in my area" lists behind an NGO
+dashboard. This is the aid/missing-person half of M16 FE-2. The incident-report half is
+[`GET /ngo/incident-reports?region_id=`](07-community-intelligence.md#get-ngoincident-reportsregion_id)
+in Phase 7 and follows the same contract (same auth, same `region_id` rules, same `400`/`403`
+bodies), so one region picker and one error handler can serve all three lists.
+
+**Why the aid list matters most:** before this route there was **no way for NGO staff to discover
+an aid request at all**. `GET /aid-requests?mine=true` returns only the caller's own requests, and
+`GET /aid-requests/{id}` needs an id the NGO has no way to learn. The missing-person list is
+different — it returns the same rows as the public [`GET /missing-persons?region_id=`](#get-missing-personsregion_id)
+for that region; what the NGO route adds is the authorization contract (only regions the NGO
+operates in) and the reporter's name, which the public list never shows.
+
+**Routes:** `GET /ngo/aid-requests?region_id=`, `GET /ngo/missing-persons?region_id=`.
+
+### Behaviour shared by both routes
+
+**Auth required:** Yes (`RequireAuth`). Open to **any** NGO staff member — `ngo_admin` and
+`ngo_volunteer` get identical results. There is no `RequireRole`; authorization comes from the
+NGO-membership and region check itself. A citizen, a platform `admin`/`super_admin`, and a citizen
+whose NGO registration is still `pending_approval` all have no NGO membership (admins use the
+[`/admin/*` lists](#fe-8-m15--admin-monitoring) instead).
+
+**Query parameter:** `region_id` — **required**, a UUID. There is no unscoped variant, and no
+`bbox` alternative (this is regional tracking, not a map viewport). Upper- and lower-case UUID
+strings are both accepted.
+
+**The order checks run in** (the first failure wins):
+
+1. Token — `401` from middleware, before the route runs.
+2. `region_id` present and a valid UUID — `400`.
+3. The caller belongs to an NGO — `400 account has no ngo membership`.
+4. `region_id` is one of the regions **assigned to that NGO** — `403`.
+5. Only then is the table queried.
+
+Because step 3 comes before step 4, a caller with no NGO gets `400` (not `403`) even for a region
+that exists.
+
+**Which regions the NGO may ask about** are exactly the rows in its `ngo_regions` — the list
+returned by `GET /ngo/me/regions` (see [Phase 1](01-geo.md)), managed by its `ngo_admin` through
+`POST`/`DELETE /ngo/me/regions`. It is an **exact match**: being assigned a district does not
+authorize its parent province or its child tehsils, and being assigned a province does not
+authorize its districts. A `region_id` that does not exist at all gets the **same `403` body** as a
+real region the NGO isn't assigned to, so the response never reveals which region ids exist. An
+approved NGO with zero assigned regions gets `403` for every region.
+
+**What "inside a region" means.** Membership is decided when you call, by testing whether the
+record's location intersects the region's boundary polygon — the same live spatial test the rest of
+the API uses. Consequences the frontend should plan for:
+
+- **Boundaries are inclusive.** A record exactly on a region's edge is inside it. A record on a
+  border shared by two regions appears in both regions' lists if the NGO is assigned both.
+- **Geometry, not hierarchy.** An NGO assigned a province sees records located anywhere inside that
+  province's boundary, including records that are also in a district or tehsil beneath it. An NGO
+  assigned both a district and one of its tehsils sees a record in that tehsil in **both** lists.
+  If you fetch several regions and merge them, **de-duplicate by `id`**.
+- **A record located inside no region at all** appears in no list, for any NGO.
+- `region_id` is **never present** on the items returned by these routes (it is not stored; it is
+  only used to select the list), so do not read a region off the item.
+
+**What comes back:** every record in the region in **any status** (an aid request that is
+`cancelled` or `fulfilled` is included, as is a missing person who is `found` or `deceased`),
+**newest first** by `created_at` (the order between records created at the same instant is
+unspecified). There is **no pagination and no `status` filter** on these routes today — filter and
+sort (for example by `severity`) in the client.
+
+**An item in this list is one the NGO can act on.** The status routes authorize with the same
+location-against-the-NGO's-regions test these lists use, so any item returned here can be updated
+by the caller's NGO through
+[`PATCH /aid-requests/{id}/status`](#patch-aid-requestsidstatus) (`in_progress` / `fulfilled`) or
+[`PATCH /missing-persons/{id}/status`](#patch-missing-personsidstatus) (`found` / `deceased`).
+
+**Who filed it.** Each item carries the requester's / reporter's account id **and their display
+name** (`requester_name` on aid requests, `reported_by_name` on missing-person reports), so a
+dashboard can show who is asking. The rules — when the key is present, when it is omitted, that it
+is a live read and never a stored copy — are in
+[Who filed it](#who-filed-it-requester_name-and-reported_by_name) at the top of this document.
+
+**What is deliberately not here:** any way to *reach* that person. The name is all NGO staff get:
+no email, no phone, and no route in this API resolves an account id into a contact detail.
+Contacting a requester is planned as part of Communication (a later phase), which is not built.
+
+---
+
+### `GET /ngo/aid-requests?region_id=`
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | array of aid requests, possibly `[]` |
+| No / malformed / expired token | `401` | see [README](README.md#authentication) |
+| `region_id` missing or empty | `400` | `{"error":"region_id is required"}` |
+| `region_id` not a valid UUID | `400` | `{"error":"region_id must be a valid uuid"}` |
+| Caller belongs to no NGO (citizen, platform admin, pending NGO applicant) | `400` | `{"error":"account has no ngo membership"}` |
+| Region not assigned to the caller's NGO, region does not exist, or the all-zero UUID | `403` | `{"error":"your ngo does not operate in this region"}` |
+
+**Response body on success** — each item has the same shape as `POST /aid-requests`'s response,
+plus `requester_name`:
+```json
+[
+  {
+    "id": "1dc0d4f7-...",
+    "requester_account_id": "48434d1b-...",
+    "requester_name": "Ali Raza",
+    "category": "food",
+    "description": "Need food for a family of 5.",
+    "location": { "type": "Point", "coordinates": [68.85, 27.7] },
+    "severity": "high",
+    "status": "pending",
+    "created_at": "2026-09-26T06:00:00Z",
+    "updated_at": "2026-09-26T06:00:00Z"
+  }
+]
+```
+`description` is omitted when the requester gave none, and `requester_name` when they have no name
+to show. `location` is GeoJSON with coordinates in `[lng, lat]` order.
+
+---
+
+### `GET /ngo/missing-persons?region_id=`
+
+The region test uses the person's **last-seen location**. Responses and checks are identical to the
+aid-request route above.
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | array of missing-person reports, possibly `[]` |
+| `region_id` missing / malformed | `400` | same two bodies as above |
+| Caller belongs to no NGO | `400` | `{"error":"account has no ngo membership"}` |
+| Region not assigned to the caller's NGO (or does not exist) | `403` | `{"error":"your ngo does not operate in this region"}` |
+
+**Response body on success** — each item has the same shape as `POST /missing-persons`'s response,
+plus `reported_by_name`:
+```json
+[
+  {
+    "id": "9c1e5a20-...",
+    "reported_by_account_id": "48434d1b-...",
+    "reported_by_name": "Ali Raza",
+    "name": "Ali Khan",
+    "age": 34,
+    "description": "Last seen near riverbank",
+    "photo_url": "https://...",
+    "last_seen_location": { "type": "Point", "coordinates": [68.85, 27.7] },
+    "last_seen_at": "2026-09-18T10:00:00Z",
+    "status": "missing",
+    "created_at": "2026-09-26T06:00:00Z",
+    "updated_at": "2026-09-26T06:00:00Z"
+  }
+]
+```
+`age`, `description` and `photo_url` are omitted when not provided, and `reported_by_name` when the
+reporter has no name to show. Sightings for a person are not
+included — fetch them with the public `GET /missing-persons/{id}/sightings`.
+
+---
+
+### How the frontend should use these routes
+
+1. **Show `requester_name` / `reported_by_name` next to the record, with a fallback.** The key is
+   absent when the person never set a name or has deleted their account, so render your own
+   placeholder ("Name not provided") rather than an empty cell. There is no contact detail to
+   show beside it.
+2. **Populate the region picker from `GET /ngo/me/regions`**, not from the full region list, so the
+   NGO can only choose regions it can actually query. For an NGO with several regions, either let
+   the user pick one, or call once per region and merge (de-duplicating by `id`, see above).
+3. **`200` with `[]` is a normal empty state** ("nothing reported in this region"), not an error.
+4. **`403`** means the NGO is not (or is no longer) assigned that region — an `ngo_admin` may have
+   removed it since the picker was loaded. Reload `GET /ngo/me/regions` and reset the picker rather
+   than showing a generic failure.
+5. **`400 account has no ngo membership`** means the signed-in user is not NGO staff (or their NGO
+   is not yet approved). Hide the NGO dashboard for that user rather than surfacing the error text.
+6. **Do not paginate or filter server-side — you can't.** Load the whole list and filter by `status`
+   or `severity` in the client; refetch after a status `PATCH` to see the change reflected (a
+   `cancelled` or `fulfilled` request stays in the list).
+7. **Acting on an item** uses the existing status routes linked above; you do not need to re-check
+   region authority in the client.
+
+---
+
+## FE-11 (M16) — Feedback on aid quality
+
+**What it covers:** the people aid is *for* (or who funded it) rating how it went, and NGO staff
+reading those ratings. A rating is a whole number from 1 to 5 with an optional comment, about
+**either** an aid request **or** a donation campaign.
+
+**Routes:** `POST /feedback`, `GET /ngo/feedback?aid_request_id=`,
+`GET /ngo/feedback?donation_campaign_id=` (one route; the query parameter says which kind of target).
+
+### `POST /feedback`
+
+**Auth required:** Yes — any authenticated account, any role (`RequireAuth` only). What you may
+rate depends on the target, below.
+
+**Request**
+```json
+{ "aid_request_id": "1dc0d4f7-...", "rating": 5, "comments": "Volunteers reached us within a day." }
+```
+or, for a campaign:
+```json
+{ "donation_campaign_id": "c8c0bc57-...", "rating": 4, "comments": "Clear updates on where the money went." }
+```
+- `aid_request_id` / `donation_campaign_id` — **exactly one** must be sent. Sending neither, or
+  both, is `400`. A field sent as JSON `null` counts as **not sent**, so `{"aid_request_id": null,
+  "rating": 5}` is "neither". A value that is present but empty, malformed, or the all-zero UUID is
+  `400 "<field> must be a valid uuid"`.
+- `rating` — required, a whole number `1`–`5`. Omitted, `0`, `6`, negative: `400` with the message
+  below. A fractional (`4.5`) or string (`"5"`) value is rejected as `400` with the generic
+  `{"error":"invalid request","detail":...}` binding shape.
+- `comments` — optional. Trimmed; **at most 2000 characters** (characters, not bytes — 2000 Urdu
+  characters are accepted). Empty or whitespace-only comments are stored as no comment.
+
+**Who may rate what**
+
+| Target | Allowed | Condition |
+|---|---|---|
+| an aid request | **only the person who submitted it** — including an NGO staff member rating their *own* request; nobody else, staff included | the request must be `in_progress` or `fulfilled`. A `pending` request has had no aid and a `cancelled` one was withdrawn, so there is nothing to rate |
+| a donation campaign | **participants only**: someone who donated to it, **or** who submitted an aid request that one of its donations was allocated to | none on the campaign's own status — a `closed` campaign still accepts feedback, and so does a campaign organized by a citizen rather than an NGO |
+
+Participation is read at the moment of the request: a person who has not yet donated, or whose aid
+request has not yet been allocated funds from the campaign, gets `403`, and the same call succeeds
+after they have.
+
+**One rating per person per target.** A second attempt is `409`, whatever rating it carries, and it
+leaves the first untouched. This is enforced by a database unique index, so two simultaneous
+submissions cannot both succeed. There is **no edit and no delete route** — a rating is final.
+
+**The order checks run in** (the first failure wins):
+
+1. Token — `401`.
+2. Request shape — exactly one target, valid UUID, rating `1`–`5`, comment length — `400`. This
+   runs first on purpose, so a malformed request never reveals whether a target exists.
+3. The target exists — `404` (before any permission check, so a missing id is never a misleading `403`).
+4. The caller may rate it — `403`.
+5. The aid request has started — `400`.
+6. Not already rated — `409`.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `201 Created` | the entry, below |
+| No / invalid token | `401` | see [README](README.md#authentication) |
+| Malformed JSON, or `rating` not a JSON integer | `400` | `{"error":"invalid request","detail":"..."}` |
+| Neither target sent (a `null` counts as not sent), or both | `400` | `{"error":"exactly one of aid_request_id or donation_campaign_id is required"}` |
+| A target id empty, malformed, or all-zero | `400` | `{"error":"aid_request_id must be a valid uuid"}` / `{"error":"donation_campaign_id must be a valid uuid"}` |
+| `rating` missing, `0`, `> 5`, or negative | `400` | `{"error":"rating must be a whole number from 1 to 5"}` |
+| `comments` over 2000 characters | `400` | `{"error":"comments must be at most 2000 characters"}` |
+| Aid request is `pending` or `cancelled` | `400` | `{"error":"feedback can only be left once the aid request is in progress or fulfilled"}` |
+| No such aid request | `404` | `{"error":"aid request not found"}` |
+| No such campaign | `404` | `{"error":"donation campaign not found"}` |
+| Aid request belongs to someone else | `403` | `{"error":"this aid request does not belong to you"}` |
+| Caller did not take part in the campaign | `403` | `{"error":"only people who donated to this campaign, or received aid funded by it, can leave feedback on it"}` |
+| Already rated this target | `409` | `{"error":"you have already left feedback on this"}` |
+
+**Response body on success**
+```json
+{
+  "id": "9a3c7e10-...",
+  "aid_request_id": "1dc0d4f7-...",
+  "rating": 5,
+  "comments": "Volunteers reached us within a day.",
+  "created_at": "2026-09-26T09:00:00Z"
+}
+```
+A campaign entry carries `donation_campaign_id` instead of `aid_request_id`. `comments` is omitted
+when there is none. **The response never includes who submitted it** — nothing in this API returns
+that.
+
+---
+
+### `GET /ngo/feedback?aid_request_id=` and `GET /ngo/feedback?donation_campaign_id=`
+
+**Auth required:** Yes. Open to **any NGO staff member** (`ngo_admin` or `ngo_volunteer`, identical
+results) — there is no `RequireRole`; authorization comes from NGO membership plus the check below.
+A citizen, a platform `admin`/`super_admin`, or an applicant whose NGO is still pending have no NGO
+membership and get `400`.
+
+**Query parameters:** send **exactly one** of `aid_request_id` or `donation_campaign_id`. An empty
+value counts as not sent.
+
+**Who may read what**
+
+| Target | The caller's NGO must |
+|---|---|
+| an aid request | cover the request's location with one of its regions — the same test the aid-request list and status routes use, so any request listed by [`GET /ngo/aid-requests`](#get-ngoaid-requestsregion_id) can have its feedback read here |
+| a donation campaign | be the NGO that **organized** the campaign. A campaign organized by a citizen has no NGO behind it, so **no NGO staff can read its feedback** |
+
+The target's existence is checked before authorization (`404`, never a misleading `403`).
+
+**Behavior**
+
+Returns the ratings for that target, **newest first**, together with a summary computed from the
+same entries. There is **no pagination**. **Ratings are anonymous:** an entry has no submitter, no
+name and no account id — for an aid request, the NGO already knows who asked from the aid request
+itself ([`requester_name`](#who-filed-it-requester_name-and-reported_by_name)); for a campaign, who
+donated stays private.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | see below; `feedback` is `[]` when there is none |
+| No / invalid token | `401` | see [README](README.md#authentication) |
+| Neither parameter, or both | `400` | `{"error":"exactly one of aid_request_id or donation_campaign_id is required"}` |
+| A parameter malformed or all-zero | `400` | `{"error":"aid_request_id must be a valid uuid"}` / `{"error":"donation_campaign_id must be a valid uuid"}` |
+| Caller belongs to no NGO | `400` | `{"error":"account has no ngo membership"}` |
+| No such aid request / campaign | `404` | `{"error":"aid request not found"}` / `{"error":"donation campaign not found"}` |
+| Aid request outside the caller's NGO's regions | `403` | `{"error":"this aid request is outside any region your ngo operates in"}` |
+| Campaign not organized by the caller's NGO (another NGO's, or a citizen's) | `403` | `{"error":"this donation campaign is not managed by you"}` |
+
+**Response body on success**
+```json
+{
+  "summary": {
+    "count": 3,
+    "average_rating": 4.67,
+    "distribution": { "1": 0, "2": 0, "3": 0, "4": 1, "5": 2 }
+  },
+  "feedback": [
+    { "id": "9a3c7e10-...", "donation_campaign_id": "c8c0bc57-...", "rating": 5,
+      "comments": "Transparent, thank you.", "created_at": "2026-09-26T09:00:00Z" },
+    { "id": "5b1d02aa-...", "donation_campaign_id": "c8c0bc57-...", "rating": 4,
+      "created_at": "2026-09-26T08:58:00Z" }
+  ]
+}
+```
+- `count` is the number of entries, and equals the length of `feedback`.
+- `average_rating` is rounded to **two decimals** and is **omitted when `count` is `0`** — do not
+  treat a missing average as `0`.
+- `distribution` always has all five keys `"1"`–`"5"`, each the number of entries with that rating.
+- When there is no feedback the body is exactly
+  `{"summary":{"count":0,"distribution":{"1":0,"2":0,"3":0,"4":0,"5":0}},"feedback":[]}`.
+
+### How the frontend should use these routes
+
+1. **Offer "rate this aid" only where it can succeed.** For a requester: on their own requests in
+   `in_progress` or `fulfilled`. For a campaign: to people who donated or were helped by it.
+   The API is the authority (`400`/`403` above), so treat those as "hide the button", not as
+   failures.
+2. **`409` means already rated** — show their rating read-only; there is nothing to edit.
+3. **Send `rating` as a JSON integer** and cap the comment box at 2000 characters.
+4. **The NGO dashboard** shows `summary` (count, average, the five bars from `distribution`) above
+   the list. Handle `count: 0` by hiding the average rather than showing `0`.
+5. **Campaign feedback is only readable by the organizing NGO.** For citizen-organized campaigns
+   there is nothing for NGO staff to load; `403` there is expected, not an error to report.
+6. **Do not try to attribute a rating.** Entries carry no submitter, by design.

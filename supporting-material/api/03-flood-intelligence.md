@@ -13,7 +13,7 @@ prediction at all.
 |---|---|---|
 | public citizen-facing routes | `/flood-predictions`, `/map/flood-overlay`, `/hazard-zones/*` (except `/risk-check` and `/{id}` are also public) | none |
 | ML ingestion | `/internal/flood-predictions` | `X-Internal-Service-Key` header (see below — **not** a user credential) |
-| `admin` | `/admin/hazard-zones`, `/admin/flood-predictions` | `RequireAuth`, `RequireRole("admin", "super_admin")` |
+| `admin` | `/admin/hazard-zones`, `/admin/flood-predictions`, `/admin/map/flood-overlay` | `RequireAuth`, `RequireRole("admin", "super_admin")` |
 | manual hazard declaration | `/admin/hazard-zones` (`POST` only) | `RequireAuth`, `RequireRole("admin", "super_admin", "ngo_admin")` — **note this is a different, broader role list than the `admin` group above**, even though it shares the same URL path; see that route's own section |
 
 **⚠️ Three different response shapes for "a hazard zone" exist in this module, and they are not
@@ -82,7 +82,8 @@ without them.
 
 ### 3. `mapOverlayEntryResponse` — the bulk map-rendering shape
 
-Used by: `GET /map/flood-overlay` **only**. Note the ID key is spelled differently here.
+Used by: `GET /map/flood-overlay`, and — with one extra `source` field — `GET /admin/map/flood-overlay`.
+Note the ID key is spelled differently here.
 
 ```json
 {
@@ -143,36 +144,67 @@ missing or wrong key returns `401 {"error":"invalid or missing service key"}`.
 ```
 - `model_version`, `valid_from`, `valid_until` — required, shared across every tile in the batch
   (one model run = one set of these three values, many tiles).
-- `tiles` — required, non-empty array (a missing key or an explicitly empty `[]` both fail the
-  request binder itself before the service layer's own "at least one tile" check would ever run —
-  in practice you cannot observe that domain-level error through this route). **Capped at 500
+- `tiles` — required, non-empty array. A missing or `null` `tiles` fails the request binder
+  (`{"error":"invalid request","detail":"..."}`); an explicitly empty `[]` gets the domain's own
+  `{"error":"at least one tile is required"}`. **Capped at 500
   tiles per request** — a full nationwide run (potentially thousands of tiles) must be split into
   multiple requests of at most 500 each; the server's own write timeout would otherwise kill an
   oversized single request mid-transaction anyway, so this cap turns that into an immediate,
   explicit error instead.
-- Per tile: `boundary` required (GeoJSON, real object). `confidence_score` — **a plain number with
-  no required-field validation at all**; omitting it from a tile is not an error and silently
-  defaults to `0.0` (bucketed to `risk_level: "low"`, see below) rather than being rejected as
-  missing. `probability_raster_url`/`uncertainty_score` — both genuinely optional, `null`/omitted
-  is fine.
+- Per tile: `boundary` required (a GeoJSON `Polygon` object — see the warning below).
+  `confidence_score` — **a plain number with no required-field validation at all**: omitting it,
+  sending `null`, or misspelling the key is not an error — it silently becomes `0.0`, which is
+  below the ingest floor, so the tile is **skipped** (counted in `skipped`, nothing stored). A whole
+  batch with a misspelled key therefore returns `201` with `skipped` equal to the batch size — check
+  that number. `probability_raster_url`/`uncertainty_score` — both genuinely optional,
+  `null`/omitted is fine, and neither is validated (any string, any number).
+- **⚠️ `boundary` is not validated as a shape.** It must be a GeoJSON `Polygon` with a closed ring of
+  at least 4 points, valid (no self-intersection), in `[lon, lat]` order within lon ±180 / lat ±90.
+  Anything that isn't a `Polygon` (a `MultiPolygon`, `Feature`, `Point`, a string, `{}`, `null`,
+  or Z coordinates) fails with a bare `500` and the batch is rolled back. Worse, several *malformed*
+  polygons are **accepted and stored** — an empty `coordinates: []`, a 3-point ring, an unclosed
+  ring, a bow-tie, a zero-area polygon, longitude 200, swapped lat/lon — and some of them make later
+  map requests fail: an overlay request whose bbox touches a stored 3-point ring returns `500`, and
+  the risk-check returns `500` for any point whose nearest zone is a stored unclosed ring. Validate
+  geometry **before** sending; the server does not repair or reject it. See
+  [ML_INGESTION_GUIDE.md](../../ML_INGESTION_GUIDE.md).
 - **`risk_level` is never a request field anywhere in this payload.** The backend computes it
   itself from `confidence_score`: `< 0.34` → `low`, `0.34–0.67` → `medium`, `≥ 0.67` → `high`. The
   ML service cannot set this directly even if it tried.
+- **Tiles with `confidence_score` below `0.01` are validated but not stored.** A tile with
+  (almost) no predicted flooding isn't a hazard zone — it would only add a dry rectangle to every
+  map, every "am I in a hazard zone?" check and every admin list. In the first real export 72.7% of
+  tiles were exactly `0` and another 7.4% were under `0.01`, so 80% of the rows carried no
+  information. The `0.01` floor is **inclusive** (a tile at exactly `0.01` is stored). Skipped tiles
+  are counted in the response's `skipped` field, never silently swallowed. The ML side should
+  filter these out itself to save bandwidth; the floor is the backstop.
 
 **Behavior**
 
 One request ingests an entire batch atomically — every tile's `flood_predictions` +
 `hazard_zones` row pair is created in one database transaction; if any tile in the batch fails
 validation, **nothing** from that request is persisted, not even the tiles that were individually
-valid.
+valid. Every tile is validated — including ones the floor will skip, so a bad `confidence_score`
+is a `400` even on a tile that would have been dropped.
+
+A batch made **only** of tiles below the floor is not an error: it returns `201` with
+`"ingested": []` and `"skipped"` set to the batch size, and stores nothing.
+
+**Known gap: older runs are not superseded.** Every stored tile stays `active` until someone
+resolves it, so each new run adds to what is already on the map instead of replacing it. The data
+contract says a new run should retire the previous one for the same area; that is not implemented
+(it also needs a way to tell which requests belong to the same run, since one run is many
+batches). Until it is, a re-sent area shows up stacked on the map.
 
 **Responses**
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `201 Created` | `{"ingested": [...]}`, one entry per tile |
+| Success | `201 Created` | `{"ingested": [...], "skipped": N}` — one `ingested` entry per **stored** tile |
 | Wrong/missing service key | `401` | `{"error":"invalid or missing service key"}` |
-| Malformed body, or `tiles` missing/empty | `400` | bind-failure shape |
+| Malformed body, or `tiles` missing/`null` | `400` | bind-failure shape |
+| `tiles` is an empty array | `400` | `{"error":"at least one tile is required"}` |
+| A `boundary` that isn't a GeoJSON `Polygon` (or is `null`, `{}`, a string, has Z coordinates) | `500` | `{"error":"internal server error"}` — the whole batch is rolled back |
 | More than 500 tiles | `400` | `{"error":"too many tiles in one request — submit in smaller batches"}` |
 | Any tile's `confidence_score` outside `[0, 1]` | `400` | `{"error":"confidence_score must be between 0 and 1"}` |
 | `model_version` blank | `400` | `{"error":"model_version is required"}` |
@@ -190,9 +222,11 @@ valid.
       "confidence_score": 0.82,
       "boundary": { "...": "..." }
     }
-  ]
+  ],
+  "skipped": 0
 }
 ```
+`ingested.length + skipped` always equals the number of tiles you sent.
 
 ---
 
@@ -244,9 +278,9 @@ present with a real number.
 
 ## FE-1 (M8) — Dynamic heatmaps / risk overlays / confidence opacity
 
-**Routes:** `GET /map/flood-overlay?bbox=`.
+**Routes:** `GET /map/flood-overlay?bbox=&min_risk=` (citizens), `GET /admin/map/flood-overlay?bbox=&min_confidence=` (admins).
 
-### `GET /map/flood-overlay?bbox=west,south,east,north`
+### `GET /map/flood-overlay?bbox=west,south,east,north&min_risk=`
 
 **Auth required:** No — public.
 
@@ -255,6 +289,8 @@ present with a real number.
 Leaflet's own `getBounds().toBBoxString()` output exactly** — a Leaflet-based frontend can pass its
 current viewport straight through with no reformatting.
 
+`min_risk` — optional, one of `low`, `medium`, `high`. It can only **narrow** the result (see below).
+
 **Behavior**
 
 Returns only **`status: "active"`** hazard zones intersecting the given rectangle — this is a
@@ -262,18 +298,49 @@ viewport query, not a stored/named place, so it works even before `regions` has 
 any real administrative boundaries. Uses the [bulk map-rendering response shape](#3-mapoverlayentryresponse--the-bulk-map-rendering-shape)
 (`hazard_zone_id`, not `id`).
 
+**This is the citizen overlay: it only ever shows real flooding.** Model output below **`medium`**
+(confidence under `0.34`) is never returned, and no parameter can ask for it — the rule is enforced
+by the server, not left to each client to remember to filter. The reason is what those tiles are: a
+model tile is a large box (about 55 km across in the current export), and a `low` one usually means a
+small flooded pocket inside an otherwise dry box, which would paint a whole rectangle as "flooded".
+Zones an admin or NGO **declared by hand** are exempt — a person asserting "this is flooded" is not a
+probability to threshold — so a manual zone of any risk level is always included.
+
+`min_risk` narrows further, and applies to every source: `min_risk=high` returns only `high` zones
+(model and manual alike); `min_risk=medium` also drops manual `low` zones; `min_risk=low` is the
+same as omitting it. It **cannot** reach below the model floor. The admin overlay
+([below](#get-adminmapflood-overlaybboxwestsoutheastnorthmin_confidence)) is the route that shows everything.
+
+**Do not request the whole country at once.** Fetch the current map viewport, on `moveend`
+(debounced), and re-request as the user pans and zooms. Each entry's `boundary` is a GeoJSON
+polygon in `[lon, lat]` order, while Leaflet's own `Rectangle`/`Polygon` take `[lat, lon]` — use
+`L.geoJSON(boundary)` and you never have to swap. Colour by `confidence_score` (absent for manual
+zones — draw those in a flat colour) and bucket by `risk_level`; the server's `0.34` / `0.67` cut-offs
+line up with the `0.33` / `0.66` stops of the ML team's green → yellow → red gradient. Responses are
+gzip-compressed when you send `Accept-Encoding: gzip` (browsers do) — see
+[Compression](README.md#compression).
+
 **Responses**
 
 | Condition | Status | Body |
 |---|---|---|
 | Success | `200 OK` | array, possibly empty |
+| `min_risk` present but not `low`/`medium`/`high` | `400` | `{"error":"min_risk must be one of: low, medium, high"}` |
 | `bbox` missing | `400` | `{"error":"bbox is required (west,south,east,north)"}` |
 | Not exactly 4 comma-separated values | `400` | `{"error":"bbox must have exactly 4 comma-separated values: west,south,east,north"}` |
 | A value isn't a valid number | `400` | `{"error":"bbox values must be numbers"}` |
 | Out-of-range lon/lat, or `west >= east` / `south >= north` | `400` | `{"error":"bbox must be west,south,east,north with west<east, south<north, and valid lon/lat ranges"}` |
 
-An absurdly large bbox (e.g. the whole planet) is **not** rejected — it just returns a lot of
-data. There is no server-side size cap on this route.
+An absurdly large bbox (e.g. the whole planet) is **not** rejected — it just returns everything that
+survives the citizen floor. There is no server-side size cap on this route; the floor and the
+viewport are what keep it small (with the first real export loaded, the whole-country response is
+~230 KB, ~25 KB gzipped — before the floor it was 6.5 MB).
+
+**Stacked zones.** Each stored tile is its own zone, and older runs are not superseded (see the
+[ingestion note](#post-internalflood-predictions)), so the same area can appear several times with
+different confidences — the current test export contains the same 644 boxes up to 31 times each. If
+you draw them all at partial opacity they accumulate into a solid block; group entries by identical
+`boundary` and draw one per box (highest `confidence_score`) until runs are superseded.
 
 ---
 
@@ -375,9 +442,14 @@ a frontend to call here.
 regardless of status, with optional date-range and status filtering. Distinct from the citizen map
 routes above, which only ever show `active` zones for the *current* time.
 
-**Routes:** `GET /admin/hazard-zones?from=&to=&status=`, `GET /admin/flood-predictions?from=&to=`.
+**Routes:** `GET /admin/hazard-zones?from=&to=&status=&limit=&offset=`, `GET /admin/flood-predictions?from=&to=&limit=&offset=`.
 
-### `GET /admin/hazard-zones?from=&to=&status=`
+**⚠️ Both are paginated and return an envelope, not a bare array.** They used to return every row as a
+bare JSON array; with tens of thousands of model tiles that was megabytes per call. This is a
+**breaking change** to both response shapes — anything reading the old array must read `zones` /
+`predictions` instead and page through the rest.
+
+### `GET /admin/hazard-zones?from=&to=&status=&limit=&offset=`
 
 **Auth required:** Yes, role `admin` or `super_admin`.
 
@@ -385,10 +457,14 @@ routes above, which only ever show `active` zones for the *current* time.
 - `from`, `to` — RFC3339 timestamps, filtering on `detected_at`. **Unlike the pagination
   params elsewhere in this API, an invalid value here is a hard `400`, not a silent fallback.**
 - `status` — one of `active`/`resolved`.
+- `limit` — default `20`, max `100`. **A value outside `1..100` (including `0`, negative, or
+  non-numeric) is silently replaced with `20`, not rejected** — identical to
+  [`GET /admin/accounts`](00-identity.md#get-adminaccountslimitoffset).
+- `offset` — default `0`; a negative or non-numeric value is silently reset to `0`.
 
 **Behavior**
 
-Uses the [full-aggregate response shape](#1-hazardzoneresponse--the-full-aggregate) — richer than
+Newest first (`detected_at` descending; ties broken by id so paging is stable). Uses the [full-aggregate response shape](#1-hazardzoneresponse--the-full-aggregate) — richer than
 the citizen map's overlay shape, since an admin table needs the full picture (`source`,
 `created_by`, `region_id`, `flood_prediction_id`), not just a drawable polygon. No implicit
 `status: "active"` filter the way the citizen routes have — omitting `status` here returns
@@ -398,18 +474,26 @@ the citizen map's overlay shape, since an admin table needs the full picture (`s
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | array, possibly empty |
+| Success | `200 OK` | `{"zones": [...], "total": N, "limit": 20, "offset": 0}` — `zones` may be empty |
 | `from`/`to` present but not valid RFC3339 | `400` | `{"error":"from must be a valid RFC3339 timestamp"}` / `{"error":"to must be a valid RFC3339 timestamp"}` |
 | `status` present but not `active`/`resolved` | `400` | `{"error":"status must be one of: active, resolved"}` |
 
+`total` is the number of zones matching the current `from`/`to`/`status` filter — **not** just this
+page, and not the whole table when a filter is set — so `Math.ceil(total / limit)` is the page
+count. **This is a table, not a map:** to draw zones on a map use
+[`GET /admin/map/flood-overlay`](#get-adminmapflood-overlaybboxwestsoutheastnorthmin_confidence), which is scoped to
+the viewport and has the confidence slider.
+
 ---
 
-### `GET /admin/flood-predictions?from=&to=`
+### `GET /admin/flood-predictions?from=&to=&limit=&offset=`
 
 **Auth required:** Yes, role `admin` or `super_admin`.
 
 **Query parameters:** `from`/`to` — optional RFC3339, filtering on `generated_at`. No `status`
-param (predictions have no status field). **No "current validity window" restriction** — unlike
+param (predictions have no status field). `limit`/`offset` — same rules as
+[`GET /admin/hazard-zones`](#get-adminhazard-zonesfromtostatuslimitoffset) above (default 20, max 100,
+out-of-range silently reset). Newest first (`generated_at` descending, id as tiebreak). **No "current validity window" restriction** — unlike
 the citizen-facing `GET /flood-predictions`, this returns the full history regardless of
 `valid_from`/`valid_until`.
 
@@ -420,17 +504,72 @@ shape) — same fields, just an unscoped/unfiltered-by-region query instead.
 
 | Condition | Status | Body |
 |---|---|---|
-| Success | `200 OK` | array, possibly empty |
+| Success | `200 OK` | `{"predictions": [...], "total": N, "limit": 20, "offset": 0}` — `predictions` may be empty |
 | `from`/`to` present but not valid RFC3339 | `400` | same as above |
 
 ---
 
 ## M15 FE-2 — Hazard half of the system-wide admin heatmap
 
-No new route — reuses `GET /admin/hazard-zones?status=active` directly (documented above). Do
-**not** reuse `GET /map/flood-overlay?bbox=` for this purpose despite it also returning active
-zones — that route is deliberately viewport-scoped (a map bounding box), the opposite of what a
-system-wide, nationwide heatmap needs.
+**Routes:** `GET /admin/map/flood-overlay?bbox=&min_confidence=`.
+
+**Revised:** this used to say "no new route — reuse `GET /admin/hazard-zones?status=active`". That no
+longer works: that list is a paginated table (max 100 per page), and a map needs every zone in the
+viewport at once. The admin heatmap now has its own route, below.
+
+### `GET /admin/map/flood-overlay?bbox=west,south,east,north&min_confidence=`
+
+**Auth required:** Yes, role `admin` or `super_admin`. `401` without a token, `403` for anyone else.
+
+**Query parameters**
+- `bbox` — **required**, exactly the same format and errors as the
+  [citizen overlay](#get-mapflood-overlaybboxwestsoutheastnorthmin_risk).
+- `min_confidence` — optional, a number from `0` to `1`. **This is the "min probability" slider.** It
+  keeps model zones whose confidence is **at least** that value (inclusive), and omitting it (or `0`)
+  shows everything. Zones declared by hand have no confidence, so they are **always kept** — the
+  slider never hides a human-asserted flood.
+
+**Behavior**
+
+The counterpart of the citizen overlay with none of its restrictions: it returns **every active
+zone in the viewport, including low-confidence model output** that citizens never see. Same entry
+shape as the citizen overlay ([bulk map-rendering shape](#3-mapoverlayentryresponse--the-bulk-map-rendering-shape))
+with one extra field, **`source`** — `ai_prediction`, `manual_admin` or `manual_ngo` — so the admin
+map can tell a model tile from a zone someone drew. Newest first.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Success | `200 OK` | array, possibly empty |
+| `min_confidence` not a number, `NaN`/`Inf`, below `0` or above `1` | `400` | `{"error":"min_confidence must be a number between 0 and 1"}` |
+| `bbox` missing/malformed | `400` | the same messages as the citizen overlay |
+| No/invalid access token | `401` | (from `RequireAuth`) |
+| Caller is not `admin`/`super_admin` | `403` | `{"error":"insufficient permissions"}` |
+
+```json
+[
+  {
+    "hazard_zone_id": "54f2f948-...",
+    "risk_level": "low",
+    "boundary": { "type": "Polygon", "coordinates": [[[74.66,30.18],[75.24,30.18],[75.24,30.76],[74.66,30.76],[74.66,30.18]]] },
+    "confidence_score": 0.12,
+    "detected_at": "2026-09-24T09:19:16Z",
+    "source": "ai_prediction"
+  }
+]
+```
+
+**Frontend handling**
+- Drive the slider with `min_confidence` (re-request on change, debounced) rather than downloading
+  everything and filtering in the browser — the request carries only what survives the slider.
+  With the first real export loaded, the whole country at `min_confidence=0` is 4,045 zones
+  (~1.4 MB, ~180 KB gzipped); at `0.05` it is 2,704, at `0.34` it is 703, at `0.67` it is 267.
+- As with the citizen overlay: request the viewport (not the country), and expect stacked
+  duplicates (same `boundary`, different confidence) from earlier runs — group by `boundary` and
+  draw the highest.
+- Do not confuse this with the table: [`GET /admin/hazard-zones`](#get-adminhazard-zonesfromtostatuslimitoffset)
+  is for browsing/searching rows, this is for drawing.
 
 ---
 

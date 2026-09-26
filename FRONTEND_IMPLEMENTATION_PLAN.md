@@ -70,7 +70,16 @@ everything the account has reported, voted on, requested, donated or sighted, ne
 position watch sent over the relay's WebSocket to everyone connected), a **Live** badge on the rows of members who are sharing, and on a connected member's page a map with their position, when it was last heard and the coordinates. It rests on a reusable reconnecting-socket engine (backoff with jitter, a fresh token
 on every attempt, a probe that tells a refused handshake from a dead network) that Phase 7's chat and navigation will use, and it is honest about the web's limits: sharing works only while the tab is open and in front. **Every Phase 4 screen is now built; the phase-end pass (full E2E suite and the deferred tests) has not been run.**
 
-**Phases 5–10:** not started. Full detail on what's done and how lives in each phase's own
+**Phase 5 — Community Intelligence: 🚧 in progress.** The first screen, the citizen **Community Feed** (`/app/community`), is built (2026-09-26),
+tested against the real backend and visually verified: every report nationwide (one `bbox` request — reports carry no region) with the official
+updates for the citizen's home region mixed in, **Latest / Verified / Nearby / Q&A** tabs, search and the three real category chips (all in the URL),
+cards with a photo, status and **Upvote / Downvote** (the citizen's own vote pressed), and rejected reports hidden and counted (your decision).
+Voting first waited for the backend — no route read which way a citizen voted, and you chose to wait rather than guess from browser storage; you then
+added `GET /incident-reports/my-votes` to the contract (`supporting-material/backend-requests/incident-report-my-votes.md`, ✅ built 2026-09-26 on the
+backend's `feature-report-my-votes` branch) and the buttons were wired the same day. The Report Incident button and the card links arrive with their screens (next).
+Phase 4's phase-end pass has still not been run.
+
+**Phases 6–10:** not started. Full detail on what's done and how lives in each phase's own
 section below (each phase's Screens table has a Status column, ✅/🚧/⬜); this section is the
 short version.
 
@@ -2506,30 +2515,92 @@ Written down, not run yet. Run them all before the phase closes, then the full s
 
 ---
 
-## Phase 5 — Community Intelligence
+## Phase 5 — Community Intelligence 🚧 in progress (Community Feed built, 2026-09-26)
 
 ### Screens
 
-| Screen | Route | Role | Pattern |
-|---|---|---|---|
-| Community Feed | `/app/community` | Citizen | W-List |
-| Incident Detail | `/app/community/:incidentId` | Citizen | W-Detail |
-| Report Incident (drawer) | overlay | Citizen | W-Drawer-Form |
-| Incidents (+ detail) | `/ngo/incidents`, `/ngo/incidents/:id` | NGO | W-List / W-Detail |
-| Incident Reports | `/admin/incident-reports`, `/admin/incident-reports/:id` | Admin | W-List / W-Detail |
+| Screen | Route | Role | Pattern | Status |
+|---|---|---|---|---|
+| Community Feed | `/app/community` | Citizen | W-List | ✅ Built (2026-09-26) — Latest / Verified / Nearby / Q&A tabs, search and category chips, report cards with photo, status and Upvote / Downvote (the viewer's own vote pressed — wired the same day once `GET /incident-reports/my-votes` existed), official update cards, rejected reports hidden and counted. No Report Incident button and no card links yet (their screens come next). See *Real deviations (Community Feed)* |
+| Incident Detail | `/app/community/:incidentId` | Citizen | W-Detail | ⬜ |
+| Report Incident (drawer) | overlay | Citizen | W-Drawer-Form | ⬜ |
+| Incidents (+ detail) | `/ngo/incidents`, `/ngo/incidents/:id` | NGO | W-List / W-Detail | ⬜ |
+| Incident Reports | `/admin/incident-reports`, `/admin/incident-reports/:id` | Admin | W-List / W-Detail | ⬜ |
 
 ### Backend routes (all ✅ built — `api/07-community-intelligence.md`)
 
-| Route | Used by |
-|---|---|
-| `POST /incident-reports` | Report Incident |
-| `POST /incident-reports/{id}/media`, `GET /incident-reports/{id}/media` | Report Incident media, Incident Detail |
-| `POST /incident-reports/{id}/votes`, `DELETE /incident-reports/{id}/votes` | Community Feed / Incident Detail vote controls |
-| `PATCH /incident-reports/{id}/status` | Admin/NGO status lifecycle |
-| `GET /incident-reports?region_id=|bbox=` | Community Feed, Citizen Map incident markers (retrofit into Phase 3's map) |
-| `POST /community-updates`, `GET /community-updates?region_id=` | NGO/Admin "official update" posts — screen itself (Alerts & Community Updates) ships Phase 7/8, but the write call is available now |
-| `GET /admin/incident-reports?status=&sort=`, `PATCH /admin/incident-reports/{id}/verify`, `PATCH /admin/incident-reports/{id}/reject` | Admin Incident Reports |
-| `GET /ngo/incident-reports?region_id=`, `PATCH /ngo/incident-reports/{id}/verify`, `PATCH /ngo/incident-reports/{id}/status` | NGO Incidents |
+| Route | Used by | Status |
+|---|---|---|
+| `POST /incident-reports` | Report Incident | ⬜ |
+| `POST /incident-reports/{id}/media`, `GET /incident-reports/{id}/media` | Report Incident media, Incident Detail | `GET` ✅ Wired (feed thumbnails, one request per card shown) |
+| `POST /incident-reports/{id}/votes`, `DELETE /incident-reports/{id}/votes` | Community Feed / Incident Detail vote controls | ✅ Wired (feed, 2026-09-26) — waited a few hours for a way to read the caller's vote |
+| `GET /incident-reports/my-votes?ids=` **(added on request, 2026-09-26 — `backend-requests/incident-report-my-votes.md`; on the backend's `feature-report-my-votes` branch)** | Community Feed / Incident Detail — which way the viewer voted | ✅ Wired (feed; one unfiltered call per account) |
+| `PATCH /incident-reports/{id}/status` | Admin/NGO status lifecycle | ⬜ |
+| `GET /incident-reports?region_id=|bbox=` | Community Feed, Citizen Map incident markers (retrofit into Phase 3's map) | ✅ Wired (feed, `bbox=-180,-90,180,90`) |
+| `POST /community-updates`, `GET /community-updates?region_id=` | NGO/Admin "official update" posts — screen itself (Alerts & Community Updates) ships Phase 7/8, but the write call is available now | `GET` ✅ Wired (feed's official updates) |
+| `GET /admin/incident-reports?status=&sort=`, `PATCH /admin/incident-reports/{id}/verify`, `PATCH /admin/incident-reports/{id}/reject` | Admin Incident Reports | ⬜ (`reject` used by the feed's E2E) |
+| `GET /ngo/incident-reports?region_id=`, `PATCH /ngo/incident-reports/{id}/verify`, `PATCH /ngo/incident-reports/{id}/status` | NGO Incidents | ⬜ |
+
+### What probing found before building (moved here from `CLAUDE.md` Appendix B; re-verified 2026-09-26 on a second machine)
+
+*Docs resynced 2026-09-26:* `supporting-material/api/*.md` and `IMPLEMENTATION_ROADMAP.md` were re-copied from the backend before starting (identity, geo, flood-intelligence and relief-operations had moved on — relief's NGO lists and feedback are Phase 6's business; `07-community-intelligence.md` differed only in a link anchor).
+
+- **Report shape:** `id, reporter_account_id, category (flooding|blocked_road|other_hazard), description?, location{Point}, region_id?, status (reported|verified|in_progress|resolved|rejected), ai_classified_category?, ai_confidence?, auto_verified, upvote_count, downvote_count, verified_at?, resolved_at?, created_at, updated_at, priority_score?` — optional keys **omitted**. **No title, severity, comment count or reporter name.**
+- **No `GET /incident-reports/{id}`** — a detail page must find its report in a list query.
+- **`region_id` is never written** (the repository resolves regions live by `ST_Intersects`), so `GET /incident-reports?region_id=` works for a report inside a region but a report outside every region is reachable only by `bbox`. The public list is **unpaginated, newest first, and includes every status — `rejected` too** (read from `ListForBBox`, confirmed live).
+- **Votes** (probed with a throwaway account): upvote → `1/0`, the same again → still `1/0` (a new vote id each time), downvote → `0/1`, `DELETE` → `0/0`, a second `DELETE` → `204`; **`DELETE` on an unknown report is `204`, not `404`**; voting on a **rejected** report is allowed; `vote_type` missing is the bind-failure `400`, a wrong value `400 "vote_type must be one of: upvote, downvote"`; unknown report on `POST` is `404`; no token `401`. **No route reads the caller's own vote.**
+- **Official updates:** `GET /community-updates?region_id=` returns that **exact** region's posts plus platform-wide ones — a citizen whose home is Sukkur City (tehsil) does **not** see a post aimed at Sukkur (district); `region_id` is required (`400 "region_id is required"`); posts carry only `author_account_id` (no name, no NGO).
+- **Media:** absolute, browser-loadable URLs (`http://localhost:8080/uploads/incident-reports/<id>/<uuid>`, or `placehold.co` in seed data); `GET …/media` for an unknown report is `[]`. **Seed data has reports with no media at all** (the API can't create one, the seed can), so a card handles zero media. Uploads land on local disk (`./uploads`) or S3/MinIO — **no cleanup removes them**, which matters for the Report Incident drawer's E2E.
+- **Validation the server doesn't do:** lat/lng ranges (lat 95 / lng 200 → `201`). Backend media rules: ≥1 file, ≤25 MB each, jpeg/png/webp/heic/mp4/quicktime/webm; the design's "5 files, 10 MB" and "20-character minimum" are design-only.
+- NGO/admin can read a reporter's credibility via `GET /accounts/{id}/trust-score`; an admin can read the reporter's email via `GET /admin/accounts/{id}`; an NGO cannot resolve reporter names.
+- Design features with **no backend** (not to be invented): internal notes, "Assign task", bulk actions, severity, titles, comment counts, the Q&A tab ("Coming soon").
+
+### Real deviations (Community Feed, 2026-09-26)
+
+- **Scope is the whole country, by `bbox`.** One `GET /incident-reports?bbox=-180,-90,180,90` (reports carry no region, and many real ones lie outside every region), then everything else in the browser. Fine for hundreds of reports; a backend conversation past that (no paging).
+- **Tabs:** *Latest* — every shown report plus official updates, newest first; *Verified* — `verified`, `in_progress` and `resolved` (all confirmed at some point), no updates; *Nearby* — asks for the position only when **Use my location** is pressed, then nearest first with "N km away" on each card (no radius cut-off); *Q&A* — the design's "Coming soon". The tab, the category and the search live in the URL (`?tab=&category=&q=`), mirrored from state; unknown values fall back to Latest / All. On Nearby the search and chips wait for a position (before one, "All 0" would mislead).
+- **The design's filter popover (category / distance / date / verification) became chips and tabs:** three category chips with counts (the three real categories — the design's eight tiles have no backend), distance is Nearby, verification is Verified, and there is **no date filter**.
+- **Rejected reports are never shown** (decided with you, 2026-09-26) — only a line: "N reports were rejected by moderators and aren't shown."
+- **Cards carry only what the API has:** no title (the description is the body, clamped to three lines; "No description given." when there is none), no severity, no comment count, no reporter name ("You" for the viewer's own, "A community member" for anyone else — the API gives only an account id), no credibility chip. The category chip uses the design system's category colours; the status pill says *Not verified yet / Verified / Verified automatically* (when `auto_verified` and still `verified`) */ Being handled / Resolved*. The photo is the report's newest photo (a video is a plain tile — nothing is downloaded or played in a list), with "+N" for more; a skeleton while loading; nothing for a report with no media or whose media list fails; a plain tile if the image won't load.
+- **Voting — first read-only, then wired once the backend could say which way the viewer voted.** At first no route told a citizen their own vote, so a button could neither show a pressed state nor take a vote back; **decided with you (2026-09-26): wait for the backend** rather than remember votes in browser storage, and the feed shipped with plain totals. You added `GET /incident-reports/my-votes` the same day (contract: `supporting-material/backend-requests/incident-report-my-votes.md`, ✅ built). **As wired:** one **unfiltered** `my-votes` request per account (a citizen's own votes are few, and one cache entry then serves the feed and, later, Incident Detail — the per-page `ids` form was not needed); each card has **Upvote / Downvote** toggle buttons (`aria-pressed`, a filled arrow and a border when pressed, the totals as the group's name, "4 upvotes, 1 downvote"); pressing the chosen side takes the vote back (`DELETE`), the other side switches it, either with no vote casts it (`POST`, an upsert). A press shows **at once** — the pressed state and the totals in every cached list — and presses are **sent one at a time in the order made** (one queue for all votes: TanStack's `scope` is fixed per mutation, so not per report), measured each from the one before (two quick taps on Upvote = cast, then take back). When the last queued press lands, the list and the votes are read again, so what stays is the server's truth. A refused press shows the server's words and reads the truth back; a `404` (the report has gone) says the vote wasn't counted and refreshes the feed. **Until the votes have loaded — or if they can't be — the cards show plain totals and nothing can be pressed** (with "Couldn't load your votes, so voting is off for now: <server's words>" and Try again). Voting on your own report is allowed (the API allows it; the design says nothing).
+- **Official updates** (the design's teal-edged "Official Update" card, no votes): with a home region, that region's posts and the platform-wide ones ("For Sukkur City" / "For Everyone"); **without a home region, only the platform-wide posts** — the route needs a region, so the first top-level region is asked and region-specific posts are dropped — with a "Set your home region" link. The author is not shown (the API gives only an account id). A failed update request (or region list) shows its own notice; the reports stay.
+- **Media are fetched one request per card shown** (the list carries none), twelve cards at a time with "Show more" — the next cards' media are asked only when they appear.
+- **Not built yet, on purpose:** the **Report Incident** button (its drawer is a later screen of this phase), the **card links** to Incident Detail (the next screen; "links only where the target exists").
+
+### Backend gaps found building the Community Feed
+
+| Gap | Effect today | Suggested change |
+|---|---|---|
+| ~~**No route reads the caller's own vote**~~ **Fixed 2026-09-26** (`GET /incident-reports/my-votes`, on the backend's `feature-report-my-votes` branch — **not yet committed there**; a server without it makes the feed say voting is off, nothing breaks) | — | — |
+| `GET /incident-reports` is unpaginated, has no unscoped mode and returns `rejected` reports on a public route | The feed asks the whole world by `bbox` and filters rejected ones in the browser; one response per load, whatever the count | `limit`/`offset`, an optional `status` filter (or exclude `rejected` from the public route), and a nationwide mode |
+| `GET /community-updates?region_id=` matches the exact region only | A citizen in a tehsil misses the posts aimed at its district and province; the feed can't fix it without a request per ancestor | Include ancestors' posts (the region's path), or accept several `region_id`s |
+| `GET /community-updates` needs a `region_id` even for the platform-wide posts | Without a home region the feed asks an arbitrary region and throws its posts away | Allow no `region_id` (= platform-wide only) |
+| Updates carry only `author_account_id` | The card can't say which NGO (or that it was an administrator) posted it | Return the NGO's name, or "platform" for an admin post |
+| Reports have no title and no reporter display name | The design's bold title line and "Hina Khan" can't be drawn | Optional `title` on create; a public display name if the product wants reporters named |
+| `DELETE /incident-reports/{id}/votes` on an unknown report is `204`; voting on a `rejected` report is allowed | Harmless for the feed (it sends no votes) | Decide whether a rejected report can still be voted on |
+
+### Real bugs found and fixed (Community Feed)
+
+- **Every citizen page overflowed by 5px at 320px (found by the visual check; not this screen's code).** The top bar's gaps (16px between the logo and the right-hand group, 8px between the four round buttons) left the account menu button 5px past the edge on every `/app/*` page. Below `sm` the gaps are now 8px and 4px (`CitizenLayout`); measured 0 on Resources, Edit Profile and the feed at 320. Shared layout, so the full unit suite and `profile-phone-nav` (6 E2E) were re-run: pass.
+- **A category chip's accessible name was "Flooding3" (found by a unit test).** The label and the count were adjacent spans with no space. The feed's chips now read "Flooding 3". **The Resources tab's `CategoryChips` has the same fault** ("Pharmacies3") — noted, not changed here.
+- **On a phone, a card's "· 30 minutes ago" left a stray dot at a line's end or start (found by the 320px screenshot).** The name, the dot and the time were separate flex items; they are now one run of text that wraps like a sentence, beside the icon.
+- **Nearby showed "All 0 · Flooding 0…" before the viewer was located (found by the screenshot).** The counts depend on a position; the search and chips now wait for one.
+
+### Testing done so far (Community Feed)
+
+- **Unit (Vitest + RTL + MSW), 1,640 tests in 169 files in the whole suite (+59 for this screen), all passing** — the four Leaflet files (46 tests) time out in their start-up hook when the whole suite runs on this 8 GB Windows machine and pass when run on their own (`--no-file-parallelism`, 46/46); the owner's machine ran the suite in one go. **The model** (24): the URL readers, "You" vs "A community member", every status pill incl. "Verified automatically" only while still verified, vote wording with singulars, who an update is for, `[lng,lat]`→`[lat,lng]` and refusing off-globe points, search over description / category / status and over an update's title and content, each tab's rule (Latest with updates, a category dropping updates, Verified = verified/in progress/resolved, Nearby empty until located then nearest first with newest first among equals and unreadable points left out, Q&A empty), input never reordered, chip counts within the tab and search, the rejected count, platform-wide filtering, the media preview. **The parts** (19): the card (who, when with `datetime`, category, status, description, the read-only totals, **no button and no link**, "You", no description, distance only when located, a 600-character unbroken description kept inside); the thumbnail (skeleton, nothing for none or a failed list, the photo with "+N", a video as a tile with nothing downloaded, a broken image as a tile); the update card; the toolbar (search, clear, chips pressed, **only the three real categories**); the list, "Show more", the empty state with and without "Clear", the error in the server's words with a retry, Nearby asking nothing until pressed and explaining a block, Q&A. **The page over MSW** (16) with a stand-in for the three read routes: the world `bbox`, the home region's updates mixed in newest first, the rejected report hidden and counted, "You" on the viewer's report; media asked only for the cards shown and **twelve at a time, the next cards' media only once shown**; no home region → only platform-wide posts and the link; no regions → no update request; the empty feed; a failed list with the server's words recovering on retry; a failed update request leaving the reports; Verified in the URL; the view read from the URL and unknown values defaulting; a category hiding updates, counts within the search, the filtered empty state and Clear; **two changes in one tick both kept**; Q&A; Nearby asking nothing until pressed, nearest first with distances, the chips hidden before a position, a blocked location. **Mutation-checked:** showing rejected reports fails 6 tests; fetching media for every card instead of the page fails the paging test; updating the view from a stale closure fails the same-tick test.
+- **E2E (Playwright, real backend, real Postgres) — `e2e/citizen-community.spec.ts`, 6 tests, run alone, all passing (twice).** Each run seeds its own `E2E Feed …` region, four reports tagged with the run's id (a flood with a photo, a verified blocked road, an in-progress hazard with a photo and a video, and a rejected one) by an `e2e-` citizen, and an official update posted to the region by an `e2e-` platform admin through the **real `POST /community-updates`**; the page's own search narrows the nationwide feed to the run's rows, so real reports never change a count. Covered: the list asked with `bbox=-180,-90,180,90`; the update and the three shown reports newest first, the rejected one absent and **the hidden count equal to the API's nationwide count of rejected reports**; "For <region>"; the stored totals, status pills, "3x minutes ago"; **the photo's URL as stored and the image actually loaded**; "+1"; no buttons in the list; the viewer's own report as "You" and the same report as "A community member" in **a second citizen's browser**; Verified, a category and the search in the URL surviving a reload, the filtered empty state and Clear; **a report rejected through the real `PATCH /admin/incident-reports/{id}/reject` leaving the feed on the next load with the hidden count one higher**; a citizen with no home region seeing no region-only post, the link, and each platform-wide post the API returns (found by its title) marked "For Everyone"; **Nearby with the browser's position granted asking nothing until pressed, then nearest first with "10 m away" and "1x km away"**. The file runs its tests one at a time (`mode: 'default'`) because two of them compare with the API's nationwide rejected count. New seed helpers `seedFeedReport` and `seedReportMedia` (guarded to `e2e-` reporters; media rows store a URL the dev server already serves, so **no upload is left on disk**); the cleanup script now also removes `community_updates` posted by test accounts and refuses to run if a real account posted to an `E2E` region.
+- **Visual:** 1440, 1024, 768, 390 and 320 for Latest (everything, and one run's rows), Verified, Nearby before and after locating, Q&A, the filtered empty state and the error state, plus the update card at 1440 / 390 / 320 — **zero horizontal overflow in all 43 captures** after the fixes above. They caught the layout's 320px overflow, the stray dot, the misleading "All 0" and a video tile taking a full photo's height on a phone (now 80px). The long capture run crashed Chromium twice under memory pressure (1 GB free of 7.7 GB) and was re-run in smaller pieces; twelve repeated visits confirmed it wasn't the page.
+- **Probed** before building (a throwaway `e2e-probe` account): every list error, the four vote transitions and their errors, media for a known and an unknown report, updates for a tehsil and without `region_id`.
+- **Test data** cleaned with `e2e/cleanup-test-data.sql`, dry run first (every guard 0): 114 accounts, 34 regions, 134 reports, 28 updates removed; 8 real reports, 5 real updates and 6 media rows left, and the two seed reports the probe voted on back at their original totals (0/0 and 0/2). **Cleanup caveat for later:** it deletes a test account's votes on *real* reports without adjusting those reports' counters — harmless today (no test votes on real reports survive), but a voting E2E must vote only on its own reports.
+
+### Testing done so far (Community Feed — voting, added 2026-09-26 once `my-votes` existed)
+
+- **Probed** `GET /incident-reports/my-votes` on the running server (:8080) with a throwaway account voting only on two reports it filed itself: see the *As built* note in `backend-requests/incident-report-my-votes.md` (every case in the contract holds; a trailing comma is a `400`, spaces after commas are fine, an empty `ids=` is `[]`).
+- **Unit (Vitest + RTL + MSW) — 1,653 tests in 169 files, all passing in one run** with `--maxWorkers=2` (+13 for voting: 4 model — what a press means in each state, how the totals move including never below zero, indexing the votes; 1 card — Upvote / Downvote with the viewer's vote pressed and each press reported; 8 page, over a stand-in that applies the backend's real vote rules — upsert, switch, take back, counters, `204` delete). The page tests: the pressed state from `my-votes` (one request); plain totals and nothing pressable until the votes load; an upvote pressed and counted **before the server answers**, then the list read again once it lands and still agreeing; take back → `DELETE`, switch → `POST`; **two quick taps sent in order**, ending where the second left it; a refusal putting the truth back with the server's words; a `404` saying the vote wasn't counted and refreshing the feed; `my-votes` failing → voting off with the server's words and a retry that brings the buttons back. **Mutation-checked:** dropping the immediate count update fails the "before the server answers" test; making every press cast (never take back) fails 3 tests; **removing the one-at-a-time queue at first failed nothing** — the stand-in held every vote request equally — so it was changed to hold only the *first* request, after which removing the queue fails the two-taps test (the second tap overtakes the first and the server ends on the wrong vote).
+- **E2E — `e2e/citizen-community.spec.ts` now 9 tests, run alone, all passing** (the 6 earlier ones plus 3): **cast → the `POST` body `{vote_type: "upvote"}`, the row in Postgres under the voter's email and the counters 5/1 → a reload still shows it pressed** (the reason the route exists) and `my-votes?ids=` agrees → **switch** (the row now `downvote`, 4/2) → **take back** (a `DELETE`, no row, 4/1); **two citizens in two browsers** on one report — each sees only their own vote pressed, both see the other's in the totals, both rows stored; **a vote on a report deleted behind the open page gets the real `404 "incident report not found"`**, the page says so, and the card leaves on the refresh. Votes are cast only on the run's own reports. New seed helpers `readReportVotes`, `readReportCounts`, `deleteFeedReport` (guarded to reports filed by `e2e-` accounts).
+- **Visual:** 1440, 390 and 320 with a pressed upvote, a pressed downvote, unpressed buttons on the viewer's own report, a four-digit total, and keyboard focus on a vote button at 320 — **zero horizontal overflow**; the pressed state is a filled arrow plus a border, not colour alone, and the focus ring draws in full.
+- **Test data** cleaned (dry run first, every guard 0): 61 accounts, 77 reports, 18 updates removed; 8 real reports, 5 real updates and the 15 seed votes left, the counters back to the seed values.
 
 Note: `POST /internal/incident-reports/{id}/ai-classification` is service-to-service (ML→backend),
 not a frontend concern — shows up in incident data as already-classified, nothing to build against
@@ -2538,8 +2609,8 @@ it directly beyond rendering whatever classification/credibility fields the resp
 ### Build steps
 1. Report Incident drawer (category grid, char-counter textarea with the documented 20-char
    minimum, media uploader max 5/10MB).
-2. Community Feed + Incident Detail, including the "Official Update" card variant (4px trust-teal
-   left border, no vote row) for NGO/admin-authored posts.
+2. ~~Community Feed~~ (✅ 2026-09-26, voting included once `my-votes` existed) + Incident Detail, including the "Official Update" card variant (4px trust-teal
+   left border, no vote row) for NGO/admin-authored posts. *(Order changed by the research: Feed → Detail → Report Incident drawer → NGO → Admin → map markers.)*
 3. NGO Incidents (adds credibility side panel, Verify/Reject, internal notes).
 4. Admin Incident Reports (adds priority-score sort, Verify/Reject with reason).
 5. Retrofit incident markers into Phase 3's `<MapView>`.
@@ -2554,10 +2625,21 @@ it directly beyond rendering whatever classification/credibility fields the resp
 
 ### Deferred tests (run before closing the phase)
 
-_Nothing yet._ As each screen is built, list here the E2E scenarios that were written down but not run — the edge-case
-matrix, phone runs, cross-role flows — per the testing cadence under *Cross-cutting testing strategy*. Before this
-phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
+Before this phase closes: implement and run them all, run the full suite, fix what fails, re-run load-stall timeouts alone, then clean
 the `E2E …` test data.
+
+Written down for the **Community Feed**, not yet run:
+
+1. **Phone run** of the spec at 390×844 with touch: the tabs scroll sideways at 320; the chips wrap; a card's photo sits under its text; "Show more" reachable; Nearby's permission prompt on a real phone.
+2. **Scale:** a few hundred reports nationwide — the single list request's size and time, the first twelve cards' media requests (twelve in parallel), "Show more" through a long list, and search staying instant; how many requests a slow network makes before the first card shows.
+3. **Staleness:** a report verified, resolved or rejected in another tab while the feed is open — shown after the 30 s cache or a refocus; a report the viewer files elsewhere appearing on the next load.
+4. **Media edge cases against the real server:** a report whose only media is a video; a real upload (`/uploads/…` served by the Go API) rather than a seeded URL; an image that 404s (the plain tile); HEIC, which most desktop browsers can't draw (a broken-image tile — decide whether to say "Photo in a format this browser can't show").
+5. **Updates:** a home region that is a tehsil whose district has posts (not shown — the backend gap); a platform-wide post and a region post with the same timestamp; an update with no title; a very long title and content.
+6. **Nearby:** location denied, unavailable, unsupported (the note, nothing listed, the button again); "Update my location" moving the order; a report at exactly the viewer's point; a report with an off-globe point (left out of Nearby, still in Latest).
+7. **Guard:** a staff account visiting `/app/community` is turned away; signed out → login and back.
+8. **Keyboard and screen reader:** the tablist by arrows, the chips' `aria-pressed` and names ("Flooding 3"), each card's heading ("Flooding reported by a community member"), the vote totals read as "4 upvotes, 1 downvote", the relative time with its full date in `title`.
+9. **Voting, beyond what the spec covers** (the spec already covers cast / reload / switch / take back, two accounts, and the real `404`): many quick presses across several reports (one queue — check it never stalls, and the totals settle to the server's); a press while offline or with the API stopped mid-queue (the refusal message, then the truth); the same account voting in two tabs (the other tab shows the old pressed state until its 30 s cache or refocus — decide whether that matters); a server **without** `my-votes` (the backend branch not merged — "voting is off for now" with the 404's words, nothing pressable); a keyboard-only vote (Tab to a button, Space/Enter, `aria-pressed` announced); votes on a report rejected after the feed loaded (the API allows it; the card disappears on the next refresh). Keep test votes on **test** reports — the cleanup deletes a test account's votes without adjusting a real report's counters.
+10. **When Incident Detail and the Report Incident drawer exist:** the card links, Back returning to the same filtered view, and a report filed from the drawer appearing at the top of Latest.
 
 **Exit criteria:** the full incident lifecycle (submit → vote → NGO verify → admin oversight) works
 end-to-end against the real backend.
