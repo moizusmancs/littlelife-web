@@ -4,6 +4,7 @@ import { CrosshairIcon } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
 import { useVotes } from '@/features/community/useVotes'
+import { incidentPath, type IncidentLinkState } from '@/features/community/incidentLinks'
 import { TabBar } from '@/components/ui/tab-bar'
 import { FeedToolbar } from '@/features/community/FeedToolbar'
 import { FeedEmpty, FeedError, FeedList, FeedSkeleton, NearbyPrompt, QaComingSoon } from '@/features/community/FeedList'
@@ -46,6 +47,12 @@ const toParams = ({ tab, category, q }: ViewState) => {
 
 const PENDING_MEDIA: MediaState = { status: 'pending' }
 
+/** The feed's address for a view — handed to a report's page so its Back link returns to the same tab, filter and search. */
+const feedPath = (view: ViewState) => {
+  const search = toParams(view).toString()
+  return search ? `/app/community?${search}` : '/app/community'
+}
+
 /**
  * /app/community — the Community Feed. Every citizen report nationwide (`GET /incident-reports?bbox=` over the whole world: reports carry no
  * region, and the route has no unscoped mode or paging) with the official updates for the citizen's home region (or only the platform-wide
@@ -53,9 +60,9 @@ const PENDING_MEDIA: MediaState = { status: 'pending' }
  * **Q&A** is the design's "Coming soon". Rejected reports are never shown (decided 2026-09-26), only counted.
  *
  * Voting: the viewer's own votes come from `GET /incident-reports/my-votes` (added on request, 2026-09-26); until they have loaded — or if
- * they can't be — the cards show plain totals, so nothing is pressed blind. Not here yet, on purpose: **Report Incident** (its drawer is a
- * later screen) and the **card links** (Incident Detail is the next screen). Owns the view (mirrored to the URL from state), the page size
- * and the viewer's position.
+ * they can't be — the cards show plain totals, so nothing is pressed blind. Each card opens its report's page, carrying the feed's view so
+ * Back returns to it. Not here yet, on purpose: **Report Incident** (its drawer is a later screen). Owns the view (mirrored to the URL from
+ * state), the page size and the viewer's position.
  */
 export function CommunityPage() {
   const [params, setParams] = useSearchParams()
@@ -115,6 +122,8 @@ export function CommunityPage() {
         onShowMore={() => setShown((count) => count + PAGE_SIZE)}
         voteOf={(id) => (votes.mine ? (votes.mine[id] ?? null) : undefined)}
         onVote={votes.mine ? votes.press : undefined}
+        hrefOf={incidentPath}
+        linkState={{ from: feedPath(view) } satisfies IncidentLinkState}
       />
     )
   }

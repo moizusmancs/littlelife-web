@@ -11,6 +11,7 @@ import {
   readTab,
   rejectedCount,
   reportLatLng,
+  reportTimeline,
   reportMatches,
   reporterLabel,
   statusBadge,
@@ -228,5 +229,43 @@ describe('updates and media', () => {
     const photo = makeMedia({ id: 'p' })
     expect(mediaPreview([video, photo])).toEqual({ preview: photo, count: 2 })
     expect(mediaPreview([video]).preview?.id).toBe('v')
+  })
+})
+
+describe('reportTimeline', () => {
+  const states = (report: Parameters<typeof reportTimeline>[0]) => reportTimeline(report).map((step) => `${step.label}:${step.state}`)
+  const base = makeReport({ created_at: '2026-09-20T06:00:00Z' })
+
+  it('a new report: Reported is current, with its time; everything else to come', () => {
+    expect(states(base)).toEqual(['Reported:current', 'Verified:upcoming', 'Being handled:upcoming', 'Resolved:upcoming'])
+    expect(reportTimeline(base)[0].at).toBe('2026-09-20T06:00:00Z')
+  })
+
+  it('verified: Reported done, Verified current with its time — and says when a classifier, not a person, verified it', () => {
+    const verified = makeReport({ status: 'verified', verified_at: '2026-09-21T06:00:00Z' })
+    expect(states(verified)).toEqual(['Reported:done', 'Verified:current', 'Being handled:upcoming', 'Resolved:upcoming'])
+    expect(reportTimeline(verified)[1]).toMatchObject({ at: '2026-09-21T06:00:00Z', note: undefined })
+    expect(reportTimeline({ ...verified, auto_verified: true })[1].note).toBe('Verified automatically by an AI check, not by a person.')
+  })
+
+  it('being handled, then resolved with its time', () => {
+    expect(states(makeReport({ status: 'in_progress', verified_at: '2026-09-21T06:00:00Z' }))).toEqual(['Reported:done', 'Verified:done', 'Being handled:current', 'Resolved:upcoming'])
+    const resolved = makeReport({ status: 'resolved', verified_at: '2026-09-21T06:00:00Z', resolved_at: '2026-09-22T06:00:00Z' })
+    // Nothing records "being handled" once a report is past it, so a resolved report doesn't claim it was.
+    expect(states(resolved)).toEqual(['Reported:done', 'Verified:done', 'Being handled:unrecorded', 'Resolved:current'])
+    expect(reportTimeline(resolved)[3].at).toBe('2026-09-22T06:00:00Z')
+  })
+
+  it('a resolved report an administrator reopened keeps its history, and says so', () => {
+    const reopened = makeReport({ status: 'in_progress', resolved_at: '2026-09-22T06:00:00Z' })
+    const steps = reportTimeline(reopened)
+    expect(steps[2]).toMatchObject({ state: 'current', note: 'Marked resolved on 22 September 2026, then reopened.' })
+    expect(steps[3]).toMatchObject({ state: 'upcoming', at: undefined })
+  })
+
+  it('never ticks Verified without a record: an administrator can resolve a report that was never verified (no verified_at)', () => {
+    const skipped = reportTimeline(makeReport({ status: 'resolved', resolved_at: '2026-09-22T06:00:00Z', auto_verified: true }))
+    expect(skipped[1]).toMatchObject({ state: 'unrecorded', at: undefined, note: 'Not marked as verified before it moved on.' })
+    expect(skipped[3]).toMatchObject({ state: 'current', at: '2026-09-22T06:00:00Z' })
   })
 })

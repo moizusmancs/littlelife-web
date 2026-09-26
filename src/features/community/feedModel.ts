@@ -1,3 +1,4 @@
+import { format, parseISO } from 'date-fns'
 import type { CommunityUpdate, IncidentCategory, IncidentMedia, IncidentReport, IncidentStatus, MyVote, VoteType } from '@/api/community'
 import { distanceMeters, type LatLng } from '@/features/map/mapGeo'
 
@@ -180,4 +181,50 @@ export const EMPTY_TEXT: Record<Exclude<FeedTab, 'qa'>, string> = {
   latest: 'Nobody has reported anything yet.',
   verified: 'No reports have been verified yet.',
   nearby: 'Nobody has reported anything with a location yet.',
+}
+
+/** `unrecorded`: the report is past this step, but nothing the API keeps says it happened (no timestamp, and it isn't the current status). */
+export type StepState = 'done' | 'current' | 'upcoming' | 'unrecorded'
+
+export interface TimelineStep {
+  label: string
+  state: StepState
+  /** When it happened, where the API records it (it has only `created_at`, `verified_at` and `resolved_at`). */
+  at?: string
+  note?: string
+}
+
+/**
+ * A report's progress as the steps a citizen understands — Reported → Verified → Being handled → Resolved — built only from what the API
+ * records: the status, and the first time a report was verified or resolved (`verified_at` / `resolved_at` are set once and never
+ * cleared). A step is only ever shown as done on evidence: **an administrator can move a report straight from reported to resolved** (the status
+ * route accepts any value — verified against the real server), which leaves no `verified_at`, and nothing records whether a report was ever
+ * "being handled" — so a step the report is past without a record is `unrecorded`, not ticked. A resolved report an administrator reopened
+ * keeps its `resolved_at`, which is said rather than hidden. A rejected report has no timeline (it isn't shown).
+ */
+export function reportTimeline(report: Pick<IncidentReport, 'status' | 'created_at' | 'verified_at' | 'resolved_at' | 'auto_verified'>): TimelineStep[] {
+  const { status } = report
+  const rank: Record<IncidentStatus, number> = { reported: 0, verified: 1, in_progress: 2, resolved: 3, rejected: -1 }
+  const at = rank[status]
+  /** Past steps are done only when `evidence` says so; the current one is current; later ones are to come. */
+  const state = (step: number, evidence: boolean): StepState => (step === at ? 'current' : step > at ? 'upcoming' : evidence ? 'done' : 'unrecorded')
+  const verified = state(1, Boolean(report.verified_at))
+  const reopened = report.resolved_at && status !== 'resolved' ? `Marked resolved on ${format(parseISO(report.resolved_at), 'd MMMM yyyy')}, then reopened.` : undefined
+  return [
+    { label: 'Reported', state: at === 0 ? 'current' : 'done', at: report.created_at },
+    {
+      label: 'Verified',
+      state: verified,
+      at: report.verified_at,
+      note:
+        verified === 'unrecorded'
+          ? 'Not marked as verified before it moved on.'
+          : report.auto_verified && (verified === 'done' || verified === 'current')
+            ? 'Verified automatically by an AI check, not by a person.'
+            : undefined,
+    },
+    // Nothing records "being handled" once a report has moved past it, so a resolved report can't say whether it was.
+    { label: 'Being handled', state: state(2, false), note: reopened },
+    { label: 'Resolved', state: state(3, Boolean(report.resolved_at)), at: status === 'resolved' ? report.resolved_at : undefined },
+  ]
 }

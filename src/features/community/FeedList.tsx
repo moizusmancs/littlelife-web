@@ -21,10 +21,14 @@ export interface FeedListProps {
   /** The viewer's vote on a report (`null` = none); `undefined` while unknown, when the cards show plain totals. */
   voteOf?: (reportId: string) => VoteType | null | undefined
   onVote?: (report: IncidentReport, pressed: VoteType) => void
+  /** Each report's page; with it every report card opens its page. */
+  hrefOf?: (reportId: string) => string
+  /** Router state passed with those links (the feed's own view, for Back). */
+  linkState?: unknown
 }
 
 /** The cards, and "Show more" when there are more than are shown. Purely presentational. */
-export function FeedList({ items, total, isMine, mediaOf, homeName, now, onShowMore, voteOf, onVote }: FeedListProps) {
+export function FeedList({ items, total, isMine, mediaOf, homeName, now, onShowMore, voteOf, onVote, hrefOf, linkState }: FeedListProps) {
   return (
     <div className="flex flex-col gap-3">
       <ul aria-label="Reports and updates" className="flex flex-col gap-3">
@@ -39,6 +43,8 @@ export function FeedList({ items, total, isMine, mediaOf, homeName, now, onShowM
                 now={now}
                 vote={voteOf?.(item.report.id)}
                 onVote={onVote ? (pressed) => onVote(item.report, pressed) : undefined}
+                href={hrefOf?.(item.report.id)}
+                linkState={linkState}
               />
             ) : (
               <OfficialUpdateCard update={item.update} homeName={homeName} now={now} />

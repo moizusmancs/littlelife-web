@@ -32,6 +32,7 @@ import { HazardZonesPage } from '@/pages/admin/HazardZonesPage'
 import { MapPage } from '@/pages/citizen/MapPage'
 import { ResourcesPage } from '@/pages/citizen/ResourcesPage'
 import { CommunityPage } from '@/pages/citizen/CommunityPage'
+import { IncidentDetailPage } from '@/pages/citizen/IncidentDetailPage'
 import { SafetyGroupDetailPage } from '@/pages/citizen/SafetyGroupDetailPage'
 import { SafetyGroupsPage } from '@/pages/citizen/SafetyGroupsPage'
 import { ShelterDetailPage } from '@/pages/citizen/ShelterDetailPage'
@@ -82,7 +83,7 @@ export function AppRouter() {
               <Route path="/app/home" element={<PlaceholderPage title="Home" phase="Phase 8" />} />
               <Route path="/app/map/shelters/:id" element={<ShelterDetailPage />} />
               <Route path="/app/community" element={<CommunityPage />} />
-              <Route path="/app/community/:incidentId" element={<PlaceholderPage title="Incident Detail" phase="Phase 5" />} />
+              <Route path="/app/community/:incidentId" element={<IncidentDetailPage />} />
               <Route path="/app/resources" element={<ResourcesPage />} />
               <Route path="/app/resources/aid/:id" element={<PlaceholderPage title="Aid Request Detail" phase="Phase 6" />} />
               <Route path="/app/resources/campaigns/:id" element={<PlaceholderPage title="Campaign Detail" phase="Phase 6" />} />

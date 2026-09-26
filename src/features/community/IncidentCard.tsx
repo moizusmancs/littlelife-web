@@ -1,12 +1,14 @@
 import { format, formatDistanceStrict, parseISO } from 'date-fns'
-import { ArrowFatDownIcon, ArrowFatUpIcon, MapPinIcon, UserIcon } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
+import { CaretRightIcon, MapPinIcon, UserIcon } from '@phosphor-icons/react'
 import type { IncidentReport, VoteType } from '@/api/community'
 import { Badge } from '@/components/ui/badge'
 import { formatDistance } from '@/features/map/mapGeo'
 import { cn } from '@/lib/utils'
-import { CATEGORY_CHIP, CATEGORY_LABEL, reporterLabel, statusBadge, votesLabel } from './feedModel'
+import { CATEGORY_CHIP, CATEGORY_LABEL, reporterLabel, statusBadge } from './feedModel'
 import { MediaThumb } from './MediaThumb'
 import type { MediaState } from './useCommunityFeed'
+import { VoteButtons } from './VoteButtons'
 
 export interface IncidentCardProps {
   report: IncidentReport
@@ -19,21 +21,28 @@ export interface IncidentCardProps {
   /** The viewer's vote on it (`null` = none); `undefined` while their votes are unknown, when the totals are shown without buttons. */
   vote?: VoteType | null
   onVote?: (pressed: VoteType) => void
+  /** The report's page. With it the whole card opens the page (the vote buttons sit above that link and stay their own). */
+  href?: string
+  /** Router state for the link — the feed passes its own view, so Back returns to it. */
+  linkState?: unknown
 }
 
 /**
  * One citizen report in the feed: who (as far as a citizen may know) and when, its category and status, what they wrote, a picture, and
  * the vote totals with Upvote / Downvote buttons (the viewer's own vote pressed). There is no title, severity or comment count — the
- * report has none. Purely presentational.
+ * report has none. The "View details" link stretches over the card, so a click anywhere but the vote buttons opens the report. Purely presentational.
  */
-export function IncidentCard({ report, mine, media, distance, now, vote, onVote }: IncidentCardProps) {
+export function IncidentCard({ report, mine, media, distance, now, vote, onVote, href, linkState }: IncidentCardProps) {
   const created = parseISO(report.created_at)
   const badge = statusBadge(report)
   const headingId = `report-${report.id}-title`
   const reporter = reporterLabel(mine)
 
   return (
-    <article aria-labelledby={headingId} className="flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-4 shadow-sm sm:flex-row">
+    <article
+      aria-labelledby={headingId}
+      className={cn('relative flex flex-col gap-4 rounded-md border border-surface-border bg-surface-raised p-4 shadow-sm sm:flex-row', href && 'transition-colors hover:border-primary-200')}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 font-body text-body-sm text-ink-500">
           <span className={cn('flex size-7 flex-none items-center justify-center rounded-full', mine ? 'bg-primary-100 text-primary-700' : 'bg-surface-sunken text-ink-500')} aria-hidden="true">
@@ -70,49 +79,20 @@ export function IncidentCard({ report, mine, media, distance, now, vote, onVote 
               {formatDistance(distance)} away
             </span>
           )}
+          {href && (
+            <Link
+              to={href}
+              state={linkState}
+              aria-describedby={headingId}
+              className="ms-auto flex items-center gap-1 font-semibold text-primary-700 after:absolute after:inset-0 after:rounded-md after:content-[''] hover:underline"
+            >
+              View details
+              <CaretRightIcon size={12} weight="bold" aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </div>
       <MediaThumb state={media} />
     </article>
-  )
-}
-
-const voteButton = (pressed: boolean) =>
-  cn(
-    'flex h-8 items-center gap-1.5 rounded-full border px-3 font-body text-body-sm font-semibold transition-colors',
-    pressed ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-surface-border bg-surface-raised text-ink-700 hover:bg-surface-sunken',
-  )
-
-/**
- * The totals, and — once the viewer's own vote is known — a pair of toggle buttons (`aria-pressed`) for it. A press is the caller's; what it
- * means (cast, switch, take back) is decided above. Until the vote is known the totals are plain text, so nothing can be pressed blind.
- */
-function VoteButtons({ up, down, vote, onVote }: { up: number; down: number; vote: VoteType | null | undefined; onVote?: (pressed: VoteType) => void }) {
-  const label = votesLabel(up, down)
-  if (vote === undefined || !onVote) {
-    return (
-      <span className="flex items-center gap-3" role="img" aria-label={label}>
-        <span className="flex items-center gap-1" aria-hidden="true">
-          <ArrowFatUpIcon size={15} />
-          {up}
-        </span>
-        <span className="flex items-center gap-1" aria-hidden="true">
-          <ArrowFatDownIcon size={15} />
-          {down}
-        </span>
-      </span>
-    )
-  }
-  return (
-    <span role="group" aria-label={label} className="flex items-center gap-2">
-      <button type="button" aria-pressed={vote === 'upvote'} aria-label="Upvote" onClick={() => onVote('upvote')} className={voteButton(vote === 'upvote')}>
-        <ArrowFatUpIcon size={15} weight={vote === 'upvote' ? 'fill' : 'regular'} aria-hidden="true" />
-        <span aria-hidden="true">{up}</span>
-      </button>
-      <button type="button" aria-pressed={vote === 'downvote'} aria-label="Downvote" onClick={() => onVote('downvote')} className={voteButton(vote === 'downvote')}>
-        <ArrowFatDownIcon size={15} weight={vote === 'downvote' ? 'fill' : 'regular'} aria-hidden="true" />
-        <span aria-hidden="true">{down}</span>
-      </button>
-    </span>
   )
 }
