@@ -148,7 +148,7 @@ Do these before touching code. Report anything abnormal in one short paragraph.
    (The owner's frontend copies were already behind on 2026-09-26 — see Appendix A.)
 6. Baseline health, so you know what "clean" is before you change anything: `npx tsc -b --noEmit`, `npm run lint`,
    `npm test`. At the last full check: tsc clean; eslint 0 errors and 2 known warnings (`watch` in RegisterPage /
-   RegisterForm); 1,578 unit tests in 166 files green.
+   RegisterForm); 1,581 unit tests in 166 files green (re-verified 2026-09-26).
 7. Read your own memory directory if the harness gives you one, and Appendix D (open decisions).
 
 ---
@@ -553,7 +553,7 @@ docker exec -i littlelife_postgres psql -U littlelife -d littlelife -v end=ROLLB
   Admin Incident Reports, plus the map's incident markers). Research so far is in Appendix B.
 - Phases 6–10: not started (Relief Ops core; not-yet-built backend domains against MSW; dashboards; real-time/i18n/dark
   mode; cross-role hardening).
-- Last full check on the owner's machine: unit 1,578 tests / 166 files green; tsc clean; eslint 0 errors, 2 warnings.
+- Last full check on the owner's machine (2026-09-26): unit 1,581 tests / 166 files green; tsc clean; eslint 0 errors, 2 warnings.
 - The backend has moved on since `supporting-material/api` was last synced (docs for identity, geo, flood-intel and
   relief-operations differ; new relief-operations routes such as NGO aid-request/missing-person listings and feedback
   exist, migration 000017 is applied). **Resync docs before starting Phase 6** (§3.5).
