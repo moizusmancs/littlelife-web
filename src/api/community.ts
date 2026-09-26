@@ -7,8 +7,9 @@ import type { PointGeometry } from '@/api/facilities'
  *
  * Probed against the real server (2026-09-26): the public list is **unpaginated, newest first, and carries every status —
  * `rejected` included**; `region_id` is resolved live by a spatial join, so a report outside every region is only reachable
- * by `bbox`; optional keys are **omitted**, not `null`. There is **no `GET /incident-reports/{id}`**. The caller's own votes are read by
- * `GET /incident-reports/my-votes` (added on request, 2026-09-26 — `supporting-material/backend-requests/incident-report-my-votes.md`).
+ * by `bbox`; optional keys are **omitted**, not `null`. One report is read by `GET /incident-reports/{id}` and the caller's own votes by
+ * `GET /incident-reports/my-votes` — both added on request, 2026-09-26 (`supporting-material/backend-requests/incident-report-by-id.md`,
+ * `…/incident-report-my-votes.md`).
  */
 
 export type IncidentCategory = 'flooding' | 'blocked_road' | 'other_hazard'
@@ -67,6 +68,18 @@ export const communityUpdatesQueryKey = (regionId: string) => [...COMMUNITY_UPDA
 /** `GET /incident-reports?bbox=west,south,east,north` — public; newest first; every status. */
 export async function listIncidentReports(bbox: string): Promise<IncidentReport[]> {
   const { data } = await apiClient.get<IncidentReport[]>('/incident-reports', { params: { bbox } })
+  return data
+}
+
+export const incidentReportQueryKey = (reportId: string) => [...INCIDENT_REPORTS_QUERY_KEY, 'report', reportId] as const
+
+/**
+ * `GET /incident-reports/{id}` — public; any status, `rejected` included (the caller decides what to show); `404 "incident report not found"`
+ * for an unknown id, `400 "id must be a valid uuid"` for a malformed one. Probed: timestamps are UTC here, while the list answers in the server's
+ * zone (`+05:00`) — the same instants, parsed alike; `region_id` is omitted, as in the list.
+ */
+export async function getIncidentReport(reportId: string): Promise<IncidentReport> {
+  const { data } = await apiClient.get<IncidentReport>(`/incident-reports/${encodeURIComponent(reportId)}`)
   return data
 }
 

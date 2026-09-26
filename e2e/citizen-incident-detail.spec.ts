@@ -52,22 +52,32 @@ test('opened from a filtered feed: the report as stored, its media and progress,
   await expect(page.getByRole('tab', { name: 'Verified' })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('a direct link asks for the list once; an unknown id is "not found"; a rejected report isn’t shown', async ({ page, request }) => {
+test('a direct link asks for that one report — never the nationwide list; an unknown or malformed id is "not found" (the real 404 and 400); a rejected report isn’t shown', async ({ page, request }) => {
   const w = await seedFeedWorld(request)
   await signInCitizen(page, 'detail-direct', w.regionId)
 
   const lists: string[] = []
+  const ones: string[] = []
   page.on('request', (req) => {
-    if (req.method() === 'GET' && /\/incident-reports\?/.test(req.url())) lists.push(new URL(req.url()).searchParams.get('bbox') ?? '')
+    if (req.method() !== 'GET') return
+    const path = new URL(req.url()).pathname
+    if (/\/incident-reports$/.test(path)) lists.push(req.url())
+    const one = path.match(/\/incident-reports\/([^/]+)$/)
+    if (one && one[1] !== 'my-votes') ones.push(one[1])
   })
   await visit(page, `/app/community/${w.ids.flood}`)
   await expect(page.getByRole('heading', { level: 1, name: 'Flooding' })).toBeVisible()
-  expect(lists).toEqual(['-180,-90,180,90'])
+  expect(ones).toEqual([w.ids.flood])
+  expect(lists).toEqual([])
   await expect(page.getByRole('link', { name: 'Back to community' })).toHaveAttribute('href', '/app/community')
 
+  const unknown = page.waitForResponse((res) => res.url().endsWith('/incident-reports/00000000-0000-0000-0000-000000000001'))
   await visit(page, '/app/community/00000000-0000-0000-0000-000000000001')
+  expect((await unknown).status()).toBe(404)
   await expect(page.getByRole('heading', { name: 'Report not found' })).toBeVisible()
+  const malformed = page.waitForResponse((res) => res.url().endsWith('/incident-reports/not-a-uuid'))
   await visit(page, '/app/community/not-a-uuid')
+  expect((await malformed).status()).toBe(400)
   await expect(page.getByRole('heading', { name: 'Report not found' })).toBeVisible()
 
   await visit(page, `/app/community/${w.ids.rejected}`)

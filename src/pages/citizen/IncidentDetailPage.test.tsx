@@ -54,13 +54,14 @@ const road = makeReport({ id: 'road', category: 'blocked_road', created_at: hour
 const rejected = makeReport({ id: 'rejected', status: 'rejected', description: 'Duplicate' })
 
 describe('IncidentDetailPage — finding the report', () => {
-  it('reads the nationwide list once, finds the report by id, and shows it with its media and progress', async () => {
+  it('a direct link reads that one report — never the nationwide list — and shows it with its media and progress', async () => {
     const { calls } = serveCommunity({ reports: [flood, road], media: { flood: [makeMedia({ id: 'p1', incident_report_id: 'flood' })] } })
     renderAt('/app/community/flood')
     expect(screen.getByLabelText('Loading the report')).toBeInTheDocument()
     expect(await screen.findByRole('heading', { level: 1, name: 'Flooding' })).toBeInTheDocument()
     expect(screen.getByText('River over the embankment near the bypass.')).toBeInTheDocument()
-    expect(calls.reports).toEqual(['?bbox=-180,-90,180,90'])
+    expect(calls.one).toEqual(['flood'])
+    expect(calls.reports).toEqual([])
     await waitFor(() => expect(screen.getByRole('img', { name: /Photo 1 from this report/ })).toBeInTheDocument())
     expect(calls.media).toEqual(['flood'])
     expect(screen.getByRole('group', { name: 'Map of where this flooding report was made' })).toHaveAttribute('data-position', '27.7,68.86')
@@ -69,10 +70,14 @@ describe('IncidentDetailPage — finding the report', () => {
     expect(screen.getByRole('link', { name: 'Back to community' })).toHaveAttribute('href', '/app/community')
   })
 
-  it('an id that isn’t in the list is "not found"', async () => {
-    serveCommunity({ reports: [flood] })
-    renderAt('/app/community/00000000-0000-0000-0000-000000000001')
+  it('an unknown id (the server’s 404) and a malformed one (its 400) are both "not found", asked once each — not retried', async () => {
+    const { calls } = serveCommunity({ reports: [flood] })
+    const { unmount } = renderAt('/app/community/00000000-0000-0000-0000-000000000001')
     expect(await screen.findByRole('heading', { name: 'Report not found' })).toBeInTheDocument()
+    unmount()
+    renderAt('/app/community/not-a-uuid')
+    expect(await screen.findByRole('heading', { name: 'Report not found' })).toBeInTheDocument()
+    expect(calls.one).toEqual(['00000000-0000-0000-0000-000000000001', 'not-a-uuid'])
   })
 
   it('a rejected report says so instead of showing its content', async () => {
@@ -83,11 +88,11 @@ describe('IncidentDetailPage — finding the report', () => {
     expect(calls.media).toEqual([])
   })
 
-  it('a failed list shows the server’s words and recovers on retry', async () => {
-    const { state } = serveCommunity({ reports: [flood], failReports: true })
+  it('a failed read shows the server’s words and recovers on retry', async () => {
+    const { state } = serveCommunity({ reports: [flood], failOne: true })
     renderAt('/app/community/flood')
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load this report: database unavailable")
-    state.failReports = false
+    state.failOne = false
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Flooding' })).toBeInTheDocument()
   })
@@ -104,13 +109,14 @@ describe('IncidentDetailPage — finding the report', () => {
 })
 
 describe('IncidentDetailPage — from the feed and back', () => {
-  it('a card opens its report without asking for the list again, and Back returns to the same filtered view', async () => {
+  it('a card opens its report from the feed’s copy — no request for the list or the report — and Back returns to the same filtered view', async () => {
     const { calls } = serveCommunity({ reports: [flood, road], homeRegionId: 'sukkur-city' })
     renderAt('/app/community?tab=verified')
     const card = await screen.findByRole('article', { name: 'Flooding reported by a community member' })
     await userEvent.click(within(card).getByRole('link', { name: 'View details' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Flooding' })).toBeInTheDocument()
     expect(calls.reports).toHaveLength(1)
+    expect(calls.one).toEqual([])
     const back = screen.getByRole('link', { name: 'Back to community' })
     expect(back).toHaveAttribute('href', '/app/community?tab=verified')
     await userEvent.click(back)
@@ -126,14 +132,23 @@ describe('IncidentDetailPage — from the feed and back', () => {
 
 describe('IncidentDetailPage — voting and distance', () => {
   it('votes with the large buttons — the same votes and rules as the feed', async () => {
-    const { calls, votes } = serveCommunity({ reports: [flood], myVotes: { flood: 'downvote' } })
+    const { calls, votes, state } = serveCommunity({ reports: [flood], myVotes: { flood: 'downvote' } })
+    let release = () => {}
+    state.gate = new Promise<void>((resolve) => (release = resolve))
     renderAt('/app/community/flood')
     const down = await screen.findByRole('button', { name: 'Downvote' })
     await waitFor(() => expect(down).toHaveAttribute('aria-pressed', 'true'))
     await userEvent.click(screen.getByRole('button', { name: 'Upvote' }))
+    // Shown on this page before the server has answered (the request is held).
     expect(screen.getByRole('group', { name: '4 upvotes, 0 downvotes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Upvote' })).toHaveAttribute('aria-pressed', 'true')
+    release()
     await waitFor(() => expect(votes).toEqual({ flood: 'upvote' }))
     expect(calls.votes).toEqual(['POST flood upvote'])
+    // Once the vote lands, this report is read again — and only this report: the nationwide list is never asked for.
+    await waitFor(() => expect(calls.one).toEqual(['flood', 'flood']))
+    expect(calls.reports).toEqual([])
+    expect(screen.getByRole('group', { name: '4 upvotes, 0 downvotes' })).toBeInTheDocument()
   })
 
   it('asks for the viewer’s position only when pressed, then says how far away the report is', async () => {

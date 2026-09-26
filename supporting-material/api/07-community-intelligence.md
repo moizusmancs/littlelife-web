@@ -5,12 +5,12 @@ Read [README.md](README.md) first for base URL, auth header, error shape, and `P
 Community Intelligence owns citizen-submitted **incident reports** (with photo/video evidence,
 crowdsourced upvote/downvote credibility, AI-assisted classification, and a full admin/NGO review
 lifecycle) and **community updates** (short official announcements posted by admins or NGOs). This
-is the largest phase documented so far — 17 routes — and the first one with genuine
+is the largest phase documented so far — 18 routes — and the first one with genuine
 `multipart/form-data` uploads instead of JSON bodies.
 
 | Group | Base path | Middleware |
 |---|---|---|
-| incident report submission/media | `/incident-reports`, `/incident-reports/{id}/media` | `RequireAuth` on `POST`; the two `GET`s are public |
+| incident report submission/media | `/incident-reports`, `/incident-reports/{id}`, `/incident-reports/{id}/media` | `RequireAuth` on `POST`; the three `GET`s are public |
 | votes | `/incident-reports/{id}/votes`, `/incident-reports/my-votes` | `RequireAuth` |
 | status (citizen-facing route) | `/incident-reports/{id}/status` | `RequireAuth`, `RequireRole("admin", "super_admin")` |
 | community updates | `/community-updates` | `RequireAuth` + `RequireRole("admin","super_admin","ngo_admin")` on `POST`; `GET` is public |
@@ -456,6 +456,28 @@ incident half (the credibility half is Trust's `GET /accounts/{id}/trust-score`,
 There is **no unscoped "every report in the country" mode** on this route — one of the two spatial
 filters is always required. `bbox` uses the same `west,south,east,north` ordering (matching
 Leaflet's `getBounds().toBBoxString()`) as every other bbox filter in this API.
+
+---
+
+### `GET /incident-reports/{id}`
+
+**Auth required:** No — public, same as the list (anyone who can list a report can already see it).
+
+**Behavior**
+
+Returns one report in the shared `incidentReportResponse` shape — the same fields and values the
+list gives for it, optional keys omitted (not `null`). **Any status is returned, `rejected`
+included**; the client decides what to show. Timestamps are in UTC (`…Z`). `region_id` is omitted,
+same as the list (it's never written; regions are resolved live only by region-scoped routes).
+The static `GET /incident-reports/my-votes` still resolves to that route, not to this one.
+
+**Responses**
+
+| Condition | Status | Body |
+|---|---|---|
+| Found (any status) | `200 OK` | the shared `incidentReportResponse` shape |
+| `id` not a valid UUID | `400` | `{"error":"id must be a valid uuid"}` |
+| No report with that id | `404` | `{"error":"incident report not found"}` |
 
 ---
 

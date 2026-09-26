@@ -23,6 +23,8 @@ export interface CommunityServeOptions {
   myVotes?: Record<string, VoteType>
   failMyVotes?: boolean
   failMedia?: boolean
+  /** `GET /incident-reports/{id}` answers a 500 while set. */
+  failOne?: boolean
 }
 
 /**
@@ -33,13 +35,14 @@ export interface CommunityServeOptions {
  * released, `state.refuse` makes the next vote request fail with the backend's words.
  */
 export function serveCommunity(options: CommunityServeOptions = {}) {
-  const calls = { reports: [] as string[], media: [] as string[], updates: [] as string[], myVotes: 0, votes: [] as string[] }
+  const calls = { reports: [] as string[], media: [] as string[], updates: [] as string[], myVotes: 0, votes: [] as string[], one: [] as string[] }
   const reports = (options.reports ?? []).map((report) => ({ ...report }))
   const votes: Record<string, VoteType> = { ...(options.myVotes ?? {}) }
   const state = {
     failReports: options.failReports ?? false,
     failMyVotes: options.failMyVotes ?? false,
     failMedia: options.failMedia ?? false,
+    failOne: options.failOne ?? false,
     gate: null as Promise<void> | null,
     refuse: null as { status: number; error: string } | null,
   }
@@ -60,6 +63,15 @@ export function serveCommunity(options: CommunityServeOptions = {}) {
       calls.myVotes += 1
       if (state.failMyVotes) return HttpResponse.json({ error: 'database unavailable' }, { status: 500 })
       return HttpResponse.json(Object.entries(votes).map(([id, type]) => ({ incident_report_id: id, vote_type: type, created_at: '2026-09-26T12:00:00Z' })))
+    }),
+    // Registered after my-votes, so that static path is never read as an id (as in the backend's router).
+    http.get('*/incident-reports/:id', ({ params }) => {
+      const id = String(params.id)
+      calls.one.push(id)
+      if (state.failOne) return HttpResponse.json({ error: 'database unavailable' }, { status: 500 })
+      if (!/^[0-9a-z-]+$/.test(id) || id === 'not-a-uuid') return HttpResponse.json({ error: 'id must be a valid uuid' }, { status: 400 })
+      const report = reports.find((r) => r.id === id)
+      return report ? HttpResponse.json(report) : HttpResponse.json({ error: 'incident report not found' }, { status: 404 })
     }),
     http.post('*/incident-reports/:id/votes', async ({ params, request }) => {
       const { vote_type } = (await request.json()) as { vote_type: VoteType }

@@ -1,13 +1,26 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient, type Query } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
-import { INCIDENT_REPORTS_QUERY_KEY, MY_VOTES_QUERY_KEY, castVote, listMyVotes, removeVote, type IncidentReport, type MyVote, type VoteType } from '@/api/community'
+import {
+  INCIDENT_REPORTS_QUERY_KEY,
+  MY_VOTES_QUERY_KEY,
+  castVote,
+  incidentReportQueryKey,
+  listMyVotes,
+  removeVote,
+  type IncidentReport,
+  type MyVote,
+  type VoteType,
+} from '@/api/community'
 import { extractErrorMessage } from '@/api/errors'
 import { nextVote, votesById, withVoteChange } from './feedModel'
 
 const VOTE_KEY = ['incident-reports', 'vote'] as const
 /** The report lists (`['incident-reports', 'bbox', …]`) — not the media or the votes, which share the prefix. */
 const isReportList = (query: Query) => query.queryKey[1] === 'bbox'
+/** A single report (`['incident-reports', 'report', id]`), read by an open detail page. */
+const isOneReport = (query: Query) => query.queryKey[1] === 'report'
+const holdsReports = (query: Query) => isReportList(query) || isOneReport(query)
 
 interface VoteChange {
   reportId: string
@@ -17,7 +30,7 @@ interface VoteChange {
 /**
  * The viewer's votes and a way to press a vote button. The votes come from `GET /incident-reports/my-votes` (every vote the account
  * has cast, one request, cached — the cache is cleared when the account changes). A press is applied to the screen **at once** — the
- * pressed state and the report's totals, in every cached list — and then sent (`POST` to cast or switch, `DELETE` to take back);
+ * pressed state and the report's totals, in every cached list and on its own page — and then sent (`POST` to cast or switch, `DELETE` to take back);
  * presses are sent one at a time, in order (`scope`), so a quick second press can't arrive before the first. When the
  * last queued press has landed the lists and the votes are read again, so what stays on screen is the server's truth. A refused press
  * (e.g. `404` — the report has gone) reads the truth back at once and keeps the server's words for the page to show.
@@ -31,7 +44,8 @@ export function useVotes() {
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: MY_VOTES_QUERY_KEY })
-    void queryClient.invalidateQueries({ queryKey: INCIDENT_REPORTS_QUERY_KEY, predicate: isReportList })
+    // Only what is on screen is read again: the feed's list on the feed, the one report on its page (not the whole country).
+    void queryClient.invalidateQueries({ queryKey: INCIDENT_REPORTS_QUERY_KEY, predicate: holdsReports })
   }
 
   const mutation = useMutation({
@@ -56,7 +70,7 @@ export function useVotes() {
     const to = nextVote(from, pressed)
     setError(null)
     void queryClient.cancelQueries({ queryKey: MY_VOTES_QUERY_KEY })
-    void queryClient.cancelQueries({ queryKey: INCIDENT_REPORTS_QUERY_KEY, predicate: isReportList })
+    void queryClient.cancelQueries({ queryKey: INCIDENT_REPORTS_QUERY_KEY, predicate: holdsReports })
     queryClient.setQueryData<MyVote[]>(MY_VOTES_QUERY_KEY, (votes = []) => {
       const others = votes.filter((vote) => vote.incident_report_id !== report.id)
       return to ? [{ incident_report_id: report.id, vote_type: to, created_at: new Date().toISOString() }, ...others] : others
@@ -64,6 +78,7 @@ export function useVotes() {
     queryClient.setQueriesData<IncidentReport[]>({ queryKey: INCIDENT_REPORTS_QUERY_KEY, predicate: isReportList }, (reports) =>
       reports?.map((item) => (item.id === report.id ? withVoteChange(item, from, to) : item)),
     )
+    queryClient.setQueryData<IncidentReport>(incidentReportQueryKey(report.id), (one) => (one ? withVoteChange(one, from, to) : one))
     mutation.mutate({ reportId: report.id, to })
   }
 

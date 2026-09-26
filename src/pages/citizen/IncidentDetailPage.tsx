@@ -12,17 +12,17 @@ import { IncidentLocationMap } from '@/features/community/IncidentLocationMap'
 import { IncidentMediaGallery } from '@/features/community/IncidentMediaGallery'
 import { IncidentSummaryCard } from '@/features/community/IncidentSummaryCard'
 import { IncidentTimeline } from '@/features/community/IncidentTimeline'
-import { useIncidentReports, useReportMedia } from '@/features/community/useCommunityFeed'
+import { useIncidentReport, useReportMedia } from '@/features/community/useCommunityFeed'
 import { useVotes } from '@/features/community/useVotes'
 import { distanceMeters } from '@/features/map/mapGeo'
 import { useGeolocation } from '@/features/map/useGeolocation'
 import { useAuthStore } from '@/store/auth'
 
 /**
- * /app/community/:incidentId — one report. **There is no `GET /incident-reports/{id}`**, so the page finds the report in the same nationwide
- * list the feed reads (one cache entry: opened from the feed it asks for nothing new; a direct link asks for the list once). An id that isn't
- * in it is "not found" — so is a malformed one — and a **rejected** report says so instead of showing its content (the feed hides them;
- * decided 2026-09-26). Votes come from the feed's own hook (`my-votes`), so a vote here shows there too.
+ * /app/community/:incidentId — one report, read by `GET /incident-reports/{id}` (added on request, 2026-09-26), starting from the feed's cached
+ * copy when there is one (opened from the feed it asks for nothing new while that copy is fresh; a direct link asks for this report only). A
+ * `404` — or a `400` for a malformed id — is "not found", even over a copy cached before the report went; a **rejected** report says so instead
+ * of showing its content (the feed hides them; decided 2026-09-26). Votes come from the feed's own hook (`my-votes`), so a vote here shows there too.
  *
  * Not built, because nothing backs them: the design's **Message** button (no messaging backend yet — Phase 7), **View on Map** (the map
  * has no incident markers until this phase's last step), a title, severity, comment count and the reporter's name or credibility.
@@ -30,12 +30,14 @@ import { useAuthStore } from '@/store/auth'
 export function IncidentDetailPage() {
   const { incidentId = '' } = useParams()
   const backTo = backToFeed(useLocation().state)
-  const reports = useIncidentReports()
+  const query = useIncidentReport(incidentId)
+  const report = query.data
 
-  if (reports.isPending) return <IncidentDetailState kind="loading" backTo={backTo} />
-  if (reports.isError) return <IncidentDetailState kind="error" backTo={backTo} message={reports.errorText ?? ''} onRetry={() => void reports.refetch()} />
-  const report = reports.data.find((item) => item.id === incidentId)
-  if (!report) return <IncidentDetailState kind="not-found" backTo={backTo} />
+  if (query.notFound) return <IncidentDetailState kind="not-found" backTo={backTo} />
+  if (!report) {
+    if (query.isError) return <IncidentDetailState kind="error" backTo={backTo} message={query.errorText ?? ''} onRetry={() => void query.refetch()} />
+    return <IncidentDetailState kind="loading" backTo={backTo} />
+  }
   if (report.status === 'rejected') return <IncidentDetailState kind="rejected" backTo={backTo} />
   return <IncidentDetail report={report} backTo={backTo} />
 }
